@@ -27,7 +27,7 @@ public class OrderCreatedEventTests(OrderFixture fixture) : IClassFixture<OrderF
         orderEvent.CustomerEmail.Should().Be(order.CustomerEmail);
         orderEvent.TotalAmount.Should().Be(order.TotalAmount);
         orderEvent.DeliveryAddress.Should().Be(order.DeliveryAddress);
-        orderEvent.Items.Should().BeEquivalentTo(order.Items);
+        orderEvent.Items.Should().BeEquivalentTo(order.Items.Select(i => i.ToSnapshot()).ToList());
         orderEvent.CreatedAt.Should().Be(order.CreatedAt);
         orderEvent.EventId.Should().NotBeEmpty();
         orderEvent.OccurredOn.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));

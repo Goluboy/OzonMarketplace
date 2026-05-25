@@ -1,0 +1,187 @@
+﻿using OrderService.Domain.Entities;
+using OrderService.Domain.Tests.Fixtures;
+using FluentAssertions;
+
+namespace OrderService.Domain.Tests.Entities;
+
+public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
+{
+    [Fact]
+    public void Create_WithValidData_ShouldCreateOrderItem()
+    {
+        var productId = Guid.NewGuid();
+        const string productName = "Test Product";
+        const int quantity = 5;
+        const decimal price = 10.50m;
+
+        var orderItem = OrderItem.Create(productId, productName, quantity, price);
+
+        orderItem.Should().NotBeNull();
+        orderItem.Id.Should().NotBeEmpty();
+        orderItem.ProductId.Should().Be(productId);
+        orderItem.ProductName.Should().Be(productName);
+        orderItem.Quantity.Should().Be(quantity);
+        orderItem.PriceAtPurchase.Should().Be(price);
+        orderItem.Subtotal.Should().Be(52.50m);
+        orderItem.OrderId.Should().Be(Guid.Empty);
+        orderItem.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-10)]
+    public void Create_WithInvalidQuantity_ShouldThrowArgumentException(int quantity)
+    {
+        var productId = Guid.NewGuid();
+        const string productName = "Test Product";
+        const decimal price = 10.50m;
+
+        var act = () => OrderItem.Create(productId, productName, quantity, price);
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*quantity*");
+    }
+
+    [Fact]
+    public void Create_WithNegativePrice_ShouldThrowArgumentException()
+    {
+        var productId = Guid.NewGuid();
+        const string productName = "Test Product";
+        const int quantity = 5;
+        const decimal price = -1.00m;
+
+        var act = () => OrderItem.Create(productId, productName, quantity, price);
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*price*");
+    }
+
+    [Fact]
+    public void Create_WithZeroPrice_ShouldSucceed()
+    {
+        var productId = Guid.NewGuid();
+        const string productName = "Free Product";
+        const int quantity = 5;
+        const decimal price = 0m;
+
+        var orderItem = OrderItem.Create(productId, productName, quantity, price);
+
+        orderItem.Should().NotBeNull();
+        orderItem.PriceAtPurchase.Should().Be(0m);
+        orderItem.Subtotal.Should().Be(0m);
+    }
+
+    [Fact]
+    public void SetOrderId_WhenNotSet_ShouldSetOrderId()
+    {
+        var orderItem = fixture.CreateOrderItem();
+        var orderId = Guid.NewGuid();
+
+        orderItem.SetOrderId(orderId);
+
+        orderItem.OrderId.Should().Be(orderId);
+        orderItem.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void SetOrderId_WhenAlreadySetToSameId_ShouldNotChange()
+    {
+        var orderItem = fixture.CreateOrderItem();
+        var orderId = Guid.NewGuid();
+        orderItem.SetOrderId(orderId);
+        var updatedAt = orderItem.UpdatedAt;
+
+        orderItem.SetOrderId(orderId);
+
+        orderItem.OrderId.Should().Be(orderId);
+        orderItem.UpdatedAt.Should().Be(updatedAt);
+    }
+
+    [Fact]
+    public void SetOrderId_WhenAlreadySetToDifferentId_ShouldThrowInvalidOperationException()
+    {
+        var orderItem = fixture.CreateOrderItem();
+        var orderId1 = Guid.NewGuid();
+        var orderId2 = Guid.NewGuid();
+        orderItem.SetOrderId(orderId1);
+
+        var act = () => orderItem.SetOrderId(orderId2);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Order already set");
+    }
+
+    [Fact]
+    public void UpdateQuantity_WithValidQuantity_ShouldUpdateQuantityAndSubtotal()
+    {
+        var orderItem = fixture.CreateOrderItem(quantity: 5, price: 10.00m);
+        const int newQuantity = 10;
+
+        orderItem.UpdateQuantity(newQuantity);
+
+        orderItem.Quantity.Should().Be(newQuantity);
+        orderItem.Subtotal.Should().Be(100.00m);
+        orderItem.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-100)]
+    public void UpdateQuantity_WithInvalidQuantity_ShouldThrowArgumentException(int newQuantity)
+    {
+        var orderItem = fixture.CreateOrderItem();
+
+        var act = () => orderItem.UpdateQuantity(newQuantity);
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*Количество должно быть больше нуля*");
+    }
+
+    [Fact]
+    public void CloneItem_ShouldCreateCopyWithSameProperties()
+    {
+        var orderItem = fixture.CreateOrderItem();
+        orderItem.SetOrderId(Guid.NewGuid());
+
+        var clone = orderItem.CloneItem();
+
+        clone.Should().NotBeSameAs(orderItem);
+        clone.Id.Should().Be(orderItem.Id);
+        clone.OrderId.Should().Be(orderItem.OrderId);
+        clone.ProductId.Should().Be(orderItem.ProductId);
+        clone.ProductName.Should().Be(orderItem.ProductName);
+        clone.Quantity.Should().Be(orderItem.Quantity);
+        clone.PriceAtPurchase.Should().Be(orderItem.PriceAtPurchase);
+        clone.Subtotal.Should().Be(orderItem.Subtotal);
+    }
+
+    [Fact]
+    public void Equals_SameId_ShouldReturnTrue()
+    {
+        var orderItem = fixture.CreateOrderItem();
+        var sameOrderItem = orderItem;
+
+        orderItem.Equals(sameOrderItem).Should().BeTrue();
+        (orderItem == sameOrderItem).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Equals_DifferentId_ShouldReturnFalse()
+    {
+        var orderItem1 = fixture.CreateOrderItem();
+        var orderItem2 = fixture.CreateOrderItem();
+
+        orderItem1.Equals(orderItem2).Should().BeFalse();
+        (orderItem1 == orderItem2).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Equals_Null_ShouldReturnFalse()
+    {
+        var orderItem = fixture.CreateOrderItem();
+
+        orderItem.Equals(null).Should().BeFalse();
+    }
+}

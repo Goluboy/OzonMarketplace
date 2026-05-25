@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Tests/">
+    <Project Path="OrderService.Domain.Tests/OrderService.Domain.Tests.csproj" Id="eaa0fc9c-d0f5-41bf-b112-43bc93d1d62b" />
+  </Folder>
   <Project Path="OrderService.Domain/OrderService.Domain.csproj" Id="9139bf46-1630-463d-a803-b0f5dd36c5b7" />
   <Project Path="OrderService.Http/OrderService.Http.csproj" />
 </Solution>

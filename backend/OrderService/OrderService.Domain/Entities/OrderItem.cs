@@ -1,4 +1,5 @@
 ﻿using OrderService.Domain.Interfaces;
+using OrderService.Domain.ValueObjects;
 
 namespace OrderService.Domain.Entities;
 
@@ -9,12 +10,13 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
     public Guid ProductId { get; private set; }
     public string ProductName { get; private set; } = null!;
     public int Quantity { get; private set; }
-    public decimal PriceAtPurchase { get; private set; }
-    public decimal Subtotal { get; private set; }
+    public Money PriceAtPurchase { get; private set; }
+    public Money Subtotal { get; private set; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; private set;  }
 
     private OrderItem() { }
+
     public override string ToString() =>
         $"OrderItem(Id={Id}, Product={ProductName}, Qty={Quantity}, Subtotal={Subtotal})";
 

@@ -9,11 +9,11 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
     public Guid Id { get; init; }
     public Guid CustomerId { get; private set; }
     public string CustomerName { get; private set; } = null!;
-    public string CustomerEmail { get; private set; } = null!;
-    public string? DeliveryAddress { get; private set; }
+    public Email CustomerEmail { get; private set; } = null!;
+    public DeliveryAddress? DeliveryAddress { get; private set; }
 
     public OrderStatus Status { get; private set; }
-    public decimal TotalAmount { get; private set; }
+    public Money TotalAmount { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }

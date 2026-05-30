@@ -104,44 +104,57 @@ paths:
       tags:
         - Categories
       summary: Получение всего списка категорий
+      description: >-
+        Возвращает список всех категорий. Поддерживает оптимизацию кэширования на стороне клиента 
+        с помощью ETag. При повторных запросах передавайте полученный ETag в заголовке `If-None-Match`.
       security: []
+      
+      # 1. Документируем входной заголовок для проверки кэша
+      parameters:
+        - in: header
+          name: If-None-Match
+          required: false
+          schema:
+            type: string
+          description: Значение ETag, полученное при предыдущем успешном запросе.
+
       responses:
+        # 2. Успешный ответ (если данные обновились на сервере)
         '200':
-          description: Список категорий получен
+          description: Список категорий успешно получен (данные изменились)
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Уникальный хэш текущей версии списка категорий (например, "W/\"3a1f9e2b\"").
+            Cache-Control:
+              schema:
+                type: string
+                example: "no-cache"
+              description: Инструкция браузеру всегда валидировать ETag на сервере перед использованием кэша.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/CategoryDto'
+
+        # 3. Ответ, если данные на сервере НЕ изменились
+        '304':
+          description: Данные не изменились. Клиент должен использовать свою локальную копию.
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Хэш версии, подтверждающий актуальность кэша.
+            Cache-Control:
+              schema:
+                type: string
+                example: "no-cache"
+          # Тело (content) у ответа 304 отсутствует по спецификации HTTP
+
         '500':
           description: Внутренняя ошибка сервера
-
-    post:
-      tags:
-        - Categories
-      summary: Создание новой категории (только администратор)
-      security:
-        - JwtBearer: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCategoryRequest'
-      responses:
-        '201':
-          description: Категория успешно создана
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CategoryDto'
-        '400':
-          description: Ошибка валидации данных
-        '401':
-          description: Неавторизован
-        '403':
-          description: Доступ запрещен
 
   /api/categories/{id}:
     put:

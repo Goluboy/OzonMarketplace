@@ -23,12 +23,15 @@ servers:
 tags:
   - name: Auth
     description: Аутентификация и управление сессиями
+  - name: Categories
+    description: Управление категориями товаров (Сервис категорий)
   - name: Products
     description: Операции с каталогом товаров
+  - name: Pricing
+    description: Управление акционными ценами и скидками (Сервис цен)
   - name: Orders
     description: Управление заказами и их статусами
 
-# Глобальная схема безопасности
 security:
   - JwtBearer: []
 
@@ -95,6 +98,110 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
 
+  # === Categories ===
+  /api/categories:
+    get:
+      tags:
+        - Categories
+      summary: Получение всего списка категорий
+      security: []
+      responses:
+        '200':
+          description: Список категорий получен
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryDto'
+        '500':
+          description: Внутренняя ошибка сервера
+
+    post:
+      tags:
+        - Categories
+      summary: Создание новой категории (только администратор)
+      security:
+        - JwtBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Категория успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryDto'
+        '400':
+          description: Ошибка валидации данных
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+
+  /api/categories/{id}:
+    put:
+      tags:
+        - Categories
+      summary: Обновление категории (только администратор)
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Уникальный идентификатор категории (int)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Категория обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryDto'
+        '400':
+          description: Ошибка валидации
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Категория не найдена
+
+    delete:
+      tags:
+        - Categories
+      summary: Удаление категории (только администратор)
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Уникальный идентификатор категории (int)
+      responses:
+        '204':
+          description: Категория удалена
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Категория не найдена
+
   # === Products ===
   /api/products:
     get:
@@ -110,10 +217,10 @@ paths:
             type: string
           description: Поисковый запрос по названию или описанию
         - in: query
-          name: category
+          name: categoryId
           schema:
-            type: string
-          description: Фильтр по категории товара
+            type: integer
+          description: Фильтр по числовому идентификатору категории
         - in: query
           name: minPrice
           schema:
@@ -164,14 +271,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProductPagedResult'
-              example:
-                items:
-                  - id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-                    name: "Ноутбук"
-                    price: 99999.99
-                totalCount: 150
-                page: 1
-                pageSize: 20
         '400':
           description: Неверные параметры запроса
           content:
@@ -293,6 +392,142 @@ paths:
         '404':
           description: Товар не найден
 
+  # === Pricing (Discounts Service) ===
+  /api/pricing/products/{productId}:
+    get:
+      tags:
+        - Pricing
+      summary: Получение информации о скидке на товар (для админки)
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Уникальный идентификатор товара (UUID)
+      responses:
+        '200':
+          description: Информация о скидке получена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDiscountDto'
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Скидка для данного товара еще не создавалась
+
+    post:
+      tags:
+        - Pricing
+      summary: Создание/установка скидочной цены на товар (только администратор)
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetDiscountRequest'
+      responses:
+        '201':
+          description: Скидочная цена успешно установлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDiscountDto'
+        '400':
+          description: Ошибка валидации
+
+    put:
+      tags:
+        - Pricing
+      summary: Обновление параметров скидки (только администратор)
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetDiscountRequest'
+      responses:
+        '200':
+          description: Параметры скидки успешно изменены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDiscountDto'
+        '404':
+          description: Настройка скидки для товара не найдена
+
+  /api/pricing/products/{productId}/activate:
+    post:
+      tags:
+        - Pricing
+      summary: Активация скидки (только администратор)
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Скидка успешно активирована
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDiscountDto'
+        '404':
+          description: Настройка скидки не найдена
+
+  /api/pricing/products/{productId}/deactivate:
+    post:
+      tags:
+        - Pricing
+      summary: Деактивация скидки (только администратор)
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Скидка деактивирована (товар будет продаваться по базовой цене)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDiscountDto'
+        '404':
+          description: Настройка скидки не найдена
+
   # === Orders ===
   /api/orders:
     get:
@@ -306,6 +541,7 @@ paths:
             type: integer
             default: 1
             minimum: 1
+          description: Номер страницы (начинается с 1)
         - in: query
           name: pageSize
           schema:
@@ -313,6 +549,7 @@ paths:
             default: 20
             minimum: 1
             maximum: 100
+          description: Количество элементов на странице
         - in: query
           name: status
           schema:
@@ -523,20 +760,92 @@ components:
               type: string
               enum: [customer, admin]
 
-    # === Products ===
-    ProductDto:
+    # === Categories ===
+    CategoryDto:
       type: object
       required:
         - id
         - name
+        - path
+      properties:
+        id:
+          type: integer
+          example: 15
+          readOnly: true
+        name:
+          type: string
+          example: "Смартфоны"
+        path:
+          type: string
+          example: "electronics.phones.smartphones"
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+        - path
+      properties:
+        name:
+          type: string
+          example: "Электроника"
+        path:
+          type: string
+          example: "electronics"
+
+    UpdateCategoryRequest:
+      type: object
+      required:
+        - name
+        - path
+      properties:
+        name:
+          type: string
+          example: "Бытовая техника"
+        path:
+          type: string
+          example: "appliances"
+
+    # === Products ===
+    Money:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: float
+          minimum: 0
+          example: 99999.99
+
+    ProductImage:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          example: "https://cdn.example.com/product.jpg"
+
+    ProductDto:
+      type: object
+      required:
+        - id
+        - sku
+        - name
+        - description
         - price
-        - category
+        - categoryId
+        - images
       properties:
         id:
           type: string
           format: uuid
           readOnly: true
           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        sku:
+          type: integer
+          example: 1001
         name:
           type: string
           minLength: 1
@@ -547,18 +856,14 @@ components:
           maxLength: 2000
           example: "Мощный игровой ноутбук с видеокартой RTX"
         price:
-          type: number
-          format: float
-          minimum: 0
-          example: 99999.99
-        category:
-          type: string
-          example: "Электроника"
-        imageUrl:
-          type: string
-          format: uri
-          nullable: true
-          example: "https://cdn.example.com/product.jpg"
+          $ref: '#/components/schemas/Money'
+        categoryId:
+          type: integer
+          example: 15
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
         createdAt:
           type: string
           format: date-time
@@ -572,27 +877,34 @@ components:
     CreateProductRequest:
       type: object
       required:
+        - sku
         - name
+        - description
         - price
-        - category
+        - categoryId
+        - images
       properties:
+        sku:
+          type: integer
+          example: 1001
         name:
           type: string
           minLength: 1
           maxLength: 200
+          example: "Ноутбук"
         description:
           type: string
           maxLength: 2000
+          example: "Описание товара"
         price:
-          type: number
-          format: float
-          minimum: 0
-        category:
-          type: string
-        imageUrl:
-          type: string
-          format: uri
-          nullable: true
+          $ref: '#/components/schemas/Money'
+        categoryId:
+          type: integer
+          example: 15
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
 
     UpdateProductRequest:
       type: object
@@ -605,15 +917,13 @@ components:
           type: string
           maxLength: 2000
         price:
-          type: number
-          format: float
-          minimum: 0
-        category:
-          type: string
-        imageUrl:
-          type: string
-          format: uri
-          nullable: true
+          $ref: '#/components/schemas/Money'
+        categoryId:
+          type: integer
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
 
     ProductPagedResult:
       type: object
@@ -640,6 +950,42 @@ components:
           minimum: 1
           maximum: 100
           example: 20
+
+    # === Pricing / Discounts ===
+    SetDiscountRequest:
+      type: object
+      required:
+        - salePrice
+      properties:
+        salePrice:
+          type: number
+          format: float
+          minimum: 0
+          example: 79999.99
+
+    ProductDiscountDto:
+      type: object
+      required:
+        - productId
+        - salePrice
+        - isActive
+      properties:
+        productId:
+          type: string
+          format: uuid
+          readOnly: true
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        salePrice:
+          type: number
+          format: float
+          example: 79999.99
+        isActive:
+          type: boolean
+          example: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
 
     # === Orders ===
     CreateOrderRequest:

@@ -2,7 +2,8 @@
 
 public record ProductCreatedEvent(
     Guid ProductId,
-    int Sku,
+    Guid SellerId,
+    long Sku,
     string Name,
     decimal PriceAmount,
     int CategoryId,

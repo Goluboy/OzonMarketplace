@@ -24,6 +24,16 @@ public class Category : IEquatable<Category>
         };
     }
     
+    public static Category Reconstruct(int id, string name, string path)
+    {
+        return new Category
+        {
+            Id = id,
+            Name = name,
+            Path = path
+        };
+    }
+    
     public void Rename(string newName)
     {
         if (string.IsNullOrWhiteSpace(newName))

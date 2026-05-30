@@ -155,7 +155,33 @@ paths:
 
         '500':
           description: Внутренняя ошибка сервера
-
+    
+    post:
+      tags:
+        - Categories
+      summary: Создание новой категории (только администратор)
+      security:
+        - JwtBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Категория успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryDto'
+        '400':
+          description: Ошибка валидации данных
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+  
   /api/categories/{id}:
     put:
       tags:

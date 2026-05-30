@@ -10,7 +10,7 @@ public class Product : IEquatable<Product>
     public string Name { get; private set; } = null!;
     public string Description { get; private set; } = null!;
     public Money Price { get; private set; } = null!;
-    public Guid CategoryId { get; private set; }
+    public int CategoryId { get; private set; }
     
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -30,7 +30,7 @@ public class Product : IEquatable<Product>
         int sku,
         string name,
         string description,
-        Guid categoryId,
+        int categoryId,
         Money price,
         List<ProductImage> images)
     {
@@ -46,9 +46,9 @@ public class Product : IEquatable<Product>
 
         ArgumentNullException.ThrowIfNull(price);
 
-        if (categoryId == Guid.Empty)
+        if (categoryId <= 0)
         {
-            throw new ArgumentException("Category Id cannot be empty", nameof(categoryId));
+            throw new ArgumentException("Category Id cannot be negative", nameof(categoryId));
         }
 
         var product = new Product
@@ -89,16 +89,16 @@ public class Product : IEquatable<Product>
             newPrice.Amount));
     }
     
-    public void UpdateDetails(string name, string description, Guid categoryId)
+    public void UpdateDetails(string name, string description, int categoryId)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new ArgumentException("Product name cannot be null or empty", nameof(name));
         }
 
-        if (categoryId == Guid.Empty)
+        if (categoryId <= 0)
         {
-            throw new ArgumentException("Category Id cannot be empty", nameof(categoryId));
+            throw new ArgumentException("Category Id cannot be negative", nameof(categoryId));
         }
 
         Name = name;

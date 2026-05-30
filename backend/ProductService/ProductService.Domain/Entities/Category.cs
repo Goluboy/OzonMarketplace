@@ -2,7 +2,7 @@
 
 public class Category : IEquatable<Category>
 {
-    public Guid Id { get; init; }
+    public int Id { get; private set; }
     public string Name { get; private set; } = null!;
     public string Path { get; private set; } = null!;
     
@@ -19,7 +19,6 @@ public class Category : IEquatable<Category>
 
         return new Category
         {
-            Id = Guid.NewGuid(),
             Name = name,
             Path = path
         };
@@ -42,6 +41,15 @@ public class Category : IEquatable<Category>
         Path = newPath;
     }
 
+    public void SetId(int id)
+    {
+        if (id <= 0)
+        {
+            throw new ArgumentException("Id must be greater than zero");
+        }
+        Id = id;
+    }
+    
     private static void ValidatePath(string path)
     {
         if (string.IsNullOrWhiteSpace(path))

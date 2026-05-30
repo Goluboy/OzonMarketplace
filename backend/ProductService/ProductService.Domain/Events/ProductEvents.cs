@@ -5,7 +5,7 @@ public record ProductCreatedEvent(
     int Sku,
     string Name,
     decimal PriceAmount,
-    Guid CategoryId,
+    int CategoryId,
     List<string> ImageUrls) : DomainEvent;
     
 public record ProductPriceChangedEvent(
@@ -17,7 +17,7 @@ public record ProductDetailsUpdatedEvent(
     Guid ProductId,
     string NewName,
     string NewDescription,
-    Guid NewCategoryId) : DomainEvent;
+    int NewCategoryId) : DomainEvent;
 
 public record ProductImagesUpdatedEvent(
     Guid ProductId,

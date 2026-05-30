@@ -92,7 +92,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
 
         var newName = "Updated Product Name";
         var newDescription = "Updated Description";
-        var newCategoryId = Guid.NewGuid();
+        var newCategoryId = 101;
         
         var initialVersion = product.Version;
         product.ClearDomainEvents();
@@ -134,7 +134,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultImages);
         
         var validDescription = "Some Description";
-        var validCategoryId = Guid.NewGuid();
+        var validCategoryId = 101;
 
         var act = () => product.UpdateDetails(invalidName!, validDescription, validCategoryId);
 
@@ -155,7 +155,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultImages);
         var validName = "Valid Name";
         var validDescription = "Valid Description";
-        var emptyCategoryId = Guid.Empty;
+        var emptyCategoryId = 0;
 
         // Act
         var act = () => product.UpdateDetails(validName, validDescription, emptyCategoryId);

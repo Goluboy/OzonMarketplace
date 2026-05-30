@@ -15,10 +15,7 @@ public class Category : IEquatable<Category>
             throw new ArgumentException("Category Name cannot be null or empty", nameof(name));
         }
 
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            throw new ArgumentException("Category Path cannot be null or empty", nameof(path));
-        }
+        ValidatePath(path);
 
         return new Category
         {
@@ -40,14 +37,43 @@ public class Category : IEquatable<Category>
     
     public void MoveTo(string newPath)
     {
-        if (string.IsNullOrWhiteSpace(newPath))
-        {
-            throw new ArgumentException("Category Path cannot be null or empty", nameof(newPath));
-        }
+        ValidatePath(newPath);
         
         Path = newPath;
     }
 
+    private static void ValidatePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Category Path cannot be null or empty", nameof(path));
+        }
+
+        if (path.StartsWith('.') || path.EndsWith('.'))
+        {
+            throw new ArgumentException("Category Path cannot start or end with a dot", nameof(path));
+        }
+
+        if (path.Contains(".."))
+        {
+            throw new ArgumentException("Category Path cannot contain consecutive dots", nameof(path));
+        }
+
+        var segments = path.Split('.');
+        foreach (var segment in segments)
+        {
+            if (string.IsNullOrWhiteSpace(segment))
+            {
+                throw new ArgumentException("Category Path segments cannot be empty", nameof(path));
+            }
+            
+            if (!segment.All(c => char.IsLetterOrDigit(c) || c == '-'))
+            {
+                throw new ArgumentException($"Category Path segment '{segment}' contains invalid characters", nameof(path));
+            }
+        }
+    }
+    
     public bool Equals(Category? other)
     {
         if (other is null)

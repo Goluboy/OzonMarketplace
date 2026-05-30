@@ -2,7 +2,7 @@
 
 public record ProductImage
 {
-    public required string Url { get; init; }
+    public string Url { get; init; }
 
     public ProductImage(string url)
     {

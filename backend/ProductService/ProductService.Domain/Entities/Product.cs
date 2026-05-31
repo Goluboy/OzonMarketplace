@@ -80,6 +80,7 @@ public class Product : IEquatable<Product>
             product.Sku,
             product.Name,
             product.Price.Amount,
+            product.Price.Currency,
             product.CategoryId,
             product.Images.Select(i => i.Url).ToList()));
         
@@ -132,7 +133,9 @@ public class Product : IEquatable<Product>
         _domainEvents.Add(new ProductPriceChangedEvent(
             Id,
             oldPrice.Amount,
-            newPrice.Amount));
+            oldPrice.Currency,
+            newPrice.Amount,
+            newPrice.Currency));
     }
     
     public void UpdateDetails(string name, string description, int categoryId)

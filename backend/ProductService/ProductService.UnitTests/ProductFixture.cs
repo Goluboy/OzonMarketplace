@@ -9,7 +9,7 @@ public class ProductFixture
     public string DefaultName => "Standard Test Product";
     public string DefaultDescription => "Standard Description";
     public int DefaultCategoryId => 0123456789;
-    public Money DefaultPrice => new Money(100);
+    public Money DefaultPrice => new(100);
     public Guid SellerId => Guid.NewGuid();
     public List<ProductImage> DefaultImages => [new ProductImage("https://example.com/image1.png")];
 

@@ -2,7 +2,7 @@
 using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Helpers;
 
-namespace ProductService.Infrastructure.Migrations;
+namespace ProductService.Infrastructure.Persistence.Migrations;
 
 [Migration(202605301700000)]
 public class CreateCategoriesTableMigration : Migration

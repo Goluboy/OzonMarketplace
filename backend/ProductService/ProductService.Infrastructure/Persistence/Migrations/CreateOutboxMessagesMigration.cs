@@ -2,7 +2,7 @@
 using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Helpers;
 
-namespace ProductService.Infrastructure.Migrations;
+namespace ProductService.Infrastructure.Persistence.Migrations;
 
 [Migration(20260530181500)]
 public class CreateOutboxMessagesMigration : Migration

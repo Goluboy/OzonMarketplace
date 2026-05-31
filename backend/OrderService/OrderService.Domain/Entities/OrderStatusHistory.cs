@@ -6,7 +6,7 @@ namespace OrderService.Domain.Entities;
 public class OrderStatusHistory
 {
     public Guid Id { get; private set; }
-    public Guid OrderId { get; private set; }
+    public OrderId OrderId { get; private set; }
     public OrderStatus? OldStatus { get; private set; }
     public OrderStatus NewStatus { get; private set; }
 
@@ -26,7 +26,7 @@ public class OrderStatusHistory
         return new OrderStatusHistory
         {
             Id = Guid.NewGuid(),
-            OrderId = orderId,
+            OrderId = new OrderId(orderId),
             OldStatus = oldStatus == newStatus ? null : oldStatus,
             NewStatus = newStatus,
             ChangedAt = DateTime.UtcNow,

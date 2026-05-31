@@ -1,6 +1,7 @@
 ﻿using OrderService.Domain.Entities;
 using OrderService.Domain.Tests.Fixtures;
 using FluentAssertions;
+using OrderService.Domain.ValueObjects;
 
 namespace OrderService.Domain.Tests.Entities;
 
@@ -21,9 +22,11 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         orderItem.ProductId.Should().Be(productId);
         orderItem.ProductName.Should().Be(productName);
         orderItem.Quantity.Should().Be(quantity);
-        orderItem.PriceAtPurchase.Should().Be(price);
-        orderItem.Subtotal.Should().Be(52.50m);
-        orderItem.OrderId.Should().Be(Guid.Empty);
+        orderItem.PriceAtPurchase.Value.Should().Be(price);
+        orderItem.PriceAtPurchase.Currency.Should().Be("RUB");
+        orderItem.Subtotal.Value.Should().Be(52.50m);
+        orderItem.Subtotal.Currency.Should().Be("RUB");
+        orderItem.OrderId.Should().Be(null);
         orderItem.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
@@ -68,15 +71,17 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         var orderItem = OrderItem.Create(productId, productName, quantity, price);
 
         orderItem.Should().NotBeNull();
-        orderItem.PriceAtPurchase.Should().Be(0m);
-        orderItem.Subtotal.Should().Be(0m);
+        orderItem.PriceAtPurchase.Value.Should().Be(0m);
+        orderItem.PriceAtPurchase.Currency.Should().Be("RUB");
+        orderItem.Subtotal.Currency.Should().Be("RUB");
+        orderItem.Subtotal.Value.Should().Be(0m);
     }
 
     [Fact]
     public void SetOrderId_WhenNotSet_ShouldSetOrderId()
     {
         var orderItem = fixture.CreateOrderItem();
-        var orderId = Guid.NewGuid();
+        var orderId = OrderId.New();
 
         orderItem.SetOrderId(orderId);
 
@@ -88,7 +93,7 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
     public void SetOrderId_WhenAlreadySetToSameId_ShouldNotChange()
     {
         var orderItem = fixture.CreateOrderItem();
-        var orderId = Guid.NewGuid();
+        var orderId = OrderId.New();
         orderItem.SetOrderId(orderId);
         var updatedAt = orderItem.UpdatedAt;
 
@@ -102,8 +107,8 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
     public void SetOrderId_WhenAlreadySetToDifferentId_ShouldThrowInvalidOperationException()
     {
         var orderItem = fixture.CreateOrderItem();
-        var orderId1 = Guid.NewGuid();
-        var orderId2 = Guid.NewGuid();
+        var orderId1 = OrderId.New();
+        var orderId2 = OrderId.New();
         orderItem.SetOrderId(orderId1);
 
         var act = () => orderItem.SetOrderId(orderId2);
@@ -121,7 +126,8 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         orderItem.UpdateQuantity(newQuantity);
 
         orderItem.Quantity.Should().Be(newQuantity);
-        orderItem.Subtotal.Should().Be(100.00m);
+        orderItem.Subtotal.Value.Should().Be(100.00m);
+        orderItem.Subtotal.Currency.Should().Be("RUB");
         orderItem.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
@@ -143,7 +149,7 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
     public void CloneItem_ShouldCreateCopyWithSameProperties()
     {
         var orderItem = fixture.CreateOrderItem();
-        orderItem.SetOrderId(Guid.NewGuid());
+        orderItem.SetOrderId(OrderId.New());
 
         var clone = orderItem.CloneItem();
 

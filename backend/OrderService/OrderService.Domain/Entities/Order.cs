@@ -6,14 +6,14 @@ namespace OrderService.Domain.Entities;
 
 public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
 {
-    public Guid Id { get; init; }
+    public OrderId Id { get; init; }
     public Guid CustomerId { get; private set; }
     public string CustomerName { get; private set; } = null!;
-    public string CustomerEmail { get; private set; } = null!;
-    public string? DeliveryAddress { get; private set; }
+    public Email CustomerEmail { get; private set; } = null!;
+    public DeliveryAddress? DeliveryAddress { get; private set; }
 
     public OrderStatus Status { get; private set; }
-    public decimal TotalAmount { get; private set; }
+    public Money TotalAmount { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
@@ -60,11 +60,11 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
 
         var order = new Order
         {
-            Id = Guid.NewGuid(),
+            Id = new OrderId(Guid.NewGuid()),
             CustomerId = customerId,
             CustomerName = customerName,
-            CustomerEmail = customerEmail,
-            DeliveryAddress = deliveryAddress,
+            CustomerEmail = new Email(customerEmail),
+            DeliveryAddress = DeliveryAddress.Create(deliveryAddress),
             Status = OrderStatus.Created,
             CreatedAt = DateTime.UtcNow,
             Version = 1
@@ -96,7 +96,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
     
     private void RecalculateTotal()
     {
-        TotalAmount = Math.Round(_items.Sum(i => i.Subtotal), 2, MidpointRounding.AwayFromZero);
+        TotalAmount = new Money(Math.Round(_items.Sum(i => i.Subtotal.Value), 2, MidpointRounding.AwayFromZero));
     }
 
     public void AddItem(OrderItem item)

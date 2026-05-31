@@ -871,6 +871,7 @@ components:
       required:
         - id
         - sku
+        - sellerId
         - name
         - description
         - price
@@ -885,6 +886,12 @@ components:
         sku:
           type: integer
           example: 1001
+        sellerId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Уникальный идентификатор продавца-владельца товара (UUID)
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
         name:
           type: string
           minLength: 1
@@ -899,6 +906,16 @@ components:
         categoryId:
           type: integer
           example: 15
+        categoryName:
+          type: string
+          readOnly: true
+          example: "Смартфоны"
+          description: Человекочитаемое название категории для отображения (только чтение)
+        categoryPath:
+          type: string
+          readOnly: true
+          example: "electronics.phones.smartphones"
+          description: Полный иерархический путь категории для хлебных крошек (только чтение)
         images:
           type: array
           items:
@@ -1006,6 +1023,7 @@ components:
       type: object
       required:
         - productId
+        - sellerId
         - salePrice
         - isActive
       properties:
@@ -1014,6 +1032,12 @@ components:
           format: uuid
           readOnly: true
           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        sellerId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Уникальный идентификатор продавца-владельца товара (UUID)
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
         salePrice:
           type: number
           format: float

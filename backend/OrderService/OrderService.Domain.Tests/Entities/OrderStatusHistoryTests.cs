@@ -10,7 +10,7 @@ public class OrderStatusHistoryTests : IClassFixture<OrderFixture>
     [Fact]
     public void Create_WithValidData_ShouldCreateOrderStatusHistory()
     {
-        var orderId = Guid.NewGuid();
+        var orderId = OrderId.New();
         const OrderStatus oldStatus = OrderStatus.Created;
         const OrderStatus newStatus = OrderStatus.Paid;
         var changedBy = Guid.NewGuid();

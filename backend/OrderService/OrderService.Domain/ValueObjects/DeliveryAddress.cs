@@ -2,23 +2,33 @@
 
 public sealed record DeliveryAddress
 {
-    public DeliveryAddress(string addressLine)
+    public string AddressLine { get; init; }
+
+    private DeliveryAddress(string addressLine)
+    {
+        AddressLine = addressLine.Trim();
+    }
+    public static DeliveryAddress? Create(string? addressLine)
     {
         if (string.IsNullOrWhiteSpace(addressLine))
-        {
-            throw new ArgumentException("Address required");
-        }
+            return null;
 
-        this.AddressLine = addressLine.Trim();
+        return new DeliveryAddress(addressLine);
     }
 
-    public string AddressLine { get; init; }
-    public override string ToString() => AddressLine;
-    public static implicit operator string(DeliveryAddress deliveryAddress) => deliveryAddress.AddressLine;
-    public static explicit operator DeliveryAddress(string value) => new(value);
-
-    public void Deconstruct(out string addressLine)
+    public static DeliveryAddress CreateRequired(string? addressLine)
     {
-        addressLine = this.AddressLine;
+        if (string.IsNullOrWhiteSpace(addressLine))
+            throw new ArgumentException("Delivery address is required", nameof(addressLine));
+
+        return new DeliveryAddress(addressLine);
     }
+
+    public override string ToString() => AddressLine;
+    
+    public static implicit operator string?(DeliveryAddress? address) => address?.AddressLine;
+
+    public static explicit operator DeliveryAddress(string value) => CreateRequired(value);
+
+    public void Deconstruct(out string addressLine) => addressLine = AddressLine;
 }

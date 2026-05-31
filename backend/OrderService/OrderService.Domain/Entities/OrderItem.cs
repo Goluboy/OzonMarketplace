@@ -6,7 +6,7 @@ namespace OrderService.Domain.Entities;
 public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
 {
     public Guid Id { get; init; }
-    public Guid OrderId { get; private set; }
+    public OrderId? OrderId { get; private set; }
     public Guid ProductId { get; private set; }
     public string ProductName { get; private set; } = null!;
     public int Quantity { get; private set; }
@@ -40,16 +40,18 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
             ProductId = productId,
             ProductName = productName,
             Quantity = quantity,
-            PriceAtPurchase = price,
-            Subtotal = subtotal,
+            PriceAtPurchase = new Money(price),
+            Subtotal = new Money(subtotal),
             CreatedAt = DateTime.UtcNow
         };
     }
 
-    public void SetOrderId(Guid orderId)
+    public void SetOrderId(OrderId orderId)
     {
-        if (OrderId != Guid.Empty && OrderId != orderId)
-        { 
+        ArgumentNullException.ThrowIfNull(orderId);
+
+        if (OrderId is not null && OrderId != orderId)
+        {
             throw new InvalidOperationException("Order already set");
         }
 
@@ -62,6 +64,7 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
         UpdatedAt = DateTime.UtcNow;
     }
 
+
     public void UpdateQuantity(int newQuantity)
     {
         if (newQuantity <= 0)
@@ -70,7 +73,7 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
         }
 
         Quantity = newQuantity;
-        Subtotal = Math.Round(Quantity * PriceAtPurchase, 2, MidpointRounding.AwayFromZero);
+        Subtotal = new Money(Math.Round(Quantity * PriceAtPurchase, 2, MidpointRounding.AwayFromZero));
         UpdatedAt = DateTime.UtcNow;
     }
 

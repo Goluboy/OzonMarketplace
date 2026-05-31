@@ -16,8 +16,8 @@ public sealed record Money
             throw new ArgumentException("Currency required", nameof(currency));
         }
 
-        this.Value = Value;
-        this.Currency = Currency;
+        this.Value = value;
+        this.Currency = currency;
     }
 
 

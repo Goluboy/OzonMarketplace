@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using ProductService.Domain.Entities;
+using ProductService.Domain.Events;
 using Xunit;
 
 namespace ProductService.UnitTests.Domain;
@@ -19,6 +20,27 @@ public class CategoryTests
         // Assert
         category.Should().NotBeNull();
         category.Path.Should().Be(validPath);
+        
+        category.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<CategoryCreatedEvent>();;
+    }
+
+    [Fact]
+    public void SetId_WithValidCategory_ShouldSetIdInDomainEvent()
+    {
+        // Assert
+        var category = Category.Create("Valid Name", "valid.parent.path");
+        var expectedId = 101;
+        
+        // Act
+        category.SetId(expectedId);
+        
+        // Assert
+        var domainEvent = category.DomainEvents
+            .Should().ContainSingle()
+            .Subject.Should().BeOfType<CategoryCreatedEvent>()
+            .Subject;
+        domainEvent.Category.Id.Should().Be(expectedId);
     }
     
     [Theory]
@@ -63,6 +85,7 @@ public class CategoryTests
     {
         // Assert
         var category = Category.Create("Valid Name", "valid.parent.path");
+        category.ClearDomainEvents();
         var newPath = "new.valid.path";
         
         // Act
@@ -71,5 +94,8 @@ public class CategoryTests
         // Assert
         category.Should().NotBeNull();
         category.Path.Should().Be(newPath);
+        
+        category.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<CategoryPathChangedEvent>();
     }
 }

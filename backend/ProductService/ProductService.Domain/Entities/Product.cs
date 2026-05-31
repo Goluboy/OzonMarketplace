@@ -90,7 +90,7 @@ public class Product : IEquatable<Product>
     public static Product Reconstruct(
         Guid id,
         Guid sellerId,
-        int sku,
+        long sku,
         string name,
         string description,
         Money price,

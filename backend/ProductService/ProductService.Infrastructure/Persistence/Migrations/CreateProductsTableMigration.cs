@@ -17,6 +17,7 @@ public class CreateProductsTableMigration : Migration
         var name = nameof(ProductDao.Name).ToSnakeCase();
         var description = nameof(ProductDao.Description).ToSnakeCase();
         var priceAmount = nameof(ProductDao.PriceAmount).ToSnakeCase();
+        var priceCurrency = nameof(ProductDao.PriceCurrency).ToSnakeCase();
         var categoryId = nameof(ProductDao.CategoryId).ToSnakeCase();
         var createdAt = nameof(ProductDao.CreatedAt).ToSnakeCase();
         var updatedAt = nameof(ProductDao.UpdatedAt).ToSnakeCase();
@@ -30,6 +31,7 @@ public class CreateProductsTableMigration : Migration
             .WithColumn(name).AsString(255).NotNullable()
             .WithColumn(description).AsString(2000).NotNullable()
             .WithColumn(priceAmount).AsDecimal(18, 2).NotNullable()
+            .WithColumn(priceCurrency).AsString(3).NotNullable()
             .WithColumn(categoryId).AsInt32().NotNullable()
             .ForeignKey("fk_products_categories", "categories", "id")
             .WithColumn(createdAt).AsDateTimeOffset().NotNullable()

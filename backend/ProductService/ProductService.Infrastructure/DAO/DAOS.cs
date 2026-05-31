@@ -18,6 +18,7 @@ public record ProductDao
     public required string Name { get; init; }
     public required string Description { get; init; }
     public decimal PriceAmount { get; init; }
+    public required string PriceCurrency { get; init; }
     public int CategoryId { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; init; }
@@ -25,9 +26,9 @@ public record ProductDao
     public List<ProductImageDao> Images { get; init; } = [];
 }
 
-public abstract record ProductImageDao
+public record ProductImageDao
 {
-    public int Id { get; init; }
+    public required string Url { get; init; }
 }
 
 public record OutboxMessageDao

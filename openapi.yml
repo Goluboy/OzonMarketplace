@@ -870,10 +870,10 @@ components:
           description: Сумма в формате строки для сохранения точности (2 знака после запятой)
         currency:
           type: string
-          enum: [USD, EUR, RUB]
+          pattern: '^[A-Z]{3}$'
           default: RUB
           example: "RUB"
-          description: Код валюты по ISO 4217
+          description: Код валюты по стандарту ISO 4217 (например, "RUB", "USD", "EUR", "KZT")
 
     ProductImage:
       type: object

@@ -236,8 +236,8 @@ paths:
     get:
       tags:
         - Products
-      summary: Поиск и фильтрация товаров
-      description: Возвращает пагинированный список товаров с поддержкой фильтрации, сортировки и поиска.
+      summary: Поиск и фильтрация товаров (карточки с курсорной пагинацией)
+      description: Возвращает облегченный список карточек товаров с поддержкой пагинации по курсору.
       security: []
       parameters:
         - in: query
@@ -273,12 +273,10 @@ paths:
             default: desc
           description: Порядок сортировки
         - in: query
-          name: page
+          name: cursor
           schema:
-            type: integer
-            default: 1
-            minimum: 1
-          description: Номер страницы (начинается с 1)
+            type: string
+          description: Строковый курсор для получения следующей страницы (значение nextCursor из предыдущего ответа)
         - in: query
           name: pageSize
           schema:
@@ -289,11 +287,11 @@ paths:
           description: Количество элементов на странице
       responses:
         '200':
-          description: Успешный ответ
+          description: Успешный ответ со списком карточек товаров
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductPagedResult'
+                $ref: '#/components/schemas/ProductCursorPagedResult'
         '400':
           description: Неверные параметры запроса
           content:
@@ -1000,31 +998,59 @@ components:
           items:
             $ref: '#/components/schemas/ProductImage'
 
-    ProductPagedResult:
+    ProductCardDto:
+      type: object
+      required:
+        - id
+        - name
+        - price
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        name:
+          type: string
+          maxLength: 200
+          example: "Ноутбук игровой"
+        price:
+          $ref: '#/components/schemas/Money'
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://cdn.example.com/product.jpg"
+          description: Ссылка на главное (первое) изображение товара. Может быть null, если изображений нет.
+        categoryId:
+          type: integer
+          example: 15
+          description: Идентификатор категории для фильтрации на клиенте
+
+    # === Новая схема ответа с курсорной пагинацией ===
+    ProductCursorPagedResult:
       type: object
       required:
         - items
-        - totalCount
-        - page
         - pageSize
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/ProductDto'
-        totalCount:
-          type: integer
-          minimum: 0
-          example: 150
-        page:
-          type: integer
-          minimum: 1
-          example: 1
+            $ref: '#/components/schemas/ProductCardDto'
+          description: Список полученных карточек товаров
+        nextCursor:
+          type: string
+          nullable: true
+          example: "ZXlKamNtVmhkR1ZmWldRdU1RPT0="
+          description: >-
+            Непрозрачная строка-курсор для получения следующей страницы. 
+            Передается в query-параметр 'cursor' при следующем запросе.
+            Если равен null, то достигнут конец списка (следующей страницы нет).
         pageSize:
           type: integer
-          minimum: 1
-          maximum: 100
           example: 20
+          description: Количество элементов, запрошенное для данной страницы    
 
     # === Pricing / Discounts ===
     

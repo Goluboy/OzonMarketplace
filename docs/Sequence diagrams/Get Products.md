@@ -5,12 +5,12 @@ sequenceDiagram
     participant ProductService
     participant PostgreSQL
 
-    Frontend->>NGINX: GET /api/products?page=1&size=20
+    Frontend->>NGINX: GET /api/products?cursor=ZXlKamNtVmhkR1ZmWldRdU1RPT0&size=20
     NGINX->>ProductService: Proxy to ProductService
     
     ProductService->>PostgreSQL: SELECT * FROM products LIMIT 20 OFFSET 0
     PostgreSQL-->>ProductService: Return 20 products + total count
-    ProductService-->>NGINX: 200 OK + { items: [...], totalCount: 150, hasNext: true }
+    ProductService-->>NGINX: 200 OK + { items: [...], nextCursor: "ZXlKamNtVmhkR1ZmWldRdU1RPT0=", pageSize: 20 }
     NGINX-->>Frontend: 200 OK + JSON response
     
     Frontend->>Frontend: Render first 20 products
@@ -22,7 +22,7 @@ sequenceDiagram
     NGINX->>ProductService: Proxy to ProductService
     ProductService->>PostgreSQL: SELECT * FROM products LIMIT 20 OFFSET 20
     PostgreSQL-->>ProductService: Return next 20 products
-    ProductService-->>Frontend: 200 OK + { items: [...], totalCount: 150, hasNext: true }
+    ProductService-->>Frontend: 200 OK + { items: [...], nextCursor: "ZXlKamNtVmhkR1ZmWldRdU1RPT0=", pageSize: 20 }
     
     Note over Frontend: Continue until hasNext: false
     

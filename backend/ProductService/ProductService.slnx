@@ -1,6 +1,9 @@
 <Solution>
+  <Folder Name="/common/" />
   <Folder Name="/src/">
     <Project Path="ProductService.Domain/ProductService.Domain.csproj" />
+    <Project Path="ProductService.Infrastructure.Abstractions/ProductService.Infrastructure.Abstractions.csproj" />
+    <Project Path="ProductService.Infrastructure/ProductService.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="ProductService.UnitTests/ProductService.UnitTests.csproj" />

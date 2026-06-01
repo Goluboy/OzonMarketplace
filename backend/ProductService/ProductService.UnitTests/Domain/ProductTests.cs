@@ -12,12 +12,14 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
     public void Create_WithValidParameters_ShouldCreateProduct()
     {
         // Arrange
+        var sellerId = fixture.SellerId;
         // Act
         var product = Product.Create(
             fixture.DefaultSku,
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            sellerId,
             fixture.DefaultPrice,
             fixture.DefaultImages);
         
@@ -30,6 +32,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
         product.Price.Should().Be(fixture.DefaultPrice);
         product.Images.Should().HaveCount(1);
         product.Version.Should().Be(1);
+        product.SellerId.Should().Be(sellerId);
         product.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         product.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         
@@ -49,6 +52,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName,
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             fixture.DefaultImages);
         
@@ -70,6 +74,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             invalidName!,
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             fixture.DefaultImages);
         
@@ -87,6 +92,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             fixture.DefaultImages);
 
@@ -130,6 +136,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             fixture.DefaultImages);
         
@@ -151,6 +158,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             fixture.DefaultImages);
         var validName = "Valid Name";
@@ -174,6 +182,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             fixture.DefaultImages);
         
@@ -202,6 +211,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             fixture.DefaultImages);
 
@@ -222,6 +232,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             []);
         var image = new ProductImage("https://example.com/new.png");
@@ -247,6 +258,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             []);
         var image = new ProductImage("https://example.com/duplicate.png");
@@ -269,6 +281,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             []);
         var imageUrl = "https://example.com/to-remove.png";
@@ -293,6 +306,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             fixture.DefaultName, 
             fixture.DefaultDescription,
             fixture.DefaultCategoryId,
+            fixture.SellerId,
             fixture.DefaultPrice,
             []);
 

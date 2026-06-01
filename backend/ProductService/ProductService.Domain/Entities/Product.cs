@@ -5,12 +5,13 @@ namespace ProductService.Domain.Entities;
 
 public class Product : IEquatable<Product>
 {
-    public Guid Id { get; init; }
-    public int Sku { get; init; }
+    public Guid Id { get; private init; }
+    public long Sku { get; init; }
     public string Name { get; private set; } = null!;
     public string Description { get; private set; } = null!;
     public Money Price { get; private set; } = null!;
     public int CategoryId { get; private set; }
+    public Guid SellerId { get; private init; }
     
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -27,10 +28,11 @@ public class Product : IEquatable<Product>
     private Product() { }
 
     public static Product Create(
-        int sku,
+        long sku,
         string name,
         string description,
         int categoryId,
+        Guid sellerId,
         Money price,
         List<ProductImage> images)
     {
@@ -44,6 +46,11 @@ public class Product : IEquatable<Product>
             throw new ArgumentException("Product name cannot be null or empty", nameof(name));
         }
 
+        if (sellerId == Guid.Empty)
+        {
+            throw new ArgumentException("SellerId cannot be empty", nameof(sellerId));
+        }
+        
         ArgumentNullException.ThrowIfNull(price);
 
         if (categoryId <= 0)
@@ -59,6 +66,7 @@ public class Product : IEquatable<Product>
             Description = description,
             Price = price,
             CategoryId = categoryId,
+            SellerId = sellerId,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
             Version = 1
@@ -68,13 +76,52 @@ public class Product : IEquatable<Product>
 
         product._domainEvents.Add(new ProductCreatedEvent(
             product.Id,
+            product.SellerId,
             product.Sku,
             product.Name,
             product.Price.Amount,
+            product.Price.Currency,
             product.CategoryId,
             product.Images.Select(i => i.Url).ToList()));
         
         return product;
+    }
+
+    public static Product Reconstruct(
+        Guid id,
+        Guid sellerId,
+        long sku,
+        string name,
+        string description,
+        Money price,
+        int categoryId,
+        DateTimeOffset createdAt,
+        DateTimeOffset updatedAt,
+        int version,
+        List<ProductImage> images)
+    {
+        var product = new Product
+        {
+            Id = id,
+            SellerId = sellerId,
+            Sku = sku,
+            Name = name,
+            Description = description,
+            Price = price,
+            CategoryId = categoryId,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            Version = version
+        };
+
+        product._images.AddRange(images);
+
+        return product;
+    }
+    
+    public bool IsOwnedBy(Guid sellerId)
+    {
+        return SellerId == sellerId;
     }
     
     public void ChangePrice(Money newPrice)
@@ -86,7 +133,9 @@ public class Product : IEquatable<Product>
         _domainEvents.Add(new ProductPriceChangedEvent(
             Id,
             oldPrice.Amount,
-            newPrice.Amount));
+            oldPrice.Currency,
+            newPrice.Amount,
+            newPrice.Currency));
     }
     
     public void UpdateDetails(string name, string description, int categoryId)

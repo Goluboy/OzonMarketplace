@@ -18,7 +18,7 @@ sequenceDiagram
     
     Note over Frontend: User scrolls to bottom or click 'next page'
     
-    Frontend->>NGINX: GET /api/products?page=2&size=20
+    Frontend->>NGINX: GET /api/products?cursor=ZXlKamNtVmhkR1ZmWldRdU1RPT0&size=20
     NGINX->>ProductService: Proxy to ProductService
     ProductService->>PostgreSQL: SELECT * FROM products LIMIT 20 OFFSET 20
     PostgreSQL-->>ProductService: Return next 20 products

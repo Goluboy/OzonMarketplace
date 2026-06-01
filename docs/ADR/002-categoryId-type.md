@@ -34,4 +34,4 @@
 
 
 ## Ссылки
-- Issue: `https://github.com/Goluboy/OzonMarketplace/issues/4`
+- Issue: https://github.com/Goluboy/OzonMarketplace/issues/4

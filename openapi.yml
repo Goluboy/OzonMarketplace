@@ -108,8 +108,6 @@ paths:
         Возвращает список всех категорий. Поддерживает оптимизацию кэширования на стороне клиента 
         с помощью ETag. При повторных запросах передавайте полученный ETag в заголовке `If-None-Match`.
       security: []
-      
-      # 1. Документируем входной заголовок для проверки кэша
       parameters:
         - in: header
           name: If-None-Match
@@ -117,9 +115,7 @@ paths:
           schema:
             type: string
           description: Значение ETag, полученное при предыдущем успешном запросе.
-
       responses:
-        # 2. Успешный ответ (если данные обновились на сервере)
         '200':
           description: Список категорий успешно получен (данные изменились)
           headers:
@@ -131,28 +127,22 @@ paths:
               schema:
                 type: string
                 example: "no-cache"
-              description: Инструкция браузеру всегда валидировать ETag на сервере перед использованием кэша.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/CategoryDto'
-
-        # 3. Ответ, если данные на сервере НЕ изменились
         '304':
           description: Данные не изменились. Клиент должен использовать свою локальную копию.
           headers:
             ETag:
               schema:
                 type: string
-              description: Хэш версии, подтверждающий актуальность кэша.
             Cache-Control:
               schema:
                 type: string
                 example: "no-cache"
-          # Тело (content) у ответа 304 отсутствует по спецификации HTTP
-
         '500':
           description: Внутренняя ошибка сервера
     
@@ -263,17 +253,11 @@ paths:
         - in: query
           name: minPrice
           schema:
-            type: number
-            format: float
-            minimum: 0
-          description: Минимальная цена
+            $ref: '#/components/schemas/Money'
         - in: query
           name: maxPrice
           schema:
-            type: number
-            format: float
-            minimum: 0
-          description: Максимальная цена
+            $ref: '#/components/schemas/Money'
         - in: query
           name: sortBy
           schema:
@@ -489,6 +473,8 @@ paths:
                 $ref: '#/components/schemas/ProductDiscountDto'
         '400':
           description: Ошибка валидации
+        '404':
+          description: Товар не найден
 
     put:
       tags:
@@ -623,20 +609,25 @@ paths:
                 - productId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
                   quantity: 2
       responses:
-        '201':
-          description: Заказ успешно создан
+        '202':
+          description: Заказ принят в обработку (асинхронно)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrderDto'
-              example:
-                id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
-                status: "Created"
-                totalAmount: 199999.98
-                items:
-                  - productId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-                    quantity: 2
-                    priceAtPurchase: 99999.99
+                type: object
+                required: [orderId, statusCheckUrl]
+                properties:
+                  orderId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [Draft, Processing]
+                    default: Draft
+                  statusCheckUrl:
+                    type: string
+                    format: uri
+                    example: "/api/orders/{orderId}/status"
         '400':
           description: Ошибка валидации данных
           content:
@@ -732,6 +723,28 @@ paths:
           description: Недостаточно прав
         '404':
           description: Заказ не найден
+
+  /api/orders/{id}/status:
+    get:
+      summary: Проверка статуса обработки заказа (для SAGA)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Текущий статус обработки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { $ref: '#/components/schemas/OrderStatus' }
+                  message: 
+                    type: string
+                    example: "Waiting for stock reservation..."
+                  updatedAt: { type: string, format: date-time }
 
 components:
   securitySchemes:
@@ -845,16 +858,22 @@ components:
           example: "appliances"
 
     # === Products ===
+    
     Money:
       type: object
-      required:
-        - amount
+      required: [amount, currency]
       properties:
         amount:
-          type: number
-          format: float
-          minimum: 0
-          example: 99999.99
+          type: string
+          pattern: '^\d+\.\d{2}$'
+          example: "1299.99"
+          description: Сумма в формате строки для сохранения точности (2 знака после запятой)
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          default: RUB
+          example: "RUB"
+          description: Код валюты по стандарту ISO 4217 (например, "RUB", "USD", "EUR", "KZT")
 
     ProductImage:
       type: object
@@ -1008,16 +1027,14 @@ components:
           example: 20
 
     # === Pricing / Discounts ===
+    
     SetDiscountRequest:
       type: object
       required:
         - salePrice
       properties:
         salePrice:
-          type: number
-          format: float
-          minimum: 0
-          example: 79999.99
+          $ref: '#/components/schemas/Money'
 
     ProductDiscountDto:
       type: object
@@ -1039,9 +1056,7 @@ components:
           description: Уникальный идентификатор продавца-владельца товара (UUID)
           example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
         salePrice:
-          type: number
-          format: float
-          example: 79999.99
+          $ref: '#/components/schemas/Money'
         isActive:
           type: boolean
           example: true
@@ -1134,11 +1149,9 @@ components:
           readOnly: true
           nullable: true
         totalAmount:
-          type: number
-          format: float
+          $ref: '#/components/schemas/Money'
           readOnly: true
           description: Итоговая сумма заказа
-          example: 199999.98
         items:
           type: array
           readOnly: true
@@ -1165,8 +1178,7 @@ components:
           readOnly: true
           minimum: 1
         priceAtPurchase:
-          type: number
-          format: float
+          $ref: '#/components/schemas/Money'
           readOnly: true
           description: Цена товара на момент покупки
 

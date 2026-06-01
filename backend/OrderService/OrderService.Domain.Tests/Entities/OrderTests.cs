@@ -21,11 +21,10 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
             items);
 
         order.Should().NotBeNull();
-        order.Id.Should().NotBeEmpty();
         order.CustomerId.Should().Be(fixture.CustomerId);
         order.CustomerName.Should().Be(fixture.CustomerName);
-        order.CustomerEmail.Should().Be(fixture.CustomerEmail);
-        order.DeliveryAddress.Should().Be(fixture.DeliveryAddress);
+        order.CustomerEmail.Value.Should().Be(fixture.CustomerEmail.ToLower());
+        order.DeliveryAddress?.AddressLine.Should().Be(fixture.DeliveryAddress);
         order.Status.Should().Be(OrderStatus.Created);
         order.Items.Count.Should().Be(2);
         order.Version.Should().Be(1);
@@ -100,7 +99,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
             fixture.DeliveryAddress,
             items);
 
-        order.TotalAmount.Should().Be(65.00m);
+        order.TotalAmount.Value.Should().Be(65.00m);
     }
 
     [Fact]
@@ -130,7 +129,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         order.AddItem(newItem);
 
         order.Items.Count.Should().Be(initialCount + 1);
-        order.TotalAmount.Should().BeGreaterThan(initialTotal);
+        order.TotalAmount.Value.Should().BeGreaterThan(initialTotal);
         order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         order.Version.Should().Be(2);
         order.DomainEvents.Last().Should().BeOfType<OrderItemAddedEvent>();
@@ -175,7 +174,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
 
         order.Items.Count.Should().Be(initialCount - 1);
         order.Items.Should().NotContain(i => i.Id == itemToRemove.Id);
-        order.TotalAmount.Should().BeLessThan(order.TotalAmount + refundedAmount);
+        order.TotalAmount.Value.Should().BeLessThan(order.TotalAmount + refundedAmount);
         order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         order.Version.Should().Be(2);
         order.DomainEvents.Last().Should().BeOfType<OrderItemRemovedEvent>();

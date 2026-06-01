@@ -33,5 +33,5 @@
 | `Debezium` | `Высокая сложность реализации, задача больше для DBA` |
 
 ## Ссылки
-- Issue: `https://github.com/Goluboy/OzonMarketplace/issues/16`
-- PR: `https://github.com/Goluboy/OzonMarketplace/commit/1a0b3fb9b7c62c5fc608d01a56fe504fa3192f0d`
+- Issue: [#16](https://github.com/Goluboy/OzonMarketplace/issues/16)
+- PR: [Commit 1a0b3fb](https://github.com/Goluboy/OzonMarketplace/commit/1a0b3fb9b7c62c5fc608d01a56fe504fa3192f0d)

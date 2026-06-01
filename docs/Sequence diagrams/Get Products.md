@@ -1,3 +1,4 @@
+``` mermaid
 sequenceDiagram
     participant Frontend
     participant NGINX
@@ -25,3 +26,4 @@ sequenceDiagram
     
     Note over Frontend: Continue until hasNext: false
     
+```

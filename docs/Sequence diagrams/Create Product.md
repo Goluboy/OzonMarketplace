@@ -1,3 +1,4 @@
+``` mermaid
 sequenceDiagram
     participant Frontend
     participant NGINX
@@ -70,3 +71,4 @@ sequenceDiagram
     
     OrderService->>NGINX: Return final response
     NGINX->>Frontend: Order result
+```

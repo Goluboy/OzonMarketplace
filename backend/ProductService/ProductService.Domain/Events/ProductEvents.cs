@@ -2,16 +2,20 @@
 
 public record ProductCreatedEvent(
     Guid ProductId,
-    int Sku,
+    Guid SellerId,
+    long Sku,
     string Name,
     decimal PriceAmount,
+    string Currency,
     int CategoryId,
     List<string> ImageUrls) : DomainEvent;
     
 public record ProductPriceChangedEvent(
     Guid ProductId,
     decimal OldAmount,
-    decimal NewAmount) : DomainEvent;
+    string OldCurrency,
+    decimal NewAmount,
+    string NewCurrency) : DomainEvent;
     
 public record ProductDetailsUpdatedEvent(
     Guid ProductId,

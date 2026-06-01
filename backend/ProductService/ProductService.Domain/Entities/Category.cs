@@ -1,10 +1,16 @@
-﻿namespace ProductService.Domain.Entities;
+﻿using ProductService.Domain.Events;
+
+namespace ProductService.Domain.Entities;
 
 public class Category : IEquatable<Category>
 {
     public int Id { get; private set; }
     public string Name { get; private set; } = null!;
     public string Path { get; private set; } = null!;
+    
+    private readonly List<IDomainEvent> _domainEvents = [];
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+    public void ClearDomainEvents() => _domainEvents.Clear();
     
     private Category() { }
     
@@ -17,8 +23,22 @@ public class Category : IEquatable<Category>
 
         ValidatePath(path);
 
+        var category = new Category
+        {
+            Name = name,
+            Path = path
+        };
+        
+        category._domainEvents.Add(new CategoryCreatedEvent(category));
+        
+        return category;
+    }
+    
+    public static Category Reconstruct(int id, string name, string path)
+    {
         return new Category
         {
+            Id = id,
             Name = name,
             Path = path
         };
@@ -32,6 +52,8 @@ public class Category : IEquatable<Category>
         }
         
         Name = newName;
+        
+        _domainEvents.Add(new CategoryRenamedEvent(Id, newName));
     }
     
     public void MoveTo(string newPath)
@@ -39,6 +61,8 @@ public class Category : IEquatable<Category>
         ValidatePath(newPath);
         
         Path = newPath;
+        
+        _domainEvents.Add(new CategoryPathChangedEvent(Id, newPath));
     }
 
     public void SetId(int id)

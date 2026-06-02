@@ -3,7 +3,6 @@
 public record CategoryDao
 {
     public CategoryDao() {}
-    
     public int Id { get; init; }
     public required string Name { get; init; }
     public required string Path { get; init; }
@@ -29,14 +28,4 @@ public record ProductDao
 public record ProductImageDao
 {
     public required string Url { get; init; }
-}
-
-public record OutboxMessageDao
-{
-    public OutboxMessageDao() {}
-    public Guid Id { get; set; }
-    public required string Type { get; set; }
-    public required string Payload { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? ProcessedAt { get; set; }
 }

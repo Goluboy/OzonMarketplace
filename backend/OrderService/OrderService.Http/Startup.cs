@@ -7,13 +7,12 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 using System.Data;
 using System.Text;
+using OrderService.Infrastructure.EventBus;
 
 namespace OrderService.Http
 {
     public class Startup(IConfiguration configuration)
     {
-        public IConfiguration Configuration { get; } = configuration;
-
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers()
@@ -24,9 +23,9 @@ namespace OrderService.Http
                         System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
                 });
 
-            var jwtKey = Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT_KEY не задан");
-            var jwtIssuer = Configuration["Jwt:Issuer"];
-            var jwtAudience = Configuration["Jwt:Audience"];
+            var jwtKey = configuration["Jwt:Key"] ?? "asfddfgaessedrfggseradfergaswe23234234r4234rw234rw23r23r4w23r";
+            var jwtIssuer = configuration["Jwt:Issuer"];
+            var jwtAudience = configuration["Jwt:Audience"];
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -49,7 +48,7 @@ namespace OrderService.Http
             });
 
             services.AddScoped<IDbConnection>(sp =>
-                new NpgsqlConnection(Configuration.GetConnectionString("DefaultConnection")));
+                new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();
@@ -87,6 +86,8 @@ namespace OrderService.Http
                     );
                 }
             );
+
+            services.AddKafkaIntegration(configuration);
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

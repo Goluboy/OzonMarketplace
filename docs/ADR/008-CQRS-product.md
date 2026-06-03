@@ -36,5 +36,5 @@
 | `Классический CRUD` | `Неоптимальный по аллокациям и CPU bound` |
 
 ## Ссылки
-- Issue: [#23](https://github.com/Goluboy/OzonMarketplace/issues/17)
+- Issue: [#23](https://github.com/Goluboy/OzonMarketplace/issues/23)
 - PR: `#[номер]`

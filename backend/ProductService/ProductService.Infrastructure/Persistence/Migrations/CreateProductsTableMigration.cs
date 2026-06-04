@@ -58,6 +58,14 @@ public class CreateProductsTableMigration : Migration
             .OnColumn(categoryId).Ascending()
             .OnColumn(name).Ascending();
         
+        Create.Index("ix_products_created_at_global")
+            .OnTable(TableName)
+            .OnColumn(createdAt).Descending();
+        
+        Create.Index("ix_products_sku_global")
+            .OnTable(TableName)
+            .OnColumn(sku).Ascending();
+        
         Alter.Table(TableName)
             .AddColumn("search_vector").AsCustom(
                 "tsvector GENERATED ALWAYS AS (to_tsvector('russian', coalesce(name, '') || ' ' || coalesce(description, ''))) STORED"

@@ -25,7 +25,4 @@ public record ProductDao
     public List<ProductImageDao> Images { get; init; } = [];
 }
 
-public record ProductImageDao
-{
-    public required string Url { get; init; }
-}
+public record ProductImageDao(string Url);

@@ -5,10 +5,12 @@ using DotNetCore.CAP;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
+using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Product;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using ProductService.Infrastructure.Persistence;
 using ProductService.Infrastructure.Persistence.Provider;
 using ProductService.Infrastructure.Repository;
+using ProductService.Infrastructure.Repository.Product;
 using ProductService.Infrastructure.UnitOfWork;
 using Testcontainers.PostgreSql;
 
@@ -50,13 +52,13 @@ public sealed class PostgresFixture : IAsyncLifetime
         DefaultTypeMap.MatchNamesWithUnderscores = true;
     }
     
-    public async Task ResetAsync()
+    public async Task ResetAsync(string table)
     {
         await using var connection = new NpgsqlConnection(ConnectionString);
         await connection.OpenAsync();
         
 
-        await connection.ExecuteAsync("TRUNCATE categories RESTART IDENTITY CASCADE;");
+        await connection.ExecuteAsync($"TRUNCATE {table} RESTART IDENTITY CASCADE;");
     }
 
     public IPostgresConnectionFactory CreateConnectionFactory()
@@ -78,10 +80,16 @@ public sealed class PostgresFixture : IAsyncLifetime
         
         return (uow, uow);
     }
+    
 
     public ICategoryRepository CreateCategoryRepository(IDbSession dbSession)
     {
         return new CategoryRepository(dbSession);
+    }
+
+    public IProductQueryRepository CreateProductQueryRepository(IPostgresConnectionFactory connectionFactory)
+    {
+        return new ProductQueryRepository(connectionFactory);
     }
 
     public async Task DisposeAsync()

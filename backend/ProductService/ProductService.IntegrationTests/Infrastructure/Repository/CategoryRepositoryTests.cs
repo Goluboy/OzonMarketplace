@@ -7,25 +7,18 @@ using ProductService.Infrastructure.DAO;
 
 namespace ProductService.IntegrationTests.Infrastructure.Repository;
 
-public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLifetime
+public class CategoryRepositoryTests(PostgresFixture fixture) : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
-    private readonly PostgresFixture _fixture;
-
-    public CategoryRepositoryTests(PostgresFixture fixture)
-    {
-        _fixture = fixture;
-    }
-
     public Task InitializeAsync() => Task.CompletedTask;
     
     public async Task DisposeAsync()
     {
-        await _fixture.ResetAsync();
+        await fixture.ResetAsync("categories");
     }
     
     private async Task<int> InsertCategoryDirectlyAsync(string name, string path)
     {
-        await using var connection = new NpgsqlConnection(_fixture.ConnectionString);
+        await using var connection = new NpgsqlConnection(fixture.ConnectionString);
         await connection.OpenAsync();
         
         const string sql = "INSERT INTO categories (name, path) VALUES (@Name, @Path) RETURNING id;";
@@ -36,8 +29,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
     public async Task GetAllAsync_WhenDatabaseIsEmpty_ShouldReturnEmptyCollection()
     {
         // Arrange
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
 
         // Act
         var result = await repository.GetAllAsync();
@@ -53,8 +46,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
         var id1 = await InsertCategoryDirectlyAsync("Electronics", "electronics");
         var id2 = await InsertCategoryDirectlyAsync("Books", "books");
 
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
 
         // Act
         var result = await repository.GetAllAsync();
@@ -71,8 +64,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
         // Arrange
         var id = await InsertCategoryDirectlyAsync("Home Decor", "home.decor");
 
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
 
         // Act
         var result = await repository.GetByIdAsync(id);
@@ -88,8 +81,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
     public async Task GetByIdAsync_WhenCategoryDoesNotExist_ShouldReturnNull()
     {
         // Arrange
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
         const int nonExistentId = 9999;
 
         // Act
@@ -103,8 +96,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
     public async Task AddAsync_WithValidData_ShouldInsertSuccessfullyAndReturnId()
     {
         // Arrange
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
         var category = Category.Create("Automotive", "automotive");
 
         // Act
@@ -115,7 +108,7 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
         // Assert
         id.Should().BeGreaterThan(0);
         
-        await using var connection = new NpgsqlConnection(_fixture.ConnectionString);
+        await using var connection = new NpgsqlConnection(fixture.ConnectionString);
         await connection.OpenAsync();
         var dbRow = await connection.QueryFirstOrDefaultAsync<CategoryDao>(
             "SELECT id, name, path FROM categories WHERE id = @Id;", new { Id = id });
@@ -129,8 +122,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
     public async Task AddAsync_WithDatabaseConstraintViolation_ShouldThrowDbException()
     {
         // Arrange
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
         var category = Category.Create("Valid Name", "valid.path");
         
         typeof(Category)
@@ -153,8 +146,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
         // Arrange
         var id = await InsertCategoryDirectlyAsync("Initial Name", "initial.path");
 
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
 
         var category = Category.Create("Updated Name", "updated.path");
         category.SetId(id);
@@ -167,7 +160,7 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
         // Assert
         isUpdated.Should().BeTrue();
 
-        await using var connection = new NpgsqlConnection(_fixture.ConnectionString);
+        await using var connection = new NpgsqlConnection(fixture.ConnectionString);
         await connection.OpenAsync();
         var dbRow = await connection.QueryFirstOrDefaultAsync<CategoryDao>(
             "SELECT name, path FROM categories WHERE id = @Id;", new { Id = id });
@@ -181,8 +174,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
     public async Task UpdateAsync_WhenCategoryDoesNotExist_ShouldReturnFalse()
     {
         // Arrange
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
         
         var nonExistentCategory = Category.Create("Ghost", "ghost");
         nonExistentCategory.SetId(9999);
@@ -202,8 +195,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
         // Arrange
         var id = await InsertCategoryDirectlyAsync("To Be Deleted", "delete.me");
 
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
 
         // Act
         await uow.BeginTransactionAsync();
@@ -211,7 +204,7 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
         await uow.CommitAsync();
 
         // Assert
-        await using var connection = new NpgsqlConnection(_fixture.ConnectionString);
+        await using var connection = new NpgsqlConnection(fixture.ConnectionString);
         await connection.OpenAsync();
         var exists = await connection.ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM categories WHERE id = @Id);", new { Id = id });
@@ -223,8 +216,8 @@ public class CategoryRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLif
     public async Task DeleteAsync_WhenCategoryDoesNotExist_ShouldNotThrowException()
     {
         // Arrange
-        var (uow, session) = _fixture.CreateUnitOfWorkContext();
-        var repository = _fixture.CreateCategoryRepository(session);
+        var (uow, session) = fixture.CreateUnitOfWorkContext();
+        var repository = fixture.CreateCategoryRepository(session);
         const int nonExistentId = 9999;
 
         // Act

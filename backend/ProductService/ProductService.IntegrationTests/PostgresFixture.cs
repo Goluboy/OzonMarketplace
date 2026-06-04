@@ -5,12 +5,12 @@ using DotNetCore.CAP;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
-using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Product;
+using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using ProductService.Infrastructure.Persistence;
 using ProductService.Infrastructure.Persistence.Provider;
 using ProductService.Infrastructure.Repository;
-using ProductService.Infrastructure.Repository.Product;
+using ProductService.Infrastructure.Repository.Products;
 using ProductService.Infrastructure.UnitOfWork;
 using Testcontainers.PostgreSql;
 
@@ -90,6 +90,11 @@ public sealed class PostgresFixture : IAsyncLifetime
     public IProductQueryRepository CreateProductQueryRepository(IPostgresConnectionFactory connectionFactory)
     {
         return new ProductQueryRepository(connectionFactory);
+    }
+
+    public IProductRepository CreateProductRepository(IDbSession dbSession)
+    {
+        return new ProductRepository(dbSession);
     }
 
     public async Task DisposeAsync()

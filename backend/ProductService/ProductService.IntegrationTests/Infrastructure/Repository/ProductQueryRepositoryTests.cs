@@ -2,7 +2,7 @@
 using FluentAssertions;
 using Npgsql;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
-using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Product;
+using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Helpers;
 using ProductService.Infrastructure.Helpers.JsonbSerialization;

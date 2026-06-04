@@ -2,6 +2,7 @@
 
 public record ProductCardDto(
     Guid Id,
+    Guid SellerId,
     int CategoryId,
     string Name,
     decimal PriceAmount,

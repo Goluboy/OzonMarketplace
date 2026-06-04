@@ -1,6 +1,6 @@
 ﻿using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 
-namespace ProductService.Infrastructure.Abstractions.Repository.Abstractions.Product;
+namespace ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 
 public interface IProductQueryRepository
 {

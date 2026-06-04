@@ -1,13 +1,12 @@
 ﻿using System.Globalization;
 using Dapper;
-using Microsoft.Data.SqlClient;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
-using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Product;
+using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Helpers;
 using ProductService.Infrastructure.Persistence.Provider;
 
-namespace ProductService.Infrastructure.Repository.Product;
+namespace ProductService.Infrastructure.Repository.Products;
 
 public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory) : IProductQueryRepository
 {
@@ -21,6 +20,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         
         return productsDao.Select(productDao => new ProductCardDto(
             Id: productDao.Id,
+            SellerId: productDao.SellerId,
             CategoryId: productDao.CategoryId,
             Name: productDao.Name,
             PriceAmount: productDao.PriceAmount,
@@ -45,6 +45,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         
         return new ProductCardDto(
             Id: productDao.Id,
+            SellerId: productDao.SellerId,
             CategoryId: productDao.CategoryId,
             Name: productDao.Name,
             PriceAmount: productDao.PriceAmount,

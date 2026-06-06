@@ -3,7 +3,7 @@ using Dapper;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.DAO;
-using ProductService.Infrastructure.Mapper;
+using ProductService.Infrastructure.Mappers;
 using ProductService.Infrastructure.UnitOfWork;
 
 namespace ProductService.Infrastructure.Repository.Products;

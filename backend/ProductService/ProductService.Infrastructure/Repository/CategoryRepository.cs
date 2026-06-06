@@ -2,14 +2,14 @@
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.DAO;
-using ProductService.Infrastructure.Mapper;
+using ProductService.Infrastructure.Mappers;
 using ProductService.Infrastructure.UnitOfWork;
 
 namespace ProductService.Infrastructure.Repository;
 
 public class CategoryRepository(IDbSession session) : ICategoryRepository
 {
-    public async Task<IReadOnlyCollection<Category>> GetAllAsync()
+    public async Task<IReadOnlyCollection<Category>> GetAllAsync(CancellationToken ct)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;
@@ -21,7 +21,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return daos.Select(dao => dao.ToDomain()).ToList();
     }
 
-    public async Task<Category?> GetByIdAsync(int id)
+    public async Task<Category?> GetByIdAsync(int id, CancellationToken ct)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;
@@ -37,7 +37,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return dao?.ToDomain();
     }
 
-    public async Task<int> AddAsync(Category category)
+    public async Task<int> AddAsync(Category category, CancellationToken ct)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;
@@ -55,7 +55,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return id;
     }
 
-    public async Task<bool> UpdateAsync(Category category)
+    public async Task<bool> UpdateAsync(Category category, CancellationToken ct)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;
@@ -74,7 +74,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return updatedRows > 0;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id, CancellationToken ct)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;

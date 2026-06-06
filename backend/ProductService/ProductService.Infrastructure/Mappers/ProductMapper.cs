@@ -2,7 +2,7 @@
 using ProductService.Domain.ValueObjects;
 using ProductService.Infrastructure.DAO;
 
-namespace ProductService.Infrastructure.Mapper;
+namespace ProductService.Infrastructure.Mappers;
 
 public static class ProductMapper
 {

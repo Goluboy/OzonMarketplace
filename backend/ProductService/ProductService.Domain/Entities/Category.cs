@@ -21,12 +21,14 @@ public class Category : IEquatable<Category>
             throw new ArgumentException("Category Name cannot be null or empty", nameof(name));
         }
 
-        ValidatePath(path);
+        var normalizedPath = path.Trim().ToLowerInvariant();
+        
+        ValidatePath(normalizedPath);
 
         var category = new Category
         {
             Name = name,
-            Path = path
+            Path = normalizedPath
         };
         
         category._domainEvents.Add(new CategoryCreatedEvent(category));
@@ -51,6 +53,11 @@ public class Category : IEquatable<Category>
             throw new ArgumentException("Category Name cannot be null or empty", nameof(newName));
         }
         
+        if (string.Equals(Name, newName, StringComparison.Ordinal))
+        {
+            return;
+        }
+        
         Name = newName;
         
         _domainEvents.Add(new CategoryRenamedEvent(Id, newName));
@@ -58,11 +65,13 @@ public class Category : IEquatable<Category>
     
     public void MoveTo(string newPath)
     {
-        ValidatePath(newPath);
+        var normalizedPath = newPath.Trim().ToLowerInvariant();
         
-        Path = newPath;
+        ValidatePath(normalizedPath);
         
-        _domainEvents.Add(new CategoryPathChangedEvent(Id, newPath));
+        Path = normalizedPath;
+        
+        _domainEvents.Add(new CategoryPathChangedEvent(Id, normalizedPath));
     }
 
     public void SetId(int id)

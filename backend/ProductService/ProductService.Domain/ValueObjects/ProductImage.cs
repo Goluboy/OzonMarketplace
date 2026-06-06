@@ -8,13 +8,13 @@ public record ProductImage
     {
         if (string.IsNullOrWhiteSpace(url))
         {
-            throw new ArgumentException("URL не может быть пустым.");
+            throw new ArgumentException("URL cannot be null or empty.");
         }
         
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uriResult) || 
             (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
         {
-            throw new ArgumentException("Некорректный формат URL.");
+            throw new ArgumentException("Incorrect URL format.");
         }
 
         Url = url;

@@ -1,7 +1,7 @@
 ﻿using ProductService.Domain.Entities;
 using ProductService.Infrastructure.DAO;
 
-namespace ProductService.Infrastructure.Mapper;
+namespace ProductService.Infrastructure.Mappers;
 
 public static class CategoryMapper
 {

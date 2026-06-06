@@ -21,7 +21,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return daos.Select(dao => dao.ToDomain()).ToList();
     }
 
-    public async Task<Category?> GetByIdAsync(int id, CancellationToken ct)
+    public async Task<Category?> GetAsync(int id, CancellationToken ct)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;

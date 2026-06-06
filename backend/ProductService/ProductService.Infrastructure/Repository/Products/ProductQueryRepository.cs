@@ -10,50 +10,52 @@ namespace ProductService.Infrastructure.Repository.Products;
 
 public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory) : IProductQueryRepository
 {
-    public async Task<IReadOnlyList<ProductCardDto>> GetCardsBySkuAsync(long sku)
+    public async Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(long sku, CancellationToken ct = default)
     {
         await using var connection = connectionFactory.GetConnection();
         
-        const string sql = "SELECT id, sku, seller_id, name, price_amount, price_currency, category_id, images FROM products WHERE sku = @Sku;";
+        const string sql = """
+                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'Url', '') as main_image_url 
+                           FROM products 
+                           WHERE sku = @Sku;
+                           """;
         
-        var productsDao = await connection.QueryAsync<ProductDao>(sql, new { Sku = sku });
+        var productCards = await connection.QueryAsync<ProductCardDto>(sql, new { Sku = sku });
         
-        return productsDao.Select(productDao => new ProductCardDto(
-            Id: productDao.Id,
-            SellerId: productDao.SellerId,
-            CategoryId: productDao.CategoryId,
-            Name: productDao.Name,
-            PriceAmount: productDao.PriceAmount,
-            PriceCurrency: productDao.PriceCurrency,
-            MainImageUrl: productDao.Images.FirstOrDefault()?.Url ?? string.Empty
-        )).ToList();
+        return productCards.ToList();
     }
-
-    public async Task<ProductCardDto?> GetCardByIdAsync(Guid id)
+    
+    public async Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
     {
         await using var connection = connectionFactory.GetConnection();
         
-        const string sql = "SELECT id, sku, seller_id, name, price_amount, price_currency, category_id, images FROM products WHERE id = @Id;";
+        const string sql = """
+                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'Url', '') as main_image_url 
+                           FROM products 
+                           WHERE id = ANY(@Ids);
+                           """;
         
-        var productDao = await connection.QueryFirstOrDefaultAsync<ProductDao>(sql, new { Id = id });
-        if (productDao is null)
-        {
-            return null;
-        }
+        var productCards = await connection.QueryAsync<ProductCardDto>(sql, new { Ids = ids });
         
-        var mainImage = productDao.Images.FirstOrDefault()?.Url ?? string.Empty;
-        
-        return new ProductCardDto(
-            Id: productDao.Id,
-            SellerId: productDao.SellerId,
-            CategoryId: productDao.CategoryId,
-            Name: productDao.Name,
-            PriceAmount: productDao.PriceAmount,
-            PriceCurrency: productDao.PriceCurrency,
-            MainImageUrl: mainImage);
+        return productCards.ToList();
     }
 
-    public async Task<ProductDetailsDto?> GetDetailsByIdAsync(Guid id)
+    public async Task<ProductCardDto?> GetCardAsync(Guid id, CancellationToken ct = default)
+    {
+        await using var connection = connectionFactory.GetConnection();
+        
+        const string sql = """
+                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'Url', '') as main_image_url 
+                           FROM products 
+                           WHERE id = @Id;
+                           """;
+        
+        var productCard = await connection.QueryFirstOrDefaultAsync<ProductCardDto>(sql, new { Id = id });
+        
+        return productCard;
+    }
+
+    public async Task<ProductDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default)
     {
         await using var connection = connectionFactory.GetConnection();
         
@@ -72,7 +74,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         return productDto;
     }
 
-    public async Task<ProductPagedIdsDto> GetPagedAsync(ProductSearchFilter filter)
+    public async Task<ProductPagedIdsDto> GetPagedAsync(ProductSearchFilter filter, CancellationToken ct = default)
     {
         var sortColumn = filter.SortBy.ToLowerInvariant() switch
         {

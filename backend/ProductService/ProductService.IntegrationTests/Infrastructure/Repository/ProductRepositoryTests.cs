@@ -110,7 +110,7 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
 
         // Act
         await uow.BeginTransactionAsync();
-        var result = await _repository.GetByIdAsync(productId);
+        var result = await _repository.GetAsync(productId);
         await uow.CommitAsync();
 
         // Assert
@@ -131,7 +131,7 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
 
         // Act
         await uow.BeginTransactionAsync();
-        var result = await _repository.GetByIdAsync(Guid.NewGuid());
+        var result = await _repository.GetAsync(Guid.NewGuid());
         await uow.CommitAsync();
 
         // Assert

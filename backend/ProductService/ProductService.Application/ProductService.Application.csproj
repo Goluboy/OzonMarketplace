@@ -7,11 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="DTO\" />
+      <ProjectReference Include="..\ProductService.Infrastructure.Abstractions\ProductService.Infrastructure.Abstractions.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\ProductService.Infrastructure.Abstractions\ProductService.Infrastructure.Abstractions.csproj" />
+      <Folder Include="DTO\Product\" />
+      <Folder Include="Services\Products\" />
     </ItemGroup>
 
 </Project>

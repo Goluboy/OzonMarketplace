@@ -2,12 +2,11 @@
 using ProductService.Application.DTO.Category;
 using ProductService.Application.Exceptions;
 using ProductService.Application.Mappers;
-using ProductService.Application.Services.Abstractions;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 
-namespace ProductService.Application.Services;
+namespace ProductService.Application.Services.Categories;
 
 public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categoryRepository) : ICategoryService
 {
@@ -55,7 +54,7 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
 
     public async Task<CategoryDto> UpdateAsync(UpdateCategoryDto dto, CancellationToken ct)
     {
-        var category = await categoryRepository.GetByIdAsync(dto.Id, ct) 
+        var category = await categoryRepository.GetAsync(dto.Id, ct) 
                        ?? throw new NotFoundException(nameof(Category), dto.Id);
 
         if (!string.Equals(category.Name, dto.Name, StringComparison.Ordinal))
@@ -102,7 +101,7 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
 
     public async Task DeleteAsync(int id, CancellationToken ct)
     {
-        var category = await categoryRepository.GetByIdAsync(id, ct) 
+        var category = await categoryRepository.GetAsync(id, ct) 
                        ?? throw new NotFoundException(nameof(Category), id);
         
         await unitOfWork.BeginTransactionAsync(ct);

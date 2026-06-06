@@ -10,7 +10,7 @@ namespace ProductService.Infrastructure.Repository.Products;
 
 public class ProductRepository(IDbSession session) : IProductRepository
 {
-    public async Task<Product?> GetByIdAsync(Guid id)
+    public async Task<Product?> GetAsync(Guid id)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;

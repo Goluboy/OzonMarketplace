@@ -5,6 +5,7 @@ using NSubstitute.ExceptionExtensions;
 using ProductService.Application.DTO.Category;
 using ProductService.Application.Exceptions;
 using ProductService.Application.Services;
+using ProductService.Application.Services.Categories;
 using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
@@ -143,7 +144,7 @@ public class CategoryServiceTests
         
         var input = new UpdateCategoryDto(1, "Electronics", "electronics");
 
-        _repository.GetByIdAsync(1, ct).Returns(existingCategory);
+        _repository.GetAsync(1, ct).Returns(existingCategory);
 
         // Act
         var result = await _service.UpdateAsync(input, ct);
@@ -164,7 +165,7 @@ public class CategoryServiceTests
         var existingCategory = Category.Reconstruct(1, "Old Name", "path");
         var input = new UpdateCategoryDto(1, "New Name", "path");
 
-        _repository.GetByIdAsync(1, ct).Returns(existingCategory);
+        _repository.GetAsync(1, ct).Returns(existingCategory);
         _repository.UpdateAsync(Arg.Any<Category>(), ct).Returns(true);
 
         // Act
@@ -185,7 +186,7 @@ public class CategoryServiceTests
         var ct = CancellationToken.None;
         var input = new UpdateCategoryDto(999, "Name", "path");
 
-        _repository.GetByIdAsync(999, ct).Returns((Category?)null);
+        _repository.GetAsync(999, ct).Returns((Category?)null);
 
         // Act
         var act = async () => await _service.UpdateAsync(input, ct);
@@ -203,7 +204,7 @@ public class CategoryServiceTests
         var existingCategory = Category.Reconstruct(1, "Old Name", "path");
         var input = new UpdateCategoryDto(1, "New Name", "path");
 
-        _repository.GetByIdAsync(1, ct).Returns(existingCategory);
+        _repository.GetAsync(1, ct).Returns(existingCategory);
         
         _repository.UpdateAsync(Arg.Any<Category>(), ct).Returns(false);
 
@@ -227,7 +228,7 @@ public class CategoryServiceTests
         var ct = CancellationToken.None;
         var existingCategory = Category.Reconstruct(10, "To Delete", "path");
 
-        _repository.GetByIdAsync(10, ct).Returns(existingCategory);
+        _repository.GetAsync(10, ct).Returns(existingCategory);
 
         // Act
         await _service.DeleteAsync(10, ct);
@@ -244,7 +245,7 @@ public class CategoryServiceTests
     {
         // Arrange
         var ct = CancellationToken.None;
-        _repository.GetByIdAsync(999, ct).Returns((Category?)null);
+        _repository.GetAsync(999, ct).Returns((Category?)null);
 
         // Act
         var act = async () => await _service.DeleteAsync(999, ct);
@@ -263,7 +264,7 @@ public class CategoryServiceTests
         var ct = CancellationToken.None;
         var existingCategory = Category.Reconstruct(10, "To Delete", "path");
 
-        _repository.GetByIdAsync(10, ct).Returns(existingCategory);
+        _repository.GetAsync(10, ct).Returns(existingCategory);
         _repository.DeleteAsync(10, ct).ThrowsAsync(new Exception("Database Error"));
 
         // Act

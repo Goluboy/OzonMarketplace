@@ -1,7 +1,7 @@
 ﻿
 using ProductService.Application.DTO.Category;
 
-namespace ProductService.Application.Services.Abstractions;
+namespace ProductService.Application.Services.Categories;
 
 public interface ICategoryService
 {

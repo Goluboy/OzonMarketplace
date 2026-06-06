@@ -59,11 +59,11 @@ public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublis
         }
     }
 
-    public async Task RollbackAsync(CancellationToken cancellationToken = default)
+    public async Task RollbackAsync()
     {
         if (Transaction != null)
         {
-            await Transaction.RollbackAsync(cancellationToken);
+            await Transaction.RollbackAsync(CancellationToken.None);
             await Transaction.DisposeAsync();
             Transaction = null;
         }

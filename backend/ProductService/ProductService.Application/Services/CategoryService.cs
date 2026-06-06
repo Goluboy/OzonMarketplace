@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Diagnostics.CodeAnalysis;
 using ProductService.Application.DTO.Category;
 using ProductService.Application.Exceptions;
 using ProductService.Application.Mappers;
@@ -49,7 +48,7 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
         }
         catch
         {
-            await unitOfWork.RollbackAsync(CancellationToken.None);
+            await unitOfWork.RollbackAsync();
             throw;
         }
     }
@@ -96,7 +95,7 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
         }
         catch
         {
-            await unitOfWork.RollbackAsync(CancellationToken.None);
+            await unitOfWork.RollbackAsync();
             throw;
         }
     }
@@ -119,7 +118,7 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
         }
         catch 
         {
-            await unitOfWork.RollbackAsync(CancellationToken.None);
+            await unitOfWork.RollbackAsync();
             throw;
         }
     }

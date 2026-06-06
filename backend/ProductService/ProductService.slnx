@@ -7,6 +7,7 @@
     <Project Path="ProductService.IntegrationEvents/ProductService.IntegrationEvents.csproj" Id="79b79768-8a23-403f-9837-f0325ced01be" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="ProductService.IntegrationTests/ProductService.IntegrationTests.csproj" />
     <Project Path="ProductService.UnitTests/ProductService.UnitTests.csproj" />
   </Folder>
 </Solution>

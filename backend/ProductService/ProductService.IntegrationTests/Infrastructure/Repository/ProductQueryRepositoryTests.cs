@@ -604,7 +604,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var targetIds = new List<Guid> { id1, id2 };
 
         // Act
-        var result = await _repository.GetCardsAsync(targetIds, CancellationToken.None);
+        var result = await _repository.GetCardsAsync(targetIds);
 
         // Assert
         result.Should().NotBeNull();
@@ -633,7 +633,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         await SeedProductAsync(id, 101, Guid.NewGuid(), "No Image Product", "Desc", 150m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
 
         // Act
-        var result = await _repository.GetCardsAsync(new List<Guid> { id }, CancellationToken.None);
+        var result = await _repository.GetCardsAsync(new List<Guid> { id });
 
         // Assert
         result.Should().ContainSingle();
@@ -653,7 +653,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var nonExistentIds = new List<Guid> { Guid.NewGuid() };
 
         // Act
-        var result = await _repository.GetCardsAsync(nonExistentIds, CancellationToken.None);
+        var result = await _repository.GetCardsAsync(nonExistentIds);
 
         // Assert
         result.Should().NotBeNull();

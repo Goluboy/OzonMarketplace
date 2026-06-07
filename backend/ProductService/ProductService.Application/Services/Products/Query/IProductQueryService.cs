@@ -1,7 +1,7 @@
 ﻿using ProductService.Application.DTO.Product;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 
-namespace ProductService.Application.Services.Products;
+namespace ProductService.Application.Services.Products.Query;
 
 public interface IProductQueryService
 {

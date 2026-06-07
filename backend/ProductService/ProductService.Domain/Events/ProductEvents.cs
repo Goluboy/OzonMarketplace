@@ -25,4 +25,5 @@ public record ProductDetailsUpdatedEvent(
 
 public record ProductImagesUpdatedEvent(
     Guid ProductId,
-    List<string> ImageUrls) : DomainEvent;
+    List<string> ImageUrls,
+    List<string> RemovedUrls) : DomainEvent;

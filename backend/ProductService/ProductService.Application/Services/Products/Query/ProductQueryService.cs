@@ -4,20 +4,22 @@ using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 
-namespace ProductService.Application.Services.Products;
+namespace ProductService.Application.Services.Products.Query;
 
 public class ProductQueryService(IProductQueryRepository queryRepository) : IProductQueryService
 {
     public async Task<ProductCardsPage> GetCatalogAsync(ProductSearchFilter filter, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+        
         if (TryGetSku(filter.Search, out var sku))
         {
-            var skuCards = await queryRepository.GetCardsAsync(sku, ct);
+            var skuCards = await queryRepository.GetCardsAsync(sku);
             
             return new ProductCardsPage(skuCards, NextCursor: null, filter.PageSize);
         }
         
-        var dbPagedResult = await queryRepository.GetPagedAsync(filter, ct);
+        var dbPagedResult = await queryRepository.GetPagedAsync(filter);
         
         if (!dbPagedResult.ProductIds.Any())
         {
@@ -26,7 +28,7 @@ public class ProductQueryService(IProductQueryRepository queryRepository) : IPro
         
         var productIds = dbPagedResult.ProductIds;
         
-        var dbCards = await queryRepository.GetCardsAsync(productIds, ct);
+        var dbCards = await queryRepository.GetCardsAsync(productIds);
         
         var cardsMap = dbCards.ToDictionary(c => c.Id);
         
@@ -40,7 +42,9 @@ public class ProductQueryService(IProductQueryRepository queryRepository) : IPro
 
     public async Task<ProductDetailsDto> GetProductAsync(Guid id, CancellationToken ct = default)
     {
-        var dbDetails = await queryRepository.GetDetailsAsync(id, ct);
+        ct.ThrowIfCancellationRequested();
+        
+        var dbDetails = await queryRepository.GetDetailsAsync(id);
 
         if (dbDetails == null)
         {

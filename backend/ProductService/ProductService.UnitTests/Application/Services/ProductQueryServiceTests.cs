@@ -2,6 +2,7 @@
 using NSubstitute;
 using ProductService.Application.Exceptions;
 using ProductService.Application.Services.Products;
+using ProductService.Application.Services.Products.Query;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using Xunit;
@@ -41,7 +42,7 @@ public class ProductQueryServiceTests
             new(Guid.NewGuid(), Guid.NewGuid(), 1, "Phone Store 2", 950m, "RUB", "img2.png")
         };
 
-        _repository.GetCardsAsync(123456, ct).Returns(skuCards);
+        _repository.GetCardsAsync(123456).Returns(skuCards);
 
         var result = await _service.GetCatalogAsync(filter, ct);
 
@@ -49,8 +50,8 @@ public class ProductQueryServiceTests
         result.Items.Should().HaveCount(2);
         result.NextCursor.Should().BeNull();
 
-        await _repository.DidNotReceive().GetPagedAsync(Arg.Any<ProductSearchFilter>(), ct);
-        await _repository.DidNotReceive().GetCardsAsync(Arg.Any<IReadOnlyList<Guid>>(), ct);
+        await _repository.DidNotReceive().GetPagedAsync(Arg.Any<ProductSearchFilter>());
+        await _repository.DidNotReceive().GetCardsAsync(Arg.Any<IReadOnlyList<Guid>>());
     }
 
     [Fact]
@@ -69,7 +70,7 @@ public class ProductQueryServiceTests
         );
 
         var emptyPagedResult = new ProductPagedIdsDto(new List<Guid>(), null);
-        _repository.GetPagedAsync(filter, ct).Returns(emptyPagedResult);
+        _repository.GetPagedAsync(filter).Returns(emptyPagedResult);
 
         var result = await _service.GetCatalogAsync(filter, ct);
 
@@ -77,7 +78,7 @@ public class ProductQueryServiceTests
         result.Items.Should().BeEmpty();
         result.NextCursor.Should().BeNull();
 
-        await _repository.DidNotReceive().GetCardsAsync(Arg.Any<IReadOnlyList<Guid>>(), ct);
+        await _repository.DidNotReceive().GetCardsAsync(Arg.Any<IReadOnlyList<Guid>>());
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public class ProductQueryServiceTests
 
         var pagedIds = new List<Guid> { id3, id1, id2 };
         var dbPagedResult = new ProductPagedIdsDto(pagedIds, "next_page_cursor_token");
-        _repository.GetPagedAsync(filter, ct).Returns(dbPagedResult);
+        _repository.GetPagedAsync(filter).Returns(dbPagedResult);
 
         var dbCards = new List<ProductCardDto>
         {
@@ -110,7 +111,7 @@ public class ProductQueryServiceTests
             new(id2, sellerId, 1, "Notebook Cheap", 500m, "RUB", "img2.png"),
             new(id3, sellerId, 1, "Notebook Expensive", 2000m, "RUB", "img3.png")
         };
-        _repository.GetCardsAsync(pagedIds, ct).Returns(dbCards);
+        _repository.GetCardsAsync(pagedIds).Returns(dbCards);
 
         var result = await _service.GetCatalogAsync(filter, ct);
 
@@ -155,7 +156,7 @@ public class ProductQueryServiceTests
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        _repository.GetDetailsAsync(productId, ct).Returns(detailsDto);
+        _repository.GetDetailsAsync(productId).Returns(detailsDto);
 
         var result = await _service.GetProductAsync(productId, ct);
 
@@ -172,7 +173,7 @@ public class ProductQueryServiceTests
         var ct = CancellationToken.None;
         var nonExistentId = Guid.NewGuid();
 
-        _repository.GetDetailsAsync(nonExistentId, ct).Returns((ProductDetailsDto?)null);
+        _repository.GetDetailsAsync(nonExistentId).Returns((ProductDetailsDto?)null);
 
         var act = async () => await _service.GetProductAsync(nonExistentId, ct);
 

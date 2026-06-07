@@ -8,6 +8,25 @@ namespace ProductService.UnitTests.Domain;
 
 public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture>
 {
+    private static Product CreateProductWithImages(List<string> imageUrls)
+    {
+        var images = imageUrls.Select(url => new ProductImage(url)).ToList();
+        
+        return Product.Reconstruct(
+            id: Guid.NewGuid(),
+            sellerId: Guid.NewGuid(),
+            sku: 123456,
+            name: "Test Product",
+            description: "Description",
+            price: new Money(100m, "RUB"),
+            categoryId: 1,
+            createdAt: DateTimeOffset.UtcNow.AddHours(-1),
+            updatedAt: DateTimeOffset.UtcNow.AddHours(-1),
+            version: 1,
+            images: images
+        );
+    }
+    
     [Fact]
     public void Create_WithValidParameters_ShouldCreateProduct()
     {
@@ -224,97 +243,159 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
     }
     
     [Fact]
-    public void AddImage_WhenImageIsNew_ShouldAddToArrayAndRaiseEvent()
+    public void UpdateImages_WhenNoInitialImages_ShouldAddNewImagesAndRaiseEvent()
     {
         // Arrange
-        var product = Product.Create(
-            fixture.DefaultSku,
-            fixture.DefaultName, 
-            fixture.DefaultDescription,
-            fixture.DefaultCategoryId,
-            fixture.SellerId,
-            fixture.DefaultPrice,
-            []);
-        var image = new ProductImage("https://example.com/new.png");
-        product.ClearDomainEvents();
+        var product = CreateProductWithImages([]);
+        var newUrls = new List<string> { "http://img1.png", "http://img2.png" };
 
         // Act
-        product.AddImage(image);
+        product.UpdateImages(newUrls);
 
         // Assert
-        product.Images.Should().ContainSingle()
-            .Which.Url.Should().Be("https://example.com/new.png");
+        product.Images.Should().HaveCount(2);
+        product.Images.Select(i => i.Url).Should().ContainInOrder(newUrls);
+        product.Version.Should().Be(2);
         
-        product.DomainEvents.Should().ContainSingle()
-            .Which.Should().BeOfType<ProductImagesUpdatedEvent>();
+        var ev = product.DomainEvents
+            .Should().ContainSingle()
+            .Which.Should().BeOfType<ProductImagesUpdatedEvent>()
+            .Subject;
+
+        ev.ProductId.Should().Be(product.Id);
+        ev.ImageUrls.Should().ContainInOrder(newUrls);
+        ev.RemovedUrls.Should().BeEmpty();
     }
-    
+
     [Fact]
-    public void AddImage_WhenImageAlreadyExists_ShouldThrowArgumentException()
+    public void UpdateImages_WhenHasInitialImages_ShouldDeleteAllAndRaiseEvent()
     {
         // Arrange
-        var product = Product.Create(
-            fixture.DefaultSku,
-            fixture.DefaultName, 
-            fixture.DefaultDescription,
-            fixture.DefaultCategoryId,
-            fixture.SellerId,
-            fixture.DefaultPrice,
-            []);
-        var image = new ProductImage("https://example.com/duplicate.png");
-        product.AddImage(image);
+        var initialUrls = new List<string> { "http://img1.png", "http://img2.png" };
+        var product = CreateProductWithImages(initialUrls);
+        var emptyUrls = new List<string>();
 
         // Act
-        var act = () => product.AddImage(new ProductImage("https://example.com/duplicate.png"));
-
-        // Assert
-        act.Should().Throw<ArgumentException>()
-            .WithParameterName("image");
-    }
-    
-    [Fact]
-    public void RemoveImage_WhenImageExists_ShouldRemoveAndRaiseEvent()
-    {
-        // Arrange
-        var product = Product.Create(
-            fixture.DefaultSku,
-            fixture.DefaultName, 
-            fixture.DefaultDescription,
-            fixture.DefaultCategoryId,
-            fixture.SellerId,
-            fixture.DefaultPrice,
-            []);
-        var imageUrl = "https://example.com/to-remove.png";
-        product.AddImage(new ProductImage(imageUrl));
-        product.ClearDomainEvents();
-
-        // Act
-        product.RemoveImage(imageUrl);
+        product.UpdateImages(emptyUrls);
 
         // Assert
         product.Images.Should().BeEmpty();
-        product.DomainEvents.Should().ContainSingle()
-            .Which.Should().BeOfType<ProductImagesUpdatedEvent>();
+        product.Version.Should().Be(2);
+
+        var ev = product.DomainEvents
+            .Should().ContainSingle()
+            .Which.Should().BeOfType<ProductImagesUpdatedEvent>()
+            .Subject;
+
+        ev.ImageUrls.Should().BeEmpty();
+        ev.RemovedUrls.Should().HaveCount(2).And.ContainInOrder(initialUrls);
     }
-    
+
     [Fact]
-    public void RemoveImage_WhenImageDoesNotExist_ShouldThrowArgumentException()
+    public void UpdateImages_WhenHasInitialImages_ShouldDeletePartAndRaiseEvent()
     {
         // Arrange
-        var product = Product.Create(
-            fixture.DefaultSku,
-            fixture.DefaultName, 
-            fixture.DefaultDescription,
-            fixture.DefaultCategoryId,
-            fixture.SellerId,
-            fixture.DefaultPrice,
-            []);
+        var initialUrls = new List<string> { "http://img1.png", "http://img2.png", "http://img3.png" };
+        var product = CreateProductWithImages(initialUrls);
+        var remainingUrls = new List<string> { "http://img1.png" };
 
         // Act
-        var act = () => product.RemoveImage("https://example.com/non-existent.png");
+        product.UpdateImages(remainingUrls);
 
         // Assert
-        act.Should().Throw<ArgumentException>()
-            .WithParameterName("url");
+        product.Images.Should().ContainSingle();
+        product.Images.First().Url.Should().Be("http://img1.png");
+        product.Version.Should().Be(2);
+
+        var ev = product.DomainEvents
+            .Should().ContainSingle()
+            .Which.Should().BeOfType<ProductImagesUpdatedEvent>()
+            .Subject;
+
+        ev.ImageUrls.Should().ContainSingle().Which.Should().Be("http://img1.png");
+        ev.RemovedUrls.Should().HaveCount(2).And.Contain("http://img2.png", "http://img3.png");
+    }
+
+    [Fact]
+    public void UpdateImages_WhenHasInitialImages_ShouldDeletePartAndAddPart()
+    {
+        // Arrange
+        var initialUrls = new List<string> { "http://img1.png", "http://img2.png" };
+        var product = CreateProductWithImages(initialUrls);
+        var updatedUrls = new List<string> { "http://img1.png", "http://img3.png" };
+
+        // Act
+        product.UpdateImages(updatedUrls);
+
+        // Assert
+        product.Images.Should().HaveCount(2);
+        product.Images.Select(i => i.Url).Should().ContainInOrder(updatedUrls);
+        product.Version.Should().Be(2);
+
+        var ev = product.DomainEvents
+            .Should().ContainSingle()
+            .Which.Should().BeOfType<ProductImagesUpdatedEvent>()
+            .Subject;
+
+        ev.ImageUrls.Should().ContainInOrder(updatedUrls);
+        ev.RemovedUrls.Should().ContainSingle().Which.Should().Be("http://img2.png");
+    }
+
+    [Fact]
+    public void UpdateImages_WhenHasInitialImages_ShouldDeleteAllAndAddCompletelyNew()
+    {
+        // Arrange
+        var initialUrls = new List<string> { "http://img1.png", "http://img2.png" };
+        var product = CreateProductWithImages(initialUrls);
+        var brandNewUrls = new List<string> { "http://img3.png", "http://img4.png" };
+
+        // Act
+        product.UpdateImages(brandNewUrls);
+
+        // Assert
+        product.Images.Should().HaveCount(2);
+        product.Images.Select(i => i.Url).Should().ContainInOrder(brandNewUrls);
+        product.Version.Should().Be(2);
+
+        var ev = product.DomainEvents
+            .Should().ContainSingle()
+            .Which.Should().BeOfType<ProductImagesUpdatedEvent>()
+            .Subject;
+
+        ev.ImageUrls.Should().ContainInOrder(brandNewUrls);
+        ev.RemovedUrls.Should().HaveCount(2).And.ContainInOrder(initialUrls);
+    }
+
+    [Fact]
+    public void UpdateImages_WhenCollectionIsEmptyAndNoChangesMade_ShouldNotModifyStateOrRaiseEvents()
+    {
+        // Arrange
+        var product = CreateProductWithImages([]);
+
+        // Act
+        product.UpdateImages([]);
+
+        // Assert
+        product.Images.Should().BeEmpty();
+        product.Version.Should().Be(1);
+        product.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void UpdateImages_WhenImagesOnlyChangeCase_ShouldTreatAsNoChangeAndNotModifyState()
+    {
+        // Arrange
+        var initialUrls = new List<string> { "http://img1.png", "http://IMG2.PNG" };
+        var product = CreateProductWithImages(initialUrls);
+        
+        var sameUrlsWithDifferentCase = new List<string> { "http://IMG1.PNG", "http://img2.png" };
+
+        // Act
+        product.UpdateImages(sameUrlsWithDifferentCase);
+
+        // Assert 
+        product.Images.Should().HaveCount(2);
+        product.Version.Should().Be(1);
+        product.DomainEvents.Should().BeEmpty();
     }
 }

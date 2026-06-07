@@ -10,7 +10,7 @@ namespace ProductService.Infrastructure.Repository.Products;
 
 public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory) : IProductQueryRepository
 {
-    public async Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(long sku, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(long sku)
     {
         await using var connection = connectionFactory.GetConnection();
         
@@ -25,7 +25,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         return productCards.ToList();
     }
     
-    public async Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(IReadOnlyList<Guid> ids)
     {
         await using var connection = connectionFactory.GetConnection();
         
@@ -40,7 +40,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         return productCards.ToList();
     }
 
-    public async Task<ProductCardDto?> GetCardAsync(Guid id, CancellationToken ct = default)
+    public async Task<ProductCardDto?> GetCardAsync(Guid id)
     {
         await using var connection = connectionFactory.GetConnection();
         
@@ -55,7 +55,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         return productCard;
     }
 
-    public async Task<ProductDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default)
+    public async Task<ProductDetailsDto?> GetDetailsAsync(Guid id)
     {
         await using var connection = connectionFactory.GetConnection();
         
@@ -74,7 +74,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         return productDto;
     }
 
-    public async Task<ProductPagedIdsDto> GetPagedAsync(ProductSearchFilter filter, CancellationToken ct = default)
+    public async Task<ProductPagedIdsDto> GetPagedAsync(ProductSearchFilter filter)
     {
         var sortColumn = filter.SortBy.ToLowerInvariant() switch
         {

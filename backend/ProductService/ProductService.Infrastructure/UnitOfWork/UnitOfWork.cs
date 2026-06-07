@@ -43,14 +43,14 @@ public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublis
                        ?? throw new InvalidOperationException("Transaction CAP is not open.");
     }
 
-    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    public async Task CommitAsync()
     {
         if (Transaction == null)
         {
             throw new InvalidOperationException("Transaction is not open.");
         }
         
-        await Transaction.CommitAsync(cancellationToken);
+        await Transaction.CommitAsync(CancellationToken.None);
         
         if (Transaction != null)
         {

@@ -21,7 +21,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return daos.Select(dao => dao.ToDomain()).ToList();
     }
 
-    public async Task<Category?> GetAsync(int id, CancellationToken ct)
+    public async Task<Category?> GetAsync(int id)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;
@@ -37,7 +37,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return dao?.ToDomain();
     }
 
-    public async Task<int> AddAsync(Category category, CancellationToken ct)
+    public async Task<int> AddAsync(Category category)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;
@@ -55,7 +55,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return id;
     }
 
-    public async Task<bool> UpdateAsync(Category category, CancellationToken ct)
+    public async Task<bool> UpdateAsync(Category category)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;
@@ -74,7 +74,7 @@ public class CategoryRepository(IDbSession session) : ICategoryRepository
         return updatedRows > 0;
     }
 
-    public async Task DeleteAsync(int id, CancellationToken ct)
+    public async Task DeleteAsync(int id)
     {
         var connection = session.Connection;
         var transaction = session.Transaction;

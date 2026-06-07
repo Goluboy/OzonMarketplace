@@ -34,12 +34,12 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
         await unitOfWork.BeginTransactionAsync(ct);
         try
         {
-            var id = await categoryRepository.AddAsync(category, ct);
+            var id = await categoryRepository.AddAsync(category);
             category.SetId(id);
             
             // TODO: Опубликовать события домена в CAP Outbox перед коммитом транзакции:
             
-            await unitOfWork.CommitAsync(ct);
+            await unitOfWork.CommitAsync();
             
             // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag категорий из Redis.
             
@@ -54,7 +54,7 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
 
     public async Task<CategoryDto> UpdateAsync(UpdateCategoryDto dto, CancellationToken ct)
     {
-        var category = await categoryRepository.GetAsync(dto.Id, ct) 
+        var category = await categoryRepository.GetAsync(dto.Id) 
                        ?? throw new NotFoundException(nameof(Category), dto.Id);
 
         if (!string.Equals(category.Name, dto.Name, StringComparison.Ordinal))
@@ -75,7 +75,7 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
         await unitOfWork.BeginTransactionAsync(ct);
         try
         {
-            var success = await categoryRepository.UpdateAsync(category, ct);
+            var success = await categoryRepository.UpdateAsync(category);
             
             if (!success)
             {
@@ -84,7 +84,7 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             
             // TODO: События: Опубликовать события изменения категории в брокер (когда появится инфраструктура)
             
-            await unitOfWork.CommitAsync(ct);
+            await unitOfWork.CommitAsync();
             
             // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag из Redis.
             
@@ -101,17 +101,17 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
 
     public async Task DeleteAsync(int id, CancellationToken ct)
     {
-        var category = await categoryRepository.GetAsync(id, ct) 
+        var category = await categoryRepository.GetAsync(id) 
                        ?? throw new NotFoundException(nameof(Category), id);
         
         await unitOfWork.BeginTransactionAsync(ct);
         try
         {
-            await categoryRepository.DeleteAsync(id, ct);
+            await categoryRepository.DeleteAsync(id);
             
             // TODO: События: Опубликовать события изменения категории в брокер (когда появится инфраструктура)
             
-            await unitOfWork.CommitAsync(ct);
+            await unitOfWork.CommitAsync();
             
             // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag из Redis.
         }

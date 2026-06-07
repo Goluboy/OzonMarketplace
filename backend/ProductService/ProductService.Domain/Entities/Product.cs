@@ -119,9 +119,9 @@ public class Product : IEquatable<Product>
         return product;
     }
     
-    public bool IsOwnedBy(Guid sellerId)
+    public bool IsOwnedBy(Guid userId)
     {
-        return SellerId == sellerId;
+        return SellerId == userId;
     }
     
     public void ChangePrice(Money newPrice)
@@ -161,43 +161,41 @@ public class Product : IEquatable<Product>
             Description,
             CategoryId));
     }
-    
-    public void AddImage(ProductImage image)
+
+    public void UpdateImages(IReadOnlyList<string> imageUrlsSnapshot)
     {
-        ArgumentNullException.ThrowIfNull(image);
-
-        if (_images.Any(i => i.Url.Equals(image.Url, StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new ArgumentException("Image with the same URL already exists", nameof(image));
-        }
-
-        _images.Add(image);
-        UpdateTimestamp();
+        ArgumentNullException.ThrowIfNull(imageUrlsSnapshot);
         
-        _domainEvents.Add(new ProductImagesUpdatedEvent(
-            Id,
-            _images.Select(i => i.Url).ToList()));
-    }
-    
-    public void RemoveImage(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
+        var inputUrlsSet = new HashSet<string>(imageUrlsSnapshot, StringComparer.OrdinalIgnoreCase);
+        
+        var currentUrlsSet = new HashSet<string>(_images.Select(img => img.Url), StringComparer.OrdinalIgnoreCase);
+
+        var imagesToRemove = currentUrlsSet
+            .Where(url => !inputUrlsSet.Contains(url))
+            .ToList();
+        
+        var imagesToAdd = inputUrlsSet
+            .Where(url => !currentUrlsSet.Contains(url))
+            .ToList();
+        
+        if (imagesToRemove.Count == 0 && imagesToAdd.Count == 0)
         {
             return;
         }
 
-        var imageToRemove = _images.FirstOrDefault(i => i.Url.Equals(url, StringComparison.OrdinalIgnoreCase));
-        if (imageToRemove == null)
+        if (imagesToRemove.Count != 0)
         {
-            throw new ArgumentException("Image not found", nameof(url));
+            _images.RemoveAll(img => !inputUrlsSet.Contains(img.Url));
         }
-        
-        _images.Remove(imageToRemove);
+
+        foreach (var url in imagesToAdd)
+        {
+            _images.Add(new ProductImage(url));
+        }
+
         UpdateTimestamp();
         
-        _domainEvents.Add(new ProductImagesUpdatedEvent(
-            Id,
-            _images.Select(i => i.Url).ToList()));
+        _domainEvents.Add(new ProductImagesUpdatedEvent(Id, _images.Select(i => i.Url).ToList(), imagesToRemove));
     }
     
     public bool Equals(Product? other)

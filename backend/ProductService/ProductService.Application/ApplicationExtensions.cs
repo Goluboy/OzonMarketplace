@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using ProductService.Application.Services.Categories;
 using ProductService.Application.Services.Products;
+using ProductService.Application.Services.Products.Query;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 
 namespace ProductService.Application;

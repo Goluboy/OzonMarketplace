@@ -4,9 +4,9 @@ namespace ProductService.Infrastructure.Abstractions.Repository.Abstractions.Pro
 
 public interface IProductQueryRepository
 {
-    Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(long sku, CancellationToken ct = default);
-    Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(IReadOnlyList<Guid> ids, CancellationToken ct = default);
-    Task<ProductCardDto?> GetCardAsync(Guid id, CancellationToken ct = default);
-    Task<ProductDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default);
-    Task<ProductPagedIdsDto> GetPagedAsync(ProductSearchFilter filter, CancellationToken ct = default);
+    Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(long sku);
+    Task<IReadOnlyList<ProductCardDto>> GetCardsAsync(IReadOnlyList<Guid> ids);
+    Task<ProductCardDto?> GetCardAsync(Guid id);
+    Task<ProductDetailsDto?> GetDetailsAsync(Guid id);
+    Task<ProductPagedIdsDto> GetPagedAsync(ProductSearchFilter filter);
 }

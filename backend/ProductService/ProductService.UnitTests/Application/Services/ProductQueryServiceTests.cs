@@ -1,0 +1,183 @@
+﻿using FluentAssertions;
+using NSubstitute;
+using ProductService.Application.Exceptions;
+using ProductService.Application.Services.Products;
+using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
+using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
+using Xunit;
+
+namespace ProductService.UnitTests.Application.Services;
+
+public class ProductQueryServiceTests
+{
+    private readonly IProductQueryRepository _repository = Substitute.For<IProductQueryRepository>();
+    private readonly ProductQueryService _service;
+    
+    public ProductQueryServiceTests()
+    {
+        _service = new ProductQueryService(_repository);
+    }
+    
+    #region GetCatalogAsync Tests
+
+    [Fact]
+    public async Task GetCatalogAsync_WhenSearchIsSku_ShouldReturnCardsBySkuDirectly()
+    {
+        var ct = CancellationToken.None;
+        var filter = new ProductSearchFilter(
+            Search: " 123456 ",
+            CategoryId: null,
+            MinPrice: null,
+            MaxPrice: null,
+            SortBy: "price",
+            SortOrder: "asc",
+            Cursor: null,
+            PageSize: 10
+        );
+
+        var skuCards = new List<ProductCardDto>
+        {
+            new(Guid.NewGuid(), Guid.NewGuid(), 1, "Phone Store 1", 1000m, "RUB", "img1.png"),
+            new(Guid.NewGuid(), Guid.NewGuid(), 1, "Phone Store 2", 950m, "RUB", "img2.png")
+        };
+
+        _repository.GetCardsAsync(123456, ct).Returns(skuCards);
+
+        var result = await _service.GetCatalogAsync(filter, ct);
+
+        result.Should().NotBeNull();
+        result.Items.Should().HaveCount(2);
+        result.NextCursor.Should().BeNull();
+
+        await _repository.DidNotReceive().GetPagedAsync(Arg.Any<ProductSearchFilter>(), ct);
+        await _repository.DidNotReceive().GetCardsAsync(Arg.Any<IReadOnlyList<Guid>>(), ct);
+    }
+
+    [Fact]
+    public async Task GetCatalogAsync_WhenNoProductsFoundByFilter_ShouldReturnEmptyPage()
+    {
+        var ct = CancellationToken.None;
+        var filter = new ProductSearchFilter(
+            Search: "Шоколад",
+            CategoryId: null,
+            MinPrice: null,
+            MaxPrice: null,
+            SortBy: "name",
+            SortOrder: "asc",
+            Cursor: null,
+            PageSize: 10
+        );
+
+        var emptyPagedResult = new ProductPagedIdsDto(new List<Guid>(), null);
+        _repository.GetPagedAsync(filter, ct).Returns(emptyPagedResult);
+
+        var result = await _service.GetCatalogAsync(filter, ct);
+
+        result.Should().NotBeNull();
+        result.Items.Should().BeEmpty();
+        result.NextCursor.Should().BeNull();
+
+        await _repository.DidNotReceive().GetCardsAsync(Arg.Any<IReadOnlyList<Guid>>(), ct);
+    }
+
+    [Fact]
+    public async Task GetCatalogAsync_WhenProductsExist_ShouldReturnCardsSortedInOriginalDbOrder()
+    {
+        var ct = CancellationToken.None;
+        var filter = new ProductSearchFilter(
+            Search: "Ноутбук",
+            CategoryId: null,
+            MinPrice: null,
+            MaxPrice: null,
+            SortBy: "price",
+            SortOrder: "desc",
+            Cursor: null,
+            PageSize: 10
+        );
+
+        var id1 = Guid.NewGuid();
+        var id2 = Guid.NewGuid();
+        var id3 = Guid.NewGuid();
+        var sellerId = Guid.NewGuid();
+
+        var pagedIds = new List<Guid> { id3, id1, id2 };
+        var dbPagedResult = new ProductPagedIdsDto(pagedIds, "next_page_cursor_token");
+        _repository.GetPagedAsync(filter, ct).Returns(dbPagedResult);
+
+        var dbCards = new List<ProductCardDto>
+        {
+            new(id1, sellerId, 1, "Notebook Middle", 1000m, "RUB", "img1.png"),
+            new(id2, sellerId, 1, "Notebook Cheap", 500m, "RUB", "img2.png"),
+            new(id3, sellerId, 1, "Notebook Expensive", 2000m, "RUB", "img3.png")
+        };
+        _repository.GetCardsAsync(pagedIds, ct).Returns(dbCards);
+
+        var result = await _service.GetCatalogAsync(filter, ct);
+
+        result.Should().NotBeNull();
+        result.NextCursor.Should().Be("next_page_cursor_token");
+        result.Items.Should().HaveCount(3);
+
+        var itemsList = result.Items.ToList();
+        itemsList[0].Id.Should().Be(id3);
+        itemsList[0].Name.Should().Be("Notebook Expensive");
+
+        itemsList[1].Id.Should().Be(id1);
+        itemsList[1].Name.Should().Be("Notebook Middle");
+
+        itemsList[2].Id.Should().Be(id2);
+        itemsList[2].Name.Should().Be("Notebook Cheap");
+    }
+
+    #endregion
+
+    #region GetProductAsync Tests
+
+    [Fact]
+    public async Task GetProductAsync_WhenProductExists_ShouldReturnCorrectDetails()
+    {
+        var ct = CancellationToken.None;
+        var productId = Guid.NewGuid();
+        var detailsDto = new ProductDetailsDto
+        {
+            Id = productId,
+            Sku = 12345,
+            SellerId = Guid.NewGuid(),
+            Name = "Smartphone",
+            Description = "Full description",
+            PriceAmount = 999m,
+            PriceCurrency = "USD",
+            CategoryId = 1,
+            CategoryName = "Electronics",
+            CategoryPath = "electronics",
+            Images = ["img1.png"],
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        _repository.GetDetailsAsync(productId, ct).Returns(detailsDto);
+
+        var result = await _service.GetProductAsync(productId, ct);
+
+        result.Should().NotBeNull();
+        result.Id.Should().Be(productId);
+        result.Name.Should().Be("Smartphone");
+        result.Description.Should().Be("Full description");
+        result.CategoryName.Should().Be("Electronics");
+    }
+
+    [Fact]
+    public async Task GetProductAsync_WhenProductDoesNotExist_ShouldThrowNotFoundException()
+    {
+        var ct = CancellationToken.None;
+        var nonExistentId = Guid.NewGuid();
+
+        _repository.GetDetailsAsync(nonExistentId, ct).Returns((ProductDetailsDto?)null);
+
+        var act = async () => await _service.GetProductAsync(nonExistentId, ct);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    #endregion
+}

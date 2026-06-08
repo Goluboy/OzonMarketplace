@@ -15,24 +15,23 @@ public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublis
     public DbConnection Connection => _connection ??= connectionFactory.GetConnection();
     public DbTransaction? Transaction { get; private set; }
 
-    public async Task<DbTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         if (Transaction != null)
         {
-            return Transaction;
+            return;
         }
-
+        
         await EnsureConnectionOpenAsync(cancellationToken);
         
-        Transaction = await Connection.BeginTransactionAsync(cancellationToken);
-        return Transaction;
+        Transaction = await Connection.BeginTransactionAsync(cancellationToken); ;
     }
 
-    public async Task<DbTransaction> BeginOutboxTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task BeginOutboxTransactionAsync(CancellationToken cancellationToken = default)
     {
         if (Transaction != null)
         {
-            return Transaction;
+            return ;
         }
 
         await EnsureConnectionOpenAsync(cancellationToken);
@@ -41,42 +40,30 @@ public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublis
         var capTransaction = await npgsqlConnection.BeginTransactionAsync(capPublisher, autoCommit: false, cancellationToken);
         
         Transaction = (DbTransaction?)capTransaction.DbTransaction 
-                       ?? throw new InvalidOperationException("Транзакция CAP вернула null.");
-        
-        return Transaction;
+                       ?? throw new InvalidOperationException("Transaction CAP is not open.");
     }
 
-    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    public async Task CommitAsync()
     {
         if (Transaction == null)
         {
             throw new InvalidOperationException("Transaction is not open.");
         }
         
-        try
+        await Transaction.CommitAsync(CancellationToken.None);
+        
+        if (Transaction != null)
         {
-            await Transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            await RollbackAsync(cancellationToken);
-            throw;
-        }
-        finally
-        {
-            if (Transaction != null)
-            {
-                await Transaction.DisposeAsync();
-                Transaction = null;
-            }
+            await Transaction.DisposeAsync();
+            Transaction = null;
         }
     }
 
-    public async Task RollbackAsync(CancellationToken cancellationToken = default)
+    public async Task RollbackAsync()
     {
         if (Transaction != null)
         {
-            await Transaction.RollbackAsync(cancellationToken);
+            await Transaction.RollbackAsync(CancellationToken.None);
             await Transaction.DisposeAsync();
             Transaction = null;
         }

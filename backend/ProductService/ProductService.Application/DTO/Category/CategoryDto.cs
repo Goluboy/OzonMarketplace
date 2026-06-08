@@ -1,4 +1,4 @@
-﻿namespace ProductService.Infrastructure.Abstractions.DTO.Category;
+﻿namespace ProductService.Application.DTO.Category;
 
 public record CategoryDto(
     int Id,

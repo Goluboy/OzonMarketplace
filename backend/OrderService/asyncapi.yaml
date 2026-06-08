@@ -1,0 +1,408 @@
+asyncapi: 3.0.0
+info:
+  title: Order Service Saga Choreography API
+  version: 1.0.0
+  description: |
+    AsyncAPI specification for Order Service Kafka-based Saga Choreography.
+
+    Implements distributed saga pattern using MassTransit with Kafka.
+    MassTransit handles: idempotency (Guid-based), message scheduling, retries, and timeouts.
+
+    **Saga Flow:**
+    1. User creates order → OrderCreatedEvent published
+    2. Stock Service consumes → reserves items → publishes StockReservedEvent OR StockReservationFailedEvent
+    3a. If success: Price Service consumes → calculates total → publishes PriceCalculatedEvent
+    3b. If failure: Order Service consumes → publishes OrderCancelledEvent (compensation)
+    4. If timeout at any step: MassTransit scheduler triggers OrderSagaTimeout
+
+  contact:
+    name: Order Service Team
+    url: https://github.com/Goluboy/OzonMarketplace
+  license:
+    name: MIT
+
+servers:
+  kafka:
+    host: localhost:29092
+    protocol: kafka
+    description: Local Kafka broker
+
+defaultContentType: application/json
+
+channels:
+  # ============== OUTBOUND CHANNELS ==============
+  orders.created:
+    address: orders.created
+    title: Order Created
+    description: Published when a customer creates a new order (initiates saga)
+    messages:
+      OrderCreatedMessage:
+        $ref: '#/components/messages/OrderCreatedEvent'
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 1
+
+  orders.cancelled:
+    address: orders.cancelled
+    title: Order Cancelled
+    description: Published when order saga fails or is cancelled. Triggers compensation.
+    messages:
+      OrderCancelledMessage:
+        $ref: '#/components/messages/OrderCancelledEvent'
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 1
+
+  # ============== INBOUND CHANNELS ==============
+  products.stock.reserved:
+    address: products.stock.reserved
+    title: Stock Reserved
+    description: Consumed from Stock Service - items successfully reserved
+    messages:
+      StockReservedMessage:
+        $ref: '#/components/messages/StockReservedEvent'
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 1
+        x-consumer-group: order-service-stock-group
+
+  products.stock.failed:
+    address: products.stock.failed
+    title: Stock Reservation Failed
+    description: Consumed from Stock Service - reservation failed due to insufficient stock or other reasons
+    messages:
+      StockReservationFailedMessage:
+        $ref: '#/components/messages/StockReservationFailedEvent'
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 1
+        x-consumer-group: order-service-failed-group
+
+  prices.calculated:
+    address: prices.calculated
+    title: Price Calculated
+    description: Consumed from Price Service - total price calculated
+    messages:
+      PriceCalculatedMessage:
+        $ref: '#/components/messages/PriceCalculatedEvent'
+    bindings:
+      kafka:
+        partitions: 3
+        replicas: 1
+        x-consumer-group: order-service-price-group
+
+  # ============== INTERNAL CHANNELS ==============
+  saga-timeout-queue:
+    address: saga-timeout-queue
+    title: Saga Timeout Queue
+    description: Internal in-memory queue (MassTransit) for saga timeout handling
+
+operations:
+  # ============== PUBLISH OPERATIONS ==============
+  publishOrderCreated:
+    action: send
+    title: Publish Order Created
+    channel:
+      $ref: '#/channels/orders.created'
+    messages:
+      - $ref: '#/components/messages/OrderCreatedEvent'
+
+  publishOrderCancelled:
+    action: send
+    title: Publish Order Cancelled
+    channel:
+      $ref: '#/channels/orders.cancelled'
+    messages:
+      - $ref: '#/components/messages/OrderCancelledEvent'
+
+  # ============== SUBSCRIBE OPERATIONS ==============
+  subscribeStockReserved:
+    action: receive
+    title: Subscribe to Stock Reserved
+    channel:
+      $ref: '#/channels/products.stock.reserved'
+    messages:
+      - $ref: '#/components/messages/StockReservedEvent'
+
+  subscribeStockReservationFailed:
+    action: receive
+    title: Subscribe to Stock Reservation Failed
+    channel:
+      $ref: '#/channels/products.stock.failed'
+    messages:
+      - $ref: '#/components/messages/StockReservationFailedEvent'
+
+  subscribePriceCalculated:
+    action: receive
+    title: Subscribe to Price Calculated
+    channel:
+      $ref: '#/channels/prices.calculated'
+    messages:
+      - $ref: '#/components/messages/PriceCalculatedEvent'
+
+components:
+  messages:
+    OrderCreatedEvent:
+      name: OrderCreatedEvent
+      title: Order Created Event
+      summary: Initiates order saga choreography
+      description: |
+        Emitted by Order Service when a customer creates a new order.
+        This triggers the saga choreography sequence.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OrderCreatedEvent'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    StockReservedEvent:
+      name: StockReservedEvent
+      title: Stock Reserved Event
+      summary: Stock items successfully reserved
+      description: |
+        Emitted by Stock Service when order items are successfully reserved.
+        Moves saga to price calculation step.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/StockReservedEvent'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    StockReservationFailedEvent:
+      name: StockReservationFailedEvent
+      title: Stock Reservation Failed Event
+      summary: Stock reservation failed
+      description: |
+        Emitted by Stock Service when stock reservation fails.
+        Triggers order cancellation and compensation.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/StockReservationFailedEvent'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    PriceCalculatedEvent:
+      name: PriceCalculatedEvent
+      title: Price Calculated Event
+      summary: Order total price calculated
+      description: |
+        Emitted by Price Service when total order price is calculated.
+        Notifies Order Service that pricing is ready.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PriceCalculatedEvent'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+    OrderCancelledEvent:
+      name: OrderCancelledEvent
+      title: Order Cancelled Event
+      summary: Order saga cancelled/failed
+      description: |
+        Emitted when order saga fails or is cancelled.
+        Triggers compensation (stock release, payment reversal, etc.).
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OrderCancelledEvent'
+      headers:
+        $ref: '#/components/schemas/EventHeaders'
+
+  schemas:
+    EventHeaders:
+      type: object
+      description: |
+        Common headers for all integration events.
+        Handled by MassTransit - not part of payload.
+        MassTransit manages: idempotency (message ID), message timestamps, retry logic, scheduling.
+      properties:
+        X-Correlation-ID:
+          type: string
+          format: uuid
+          description: Correlates all events in the saga (OrderId)
+      required:
+        - X-Correlation-ID
+
+    IntegrationEvent:
+      type: object
+      description: Base integration event
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+        occurredOn:
+          type: string
+          format: date-time
+          description: When event occurred (UTC)
+        correlationId:
+          type: string
+          format: uuid
+          description: OrderId - correlates all saga steps
+      required:
+        - eventId
+        - correlationId
+
+    OrderItemDto:
+      type: object
+      description: Order item details
+      properties:
+        productId:
+          type: string
+          format: uuid
+          description: Product identifier
+        quantity:
+          type: integer
+          minimum: 1
+          description: Item quantity
+      required:
+        - productId
+        - quantity
+
+    ReservedItemDto:
+      type: object
+      description: Reserved stock item
+      properties:
+        productId:
+          type: string
+          format: uuid
+          description: Product identifier
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity reserved
+      required:
+        - productId
+        - quantity
+
+    OrderCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+        - type: object
+          description: Order created - saga initiation
+          properties:
+            items:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/OrderItemDto'
+              description: Items in order
+            customerEmail:
+              type: string
+              format: email
+              description: Customer email for notifications
+            deliveryAddress:
+              type: string
+              minLength: 5
+              description: Delivery address
+          required:
+            - items
+            - customerEmail
+            - deliveryAddress
+
+    StockReservedEvent:
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+        - type: object
+          description: Stock successfully reserved
+          properties:
+            reservedItems:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ReservedItemDto'
+              description: Items successfully reserved
+          required:
+            - reservedItems
+            - reservationId
+
+    StockReservationFailedEvent:
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+        - type: object
+          description: Stock reservation failed
+          properties:
+            reason:
+              type: string
+              enum:
+                - INSUFFICIENT_STOCK
+                - PRODUCT_NOT_FOUND
+                - DATABASE_ERROR
+                - SERVICE_UNAVAILABLE
+              description: Failure reason
+            failedProductIds:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Product IDs that failed reservation
+            errorMessage:
+              type: string
+              description: Detailed error message
+          required:
+            - reason
+            - failedProductIds
+
+    PriceCalculatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+        - type: object
+          description: Order price calculated
+          properties:
+            totalAmount:
+              type: number
+              format: double
+              minimum: 0
+              description: Total order amount
+            currency:
+              type: string
+              pattern: '^[A-Z]{3}$'
+              default: 'RUB'
+              description: ISO 4217 currency code
+          required:
+            - totalAmount
+            - currency
+
+    OrderCancelledEvent:
+      allOf:
+        - $ref: '#/components/schemas/IntegrationEvent'
+        - type: object
+          description: Order cancelled/saga failed
+          properties:
+            reason:
+              type: string
+              enum:
+                - TIMEOUT
+                - STOCK_FAILED
+                - USER_CANCELLED
+                - PAYMENT_FAILED
+                - PRICE_CALCULATION_ERROR
+              description: Cancellation reason
+            itemsToRelease:
+              type: array
+              items:
+                type: string
+                format: uuid
+              description: Product IDs to release from stock
+            compensationStatus:
+              type: string
+              enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED']
+              description: Compensation flow status
+            errorMessage:
+              type: string
+              description: Detailed error message
+          required:
+            - reason
+            - itemsToRelease
+
+  securitySchemes: {}
+
+  parameters: {}
+
+  correlationIds:
+    OrderCorrelation:
+      description: Correlation ID is OrderId for saga tracking
+      location: $message.payload#/correlationId

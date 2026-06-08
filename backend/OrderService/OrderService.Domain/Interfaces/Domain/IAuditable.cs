@@ -1,4 +1,4 @@
-﻿namespace OrderService.Domain.Interfaces;
+﻿namespace OrderService.Domain.Interfaces.Domain;
 
 public interface IAuditable
 {

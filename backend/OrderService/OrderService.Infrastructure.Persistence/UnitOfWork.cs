@@ -5,6 +5,7 @@ namespace OrderService.Infrastructure.Persistence;
 
 public class UnitOfWork(IDbConnection connection) : IUnitOfWork
 {
+    public IDbConnection Connection => connection;
     private IDbTransaction? _transaction;
 
     public IDbTransaction? CurrentTransaction => _transaction;

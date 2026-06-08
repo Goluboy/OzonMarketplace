@@ -6,21 +6,22 @@ using System.Data;
 
 namespace OrderService.Infrastructure.Persistence.Repositories;
 
-public class OrderRepository(IDbConnection connection, IUnitOfWork unitOfWork) : IOrderRepository
+public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
 {
     public async Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        const string sql = @"
-            SELECT o.Id, o.CustomerId, o.CustomerName, o.CustomerEmail, o.DeliveryAddress, 
-                   o.Status, o.TotalAmount, o.CreatedAt, o.UpdatedAt, o.CancelledAt, o.Version,
-                   i.Id AS ItemId, i.ProductId, i.ProductName, i.Quantity, i.PriceAtPurchase, 
-                   i.Subtotal, i.CreatedAt AS ItemCreatedAt, i.UpdatedAt AS ItemUpdatedAt
-            FROM Orders o
-            LEFT JOIN OrderItems i ON o.Id = i.OrderId
-            WHERE o.Id = @Id
-            ORDER BY o.Id, i.CreatedAt;";
+        const string sql = """
+                           SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress", 
+                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                                  i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase", 
+                                  i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
+                           FROM "Orders" o
+                           LEFT JOIN "OrderItems" i ON o."Id" = i."OrderId"
+                           WHERE o."Id" = @Id
+                           ORDER BY o."Id", i."CreatedAt"
+                           """;
 
-        var rows = await connection.QueryAsync(sql, new { Id = id }, transaction: unitOfWork.CurrentTransaction);
+        var rows = await unitOfWork.Connection.QueryAsync(sql, new { Id = id }, transaction: unitOfWork.CurrentTransaction);
 
         if (!rows.Any())
             return null;
@@ -43,14 +44,14 @@ public class OrderRepository(IDbConnection connection, IUnitOfWork unitOfWork) :
         var status = (OrderStatus)(int)firstRow.Status;
         var totalAmount = new Money((decimal)firstRow.TotalAmount);
         var createdAt = (DateTime)firstRow.CreatedAt;
-        var updatedAt = firstRow.UpdatedAt != DBNull.Value ? (DateTime?)firstRow.UpdatedAt : null;
-        var cancelledAt = firstRow.CancelledAt != DBNull.Value ? (DateTime?)firstRow.CancelledAt : null;
+        var updatedAt = firstRow.UpdatedAt is not null ? (DateTime?)firstRow.UpdatedAt : null;
+        var cancelledAt = firstRow.CancelledAt is not null ? (DateTime?)firstRow.CancelledAt : null;
         var version = (int)firstRow.Version;
 
         var items = new List<OrderItem>();
         foreach (var row in rowList)
         {
-            if (row.ItemId == DBNull.Value || row.ItemId == null)
+            if (row.ItemId == null || row.ItemId is DBNull)
                 continue;
 
             var item = OrderItem.Rehydrate(
@@ -62,7 +63,7 @@ public class OrderRepository(IDbConnection connection, IUnitOfWork unitOfWork) :
                 priceAtPurchase: new Money((decimal)row.PriceAtPurchase),
                 subtotal: new Money((decimal)row.Subtotal),
                 createdAt: (DateTime)row.ItemCreatedAt,
-                updatedAt: row.ItemUpdatedAt != DBNull.Value ? (DateTime?)row.ItemUpdatedAt : null);
+                updatedAt: row.ItemUpdatedAt is not null ? (DateTime?)row.ItemUpdatedAt : null);
 
             items.Add(item);
         }
@@ -84,20 +85,21 @@ public class OrderRepository(IDbConnection connection, IUnitOfWork unitOfWork) :
 
     public async Task SaveAsync(Order order, CancellationToken cancellationToken = default)
     {
-        const string updateOrderSql = @"
-            INSERT INTO Orders (Id, CustomerId, CustomerName, CustomerEmail, DeliveryAddress, Status, TotalAmount, CreatedAt, UpdatedAt, CancelledAt, Version)
+        const string updateOrderSql = """
+            INSERT INTO "Orders" ("Id", "CustomerId", "CustomerName", "CustomerEmail", "DeliveryAddress", "Status", "TotalAmount", "CreatedAt", "UpdatedAt", "CancelledAt", "Version")
             VALUES (@Id, @CustomerId, @CustomerName, @CustomerEmail, @DeliveryAddress, @Status, @TotalAmount, @CreatedAt, @UpdatedAt, @CancelledAt, @Version)
-            ON CONFLICT (Id) DO UPDATE SET
-                CustomerName = EXCLUDED.CustomerName,
-                CustomerEmail = EXCLUDED.CustomerEmail,
-                DeliveryAddress = EXCLUDED.DeliveryAddress,
-                Status = EXCLUDED.Status,
-                TotalAmount = EXCLUDED.TotalAmount,
-                UpdatedAt = EXCLUDED.UpdatedAt,
-                CancelledAt = EXCLUDED.CancelledAt,
-                Version = EXCLUDED.Version;";
+            ON CONFLICT ("Id") DO UPDATE SET
+                "CustomerName" = EXCLUDED."CustomerName",
+                "CustomerEmail" = EXCLUDED."CustomerEmail",
+                "DeliveryAddress" = EXCLUDED."DeliveryAddress",
+                "Status" = EXCLUDED."Status",
+                "TotalAmount" = EXCLUDED."TotalAmount",
+                "UpdatedAt" = EXCLUDED."UpdatedAt",
+                "CancelledAt" = EXCLUDED."CancelledAt",
+                "Version" = EXCLUDED."Version"
+            """;
         
-        await connection.ExecuteAsync(updateOrderSql, new
+        await unitOfWork.Connection.ExecuteAsync(updateOrderSql, new
         {
             Id = order.Id.Value,
             order.CustomerId,
@@ -112,15 +114,16 @@ public class OrderRepository(IDbConnection connection, IUnitOfWork unitOfWork) :
             order.Version
         }, transaction: unitOfWork.CurrentTransaction);
 
-        await connection.ExecuteAsync("DELETE FROM OrderItems WHERE OrderId = @Id", new { Id = order.Id.Value }, transaction: unitOfWork.CurrentTransaction);
+        await unitOfWork.Connection.ExecuteAsync("DELETE FROM \"OrderItems\" WHERE \"OrderId\" = @Id", new { Id = order.Id.Value }, transaction: unitOfWork.CurrentTransaction);
 
-        const string insertItemSql = @"
-            INSERT INTO OrderItems (Id, OrderId, ProductId, ProductName, Quantity, PriceAtPurchase, Subtotal, CreatedAt, UpdatedAt)
-            VALUES (@Id, @OrderId, @ProductId, @ProductName, @Quantity, @PriceAtPurchase, @Subtotal, @CreatedAt, @UpdatedAt);";
+        const string insertItemSql = """
+            INSERT INTO "OrderItems" ("Id", "OrderId", "ProductId", "ProductName", "Quantity", "PriceAtPurchase", "Subtotal", "CreatedAt", "UpdatedAt")
+            VALUES (@Id, @OrderId, @ProductId, @ProductName, @Quantity, @PriceAtPurchase, @Subtotal, @CreatedAt, @UpdatedAt)
+            """;
 
         foreach (var item in order.Items)
         {
-            await connection.ExecuteAsync(insertItemSql, new
+            await unitOfWork.Connection.ExecuteAsync(insertItemSql, new
             {
                 item.Id,
                 OrderId = order.Id.Value,
@@ -137,6 +140,6 @@ public class OrderRepository(IDbConnection connection, IUnitOfWork unitOfWork) :
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await connection.ExecuteAsync("DELETE FROM Orders WHERE Id = @Id", new { Id = id }, transaction: unitOfWork.CurrentTransaction);
+        await unitOfWork.Connection.ExecuteAsync("DELETE FROM \"Orders\" WHERE \"Id\" = @Id", new { Id = id }, transaction: unitOfWork.CurrentTransaction);
     }
 }

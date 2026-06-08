@@ -52,7 +52,7 @@ namespace OrderService.Http
             services.AddScoped<IDbConnection>(sp =>
                 new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
-            services.AddFluentMigrator(configuration);
+            services.AddPersistenceServices(configuration);
 
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();

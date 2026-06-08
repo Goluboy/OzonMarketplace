@@ -17,6 +17,31 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
 
     private OrderItem() { }
 
+    public static OrderItem Rehydrate(
+        Guid id,
+        OrderId? orderId,
+        Guid productId,
+        string productName,
+        int quantity,
+        Money priceAtPurchase,
+        Money subtotal,
+        DateTime createdAt,
+        DateTime? updatedAt)
+    {
+        return new OrderItem
+        {
+            Id = id,
+            OrderId = orderId,
+            ProductId = productId,
+            ProductName = productName,
+            Quantity = quantity,
+            PriceAtPurchase = priceAtPurchase,
+            Subtotal = subtotal,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt
+        };
+    }
+
     public override string ToString() =>
         $"OrderItem(Id={Id}, Product={ProductName}, Qty={Quantity}, Subtotal={Subtotal})";
 

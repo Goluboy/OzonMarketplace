@@ -12,7 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="FluentMigrator.Runner" Version="8.0.1" />
+    <PackageReference Include="Npgsql" Version="10.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -497,6 +499,10 @@
 
   <ItemGroup>
     <None Remove="C:\Users\Administrator\.nuget\packages\net.ibm.data.db2\9.0.0.300\buildTransitive\clidriver\bin\concrt140.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OrderService.Domain\OrderService.Domain.csproj" />
   </ItemGroup>
 
 </Project>

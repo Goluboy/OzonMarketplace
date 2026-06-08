@@ -8,5 +8,6 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="OrderService.Domain.Tests/OrderService.Domain.Tests.csproj" Id="eaa0fc9c-d0f5-41bf-b112-43bc93d1d62b" />
+    <Project Path="OrderService.Infrastructure.Persistence.Tests/OrderService.Infrastructure.Persistence.Tests.csproj" Id="9072839d-c279-4c53-8d45-8a24a1cd4368" />
   </Folder>
 </Solution>

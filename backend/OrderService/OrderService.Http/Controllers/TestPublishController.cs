@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 [Route("api/test")]
 public class TestPublishController : ControllerBase
 {
-    private readonly ITopicProducer<OrderCreatedEvent> _producer;
+    private readonly ITopicProducer<Guid, OrderCreatedEvent> _producer;
 
-    public TestPublishController(ITopicProducer<OrderCreatedEvent> producer) =>
+    public TestPublishController(ITopicProducer<Guid, OrderCreatedEvent> producer) =>
         _producer = producer;
 
     [HttpPost("kafka")]
@@ -22,7 +22,7 @@ public class TestPublishController : ControllerBase
             Items = new List<OrderItemDto> { new(Guid.NewGuid(), 1) }
         };
 
-        await _producer.Produce(evt);
+        await _producer.Produce(evt.CorrelationId, evt);
         return Ok(new { Status = "Sent", EventId = evt.EventId });
     }
 }

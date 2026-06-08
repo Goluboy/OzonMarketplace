@@ -1,7 +1,7 @@
 ﻿using MassTransit;
 using OrderService.Application.Commands.Common;
 
-namespace OrderService.Infrastructure.EventBus;
+namespace OrderService.Infrastructure.EventBus.EventBus;
 
 public class MassTransitEventPublisher(ISendEndpointProvider provider) : IEventPublisher
 {

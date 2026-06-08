@@ -184,10 +184,45 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
     }
 
     [Fact]
-    public void Equals_Null_ShouldReturnFalse()
+    public void Rehydrate_WithValidData_ShouldRestoreOrderItem()
     {
-        var orderItem = fixture.CreateOrderItem();
+        var id = Guid.NewGuid();
+        var orderId = OrderId.New();
+        var productId = Guid.NewGuid();
+        const string productName = "Rehydrated Product";
+        const int quantity = 2;
+        var price = new Money(100m);
+        var subtotal = new Money(200m);
+        var createdAt = DateTime.UtcNow;
+        var updatedAt = DateTime.UtcNow.AddMinutes(5);
 
-        orderItem.Equals(null).Should().BeFalse();
+        var item = OrderItem.Rehydrate(id, orderId, productId, productName, quantity, price, subtotal, createdAt,
+            updatedAt);
+
+        item.Should().NotBeNull();
+        item.Id.Should().Be(id);
+        item.OrderId.Should().Be(orderId);
+        item.ProductId.Should().Be(productId);
+        item.ProductName.Should().Be(productName);
+        item.Quantity.Should().Be(quantity);
+        item.PriceAtPurchase.Should().Be(price);
+        item.Subtotal.Should().Be(subtotal);
+        item.CreatedAt.Should().Be(createdAt);
+        item.UpdatedAt.Should().Be(updatedAt);
+    }
+
+    [Fact]
+    public void Rehydrate_WithNullOrderId_ShouldRestoreCorrectly()
+    {
+        var id = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var price = new Money(100m);
+        var subtotal = new Money(100m);
+        var createdAt = DateTime.UtcNow;
+
+        var item = OrderItem.Rehydrate(id, null, productId, "Product", 1, price, subtotal, createdAt, null);
+
+        item.OrderId.Should().BeNull();
+        item.UpdatedAt.Should().BeNull();
     }
 }

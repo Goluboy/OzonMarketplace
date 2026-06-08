@@ -32,7 +32,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\OrderService.Infrastructure\OrderService.Infrastructure.csproj" />
+	  <ProjectReference Include="..\OrderService.Infrastructure.EventBus\OrderService.Infrastructure.EventBus.csproj" />
+	  <ProjectReference Include="..\OrderService.Infrastructure.Persistence\OrderService.Infrastructure.Persistence.csproj" />
+	  <ProjectReference Include="..\OrderService.Infrastructure\OrderService.Infrastructure.EventBus.csproj" />
 	</ItemGroup>
 
 </Project>

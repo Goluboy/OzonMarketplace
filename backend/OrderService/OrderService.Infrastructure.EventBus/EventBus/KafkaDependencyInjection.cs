@@ -4,10 +4,10 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OrderService.Application.Commands.Common;
-using OrderService.Infrastructure.EventBus.Consumers;
+using OrderService.Infrastructure.EventBus.EventBus.Consumers;
 using Quartz;
 
-namespace OrderService.Infrastructure.EventBus;
+namespace OrderService.Infrastructure.EventBus.EventBus;
 
 public static class KafkaDependencyInjection
 {

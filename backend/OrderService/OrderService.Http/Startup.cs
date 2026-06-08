@@ -8,8 +8,8 @@ using Npgsql;
 using System.Data;
 using System.Text;
 using FluentMigrator.Runner;
-using OrderService.Infrastructure;
-using OrderService.Infrastructure.EventBus;
+using OrderService.Infrastructure.EventBus.EventBus;
+using OrderService.Infrastructure.Persistence;
 
 namespace OrderService.Http
 {
@@ -52,7 +52,7 @@ namespace OrderService.Http
             services.AddScoped<IDbConnection>(sp =>
                 new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
-            services.AddFluentMigrator(configuration);
+            services.AddPersistenceServices(configuration);
 
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();

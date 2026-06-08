@@ -1,7 +1,7 @@
 using System.Data;
 using FluentMigrator;
 
-namespace OrderService.Infrastructure.Migrations;
+namespace OrderService.Infrastructure.Persistence.Migrations;
 
 [Migration(202606080001)]
 public class CreateInitialOrderSchema : Migration

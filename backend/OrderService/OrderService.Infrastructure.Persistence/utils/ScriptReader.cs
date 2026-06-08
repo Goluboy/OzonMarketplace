@@ -1,13 +1,13 @@
 ﻿using System.Reflection;
 
-namespace OrderService.Infrastructure.utils;
+namespace OrderService.Infrastructure.Persistence.utils;
 
 public static class ScriptReader
 {
     public static string ReadEmbeddedScript(string fileName)
     {
         var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = $"OrderService.Infrastructure.Migrations.Scripts.{fileName}";
+        var resourceName = $"OrderService.Infrastructure.Persistence.Migrations.Scripts.{fileName}";
 
         using var stream = assembly.GetManifestResourceStream(resourceName);
 

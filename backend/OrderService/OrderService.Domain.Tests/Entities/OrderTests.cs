@@ -403,4 +403,89 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
 
         order.DomainEvents.Count.Should().Be(0);
     }
+
+    [Fact]
+    public void Rehydrate_WithValidData_ShouldRestoreOrder()
+    {
+        // Arrange
+        var orderId = OrderId.New();
+        var customerId = Guid.NewGuid();
+        var customerName = "John Doe";
+        var customerEmail = new Email("john@example.com");
+        var deliveryAddress = DeliveryAddress.Create("123 Main St");
+        var status = OrderStatus.Paid;
+        var totalAmount = new Money(100m);
+        var createdAt = DateTime.UtcNow;
+        var updatedAt = DateTime.UtcNow.AddMinutes(10);
+        var cancelledAt = (DateTime?)null;
+        var version = 2;
+        var items = new List<OrderItem>
+        {
+            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 1", 1, new Money(50m), new Money(50m), createdAt, null),
+            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 2", 1, new Money(50m), new Money(50m), createdAt, null)
+        };
+
+        // Act
+        var order = Order.Rehydrate(
+            orderId,
+            customerId,
+            customerName,
+            customerEmail,
+            deliveryAddress,
+            status,
+            totalAmount,
+            createdAt,
+            updatedAt,
+            cancelledAt,
+            version,
+            items);
+
+        // Assert
+        order.Should().NotBeNull();
+        order.Id.Should().Be(orderId);
+        order.CustomerId.Should().Be(customerId);
+        order.CustomerName.Should().Be(customerName);
+        order.CustomerEmail.Should().Be(customerEmail);
+        order.DeliveryAddress.Should().Be(deliveryAddress);
+        order.Status.Should().Be(status);
+        order.TotalAmount.Should().Be(totalAmount);
+        order.CreatedAt.Should().Be(createdAt);
+        order.UpdatedAt.Should().Be(updatedAt);
+        order.CancelledAt.Should().Be(cancelledAt);
+        order.Version.Should().Be(version);
+        order.Items.Count.Should().Be(2);
+        order.Items.Should().BeEquivalentTo(items);
+    }
+
+    [Fact]
+    public void Rehydrate_WithNullDeliveryAddress_ShouldRestoreCorrectly()
+    {
+        // Arrange
+        var orderId = OrderId.New();
+        var customerId = Guid.NewGuid();
+        var customerName = "John Doe";
+        var customerEmail = new Email("john@example.com");
+        var status = OrderStatus.Created;
+        var totalAmount = new Money(100m);
+        var createdAt = DateTime.UtcNow;
+        var items = new List<OrderItem>();
+
+        // Act
+        var order = Order.Rehydrate(
+            orderId,
+            customerId,
+            customerName,
+            customerEmail,
+            null,
+            status,
+            totalAmount,
+            createdAt,
+            null,
+            null,
+            1,
+            items);
+
+        // Assert
+        order.DeliveryAddress.Should().BeNull();
+    }
 }

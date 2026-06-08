@@ -1,5 +1,5 @@
 ﻿using OrderService.Domain.Events;
-using OrderService.Domain.Interfaces;
+using OrderService.Domain.Interfaces.Domain;
 using OrderService.Domain.ValueObjects;
 
 namespace OrderService.Domain.Entities;
@@ -42,6 +42,43 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
     };
 
     private Order() { }
+
+    public static Order Rehydrate(
+        OrderId id,
+        Guid customerId,
+        string customerName,
+        Email customerEmail,
+        DeliveryAddress? deliveryAddress,
+        OrderStatus status,
+        Money totalAmount,
+        DateTime createdAt,
+        DateTime? updatedAt,
+        DateTime? cancelledAt,
+        int version,
+        IEnumerable<OrderItem> items)
+    {
+        var order = new Order
+        {
+            Id = id,
+            CustomerId = customerId,
+            CustomerName = customerName,
+            CustomerEmail = customerEmail,
+            DeliveryAddress = deliveryAddress,
+            Status = status,
+            TotalAmount = totalAmount,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            CancelledAt = cancelledAt,
+            Version = version
+        };
+
+        foreach (var item in items)
+        {
+            order._items.Add(item);
+        }
+
+        return order;
+    }
 
     public static Order Create(
         Guid customerId,

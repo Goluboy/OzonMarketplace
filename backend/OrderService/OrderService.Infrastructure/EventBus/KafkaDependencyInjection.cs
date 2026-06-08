@@ -1,9 +1,11 @@
 ﻿using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.Shared;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OrderService.Application.Commands.Common;
 using OrderService.Infrastructure.EventBus.Consumers;
+using Quartz;
 
 namespace OrderService.Infrastructure.EventBus;
 
@@ -11,16 +13,40 @@ public static class KafkaDependencyInjection
 {
     public static void AddKafkaIntegration(this IServiceCollection services, IConfiguration config)
     {
+        var connectionString = config.GetConnectionString("DefaultConnection");
+
+        services.AddQuartz(q =>
+        {
+            q.SchedulerName = "OrderService-Scheduler";
+
+            q.UseMicrosoftDependencyInjectionJobFactory();
+
+            q.UsePersistentStore(s =>
+            {
+                s.UsePostgres(connectionString);
+                s.UseSystemTextJsonSerializer();
+
+                s.UseClustering(c =>
+                {
+                    c.CheckinMisfireThreshold = TimeSpan.FromSeconds(20);
+                    c.CheckinInterval = TimeSpan.FromSeconds(10);
+                });
+            });
+        });
+
         services.AddScoped<IEventPublisher, MassTransitEventPublisher>();
 
         services.AddMassTransit(x =>
         {
+            x.AddPublishMessageScheduler();
+            x.AddQuartzConsumers();
+
             x.AddRider(rider =>
             {
-                // === Регистрация консюмеров ===
                 rider.AddConsumer<StockReservedConsumer>();
                 rider.AddConsumer<StockReservationFailedConsumer>();
                 rider.AddConsumer<PriceCalculatedConsumer>();
+                rider.AddConsumer<OrderSagaTimeoutConsumer>();
 
                 rider.UsingKafka((context, k) =>
                 {
@@ -46,22 +72,23 @@ public static class KafkaDependencyInjection
                         cfg.ConfigureConsumer<PriceCalculatedConsumer>(context);
                         cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
                     });
+
+                    k.TopicEndpoint<OrderSagaTimeout>("order-service-timeout", "order-service-timeout-group", cfg =>
+                    {
+                        cfg.CreateIfMissing();
+                        cfg.ConfigureConsumer<OrderSagaTimeoutConsumer>(context);
+
+                        cfg.UsePublishMessageScheduler();
+                    });
                 });
 
-                rider.AddProducer<OrderCreatedEvent>("orders.created");
-                rider.AddProducer<OrderCancelledEvent>("orders.cancelled");
+                rider.AddProducer<Guid, OrderCreatedEvent>("orders.created");
+                rider.AddProducer<Guid, OrderCancelledEvent>("orders.cancelled");
             });
-
-            x.AddMessageScheduler(new Uri("queue:message-scheduler-queue"));
-
-            x.AddConsumer<OrderSagaTimeoutConsumer>();
 
             x.UsingInMemory((context, cfg) =>
             {
-                cfg.ReceiveEndpoint("saga-timeout-queue", e =>
-                {
-                    e.ConfigureConsumer<OrderSagaTimeoutConsumer>(context);
-                });
+                cfg.ConfigureEndpoints(context);
             });
         });
 

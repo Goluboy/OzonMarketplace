@@ -7,6 +7,8 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 using System.Data;
 using System.Text;
+using FluentMigrator.Runner;
+using OrderService.Infrastructure;
 using OrderService.Infrastructure.EventBus;
 
 namespace OrderService.Http
@@ -50,6 +52,8 @@ namespace OrderService.Http
             services.AddScoped<IDbConnection>(sp =>
                 new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
+            services.AddFluentMigrator(configuration);
+
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();
 
@@ -92,13 +96,19 @@ namespace OrderService.Http
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            using (var scope = app.ApplicationServices.CreateScope())
+            {
+                var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+                runner.MigrateUp();
+            }
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Marketplace API v1"));
             }
-
+            
             app.UseHttpsRedirection();
             app.UseRouting();
 
@@ -110,6 +120,6 @@ namespace OrderService.Http
             {
                 endpoints.MapControllers();
             });
-        }
+        }   
     }
 }

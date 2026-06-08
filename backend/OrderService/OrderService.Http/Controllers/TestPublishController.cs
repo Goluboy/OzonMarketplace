@@ -1,8 +1,7 @@
-﻿using MassTransit;
+﻿using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.Shared;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
-using OrderService.IntegrationEvents;
-using OrderService.IntegrationEvents.IntegrationEvents;
-using OrderService.IntegrationEvents.Shared;
 
 [ApiController]
 [Route("api/test")]

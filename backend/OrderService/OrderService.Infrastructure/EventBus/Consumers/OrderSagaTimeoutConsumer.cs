@@ -1,5 +1,5 @@
-﻿using MassTransit;
-using OrderService.IntegrationEvents.Shared;
+﻿using IntegrationEvents.Shared;
+using MassTransit;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 

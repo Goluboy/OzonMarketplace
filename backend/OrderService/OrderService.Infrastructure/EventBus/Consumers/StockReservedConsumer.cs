@@ -1,5 +1,5 @@
-﻿using MassTransit;
-using OrderService.IntegrationEvents.IntegrationEvents;
+﻿using IntegrationEvents.IntegrationEvents;
+using MassTransit;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 

@@ -9,12 +9,12 @@
   <ItemGroup>
     <PackageReference Include="MassTransit.Kafka" Version="[8.5.9]" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
+    <PackageReference Include="Netu.IntegrationEvents" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OrderService.Application.Commands\OrderService.Application.Commands.csproj" />
     <ProjectReference Include="..\OrderService.Domain\OrderService.Domain.csproj" />
-    <ProjectReference Include="..\OrderService.IntegrationEvents\OrderService.IntegrationEvents.csproj" />
   </ItemGroup>
 
 </Project>

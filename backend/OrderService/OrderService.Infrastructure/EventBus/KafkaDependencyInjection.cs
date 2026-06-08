@@ -1,9 +1,9 @@
-﻿using MassTransit;
+﻿using IntegrationEvents.IntegrationEvents;
+using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OrderService.Application.Commands.Common;
 using OrderService.Infrastructure.EventBus.Consumers;
-using OrderService.IntegrationEvents.IntegrationEvents;
 
 namespace OrderService.Infrastructure.EventBus;
 

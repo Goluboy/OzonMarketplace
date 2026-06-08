@@ -3,7 +3,8 @@
     <Project Path="OrderService.Application.Commands/OrderService.Application.Commands.csproj" Id="0c711350-5db1-4a64-8cef-69133af2ca26" />
     <Project Path="OrderService.Domain/OrderService.Domain.csproj" Id="9139bf46-1630-463d-a803-b0f5dd36c5b7" />
     <Project Path="OrderService.Http/OrderService.Http.csproj" />
-    <Project Path="OrderService.Infrastructure/OrderService.Infrastructure.csproj" Id="548540b7-9e4b-4b30-9e1e-eb85257f6855" />
+    <Project Path="OrderService.Infrastructure.Persistence/OrderService.Infrastructure.Persistence.csproj" Id="875b16dd-eb4f-4d8f-80e3-40f1b7bd5b0d" />
+    <Project Path="OrderService.Infrastructure/OrderService.Infrastructure.EventBus.csproj" Id="548540b7-9e4b-4b30-9e1e-eb85257f6855" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="OrderService.Domain.Tests/OrderService.Domain.Tests.csproj" Id="eaa0fc9c-d0f5-41bf-b112-43bc93d1d62b" />

@@ -1,7 +1,7 @@
 ﻿using IntegrationEvents.IntegrationEvents;
 using MassTransit;
 
-namespace OrderService.Infrastructure.EventBus.Consumers;
+namespace OrderService.Infrastructure.EventBus.EventBus.Consumers;
 
 public class StockReservationFailedConsumer : IConsumer<StockReservationFailedEvent>
 {

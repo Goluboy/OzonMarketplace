@@ -8,8 +8,7 @@ using Npgsql;
 using System.Data;
 using System.Text;
 using FluentMigrator.Runner;
-using OrderService.Infrastructure;
-using OrderService.Infrastructure.EventBus;
+using OrderService.Infrastructure.EventBus.EventBus;
 
 namespace OrderService.Http
 {

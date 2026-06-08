@@ -1,8 +1,7 @@
 ﻿using FluentMigrator;
-using System.Reflection;
-using OrderService.Infrastructure.utils;
+using OrderService.Infrastructure.Persistence.utils;
 
-namespace OrderService.Infrastructure.Migrations;
+namespace OrderService.Infrastructure.Persistence.Migrations;
 
 [Migration(202606080002)]
 public class CreateQuartzSchema : Migration

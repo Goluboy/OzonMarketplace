@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace OrderService.Infrastructure.utils;
+namespace OrderService.Infrastructure.Persistence.utils;
 
 public static class ScriptReader
 {

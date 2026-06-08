@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace OrderService.Infrastructure;
+namespace OrderService.Infrastructure.Persistence;
 
 public static class FluentMigratorRegistration
 {

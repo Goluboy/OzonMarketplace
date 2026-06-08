@@ -2,7 +2,7 @@
 
 namespace ProductService.Infrastructure.UnitOfWork;
 
-internal interface IDbSession : IDisposable, IAsyncDisposable
+public interface IDbSession : IDisposable, IAsyncDisposable
 {
     DbConnection Connection { get; }
     DbTransaction? Transaction { get; }

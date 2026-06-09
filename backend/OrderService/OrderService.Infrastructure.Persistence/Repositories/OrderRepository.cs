@@ -8,27 +8,6 @@ namespace OrderService.Infrastructure.Persistence.Repositories;
 
 public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
 {
-    public async Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        const string sql = """
-                           SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress", 
-                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
-                                  i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase", 
-                                  i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
-                           FROM "Orders" o
-                           LEFT JOIN "OrderItems" i ON o."Id" = i."OrderId"
-                           WHERE o."Id" = @Id
-                           ORDER BY o."Id", i."CreatedAt"
-                           """;
-
-        var rows = await unitOfWork.Connection.QueryAsync(sql, new { Id = id }, transaction: unitOfWork.CurrentTransaction);
-
-        if (!rows.Any())
-            return null;
-
-        return RehydrateOrderAggregate(rows);
-    }
-
     private static Order RehydrateOrderAggregate(IEnumerable<dynamic> rows)
     {
         var rowList = rows.ToList();
@@ -38,8 +17,8 @@ public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
         var customerId = (Guid)firstRow.CustomerId;
         var customerName = (string)firstRow.CustomerName;
         var customerEmail = new Email((string)firstRow.CustomerEmail);
-        var deliveryAddress = firstRow.DeliveryAddress != null 
-            ? DeliveryAddress.Create((string)firstRow.DeliveryAddress) 
+        var deliveryAddress = firstRow.DeliveryAddress != null
+            ? DeliveryAddress.Create((string)firstRow.DeliveryAddress)
             : null;
         var status = (OrderStatus)(int)firstRow.Status;
         var totalAmount = new Money((decimal)firstRow.TotalAmount);
@@ -83,6 +62,53 @@ public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
             items);
     }
 
+    public async Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+                           SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
+                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                                  i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
+                                  i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
+                           FROM "Orders" o
+                           LEFT JOIN "OrderItems" i ON o."Id" = i."OrderId"
+                           WHERE o."Id" = @Id
+                           ORDER BY o."Id", i."CreatedAt"
+                           """;
+
+        var rows = await unitOfWork.Connection.QueryAsync(sql, new { Id = id }, transaction: unitOfWork.CurrentTransaction);
+
+        if (!rows.Any())
+            return null;
+
+        return RehydrateOrderAggregate(rows);
+    }
+
+    public async Task<IEnumerable<Order>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+                           SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
+                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                                  i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
+                                  i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
+                           FROM "Orders" o
+                           LEFT JOIN "OrderItems" i ON o."Id" = i."OrderId"
+                           WHERE o."CustomerId" = @CustomerId
+                           ORDER BY o."Id", i."CreatedAt"
+                           """;
+
+        var rows = await unitOfWork.Connection.QueryAsync(sql, new { CustomerId = customerId }, transaction: unitOfWork.CurrentTransaction);
+        
+        var groupedRows = rows.GroupBy(r => r.Id);
+        var orders = new List<Order>();
+
+        foreach (var group in groupedRows)
+        {
+            orders.Add(RehydrateOrderAggregate(group));
+        }
+
+        return orders;
+    }
+
     public async Task SaveAsync(Order order, CancellationToken cancellationToken = default)
     {
         const string updateOrderSql = """
@@ -98,7 +124,7 @@ public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
                 "CancelledAt" = EXCLUDED."CancelledAt",
                 "Version" = EXCLUDED."Version"
             """;
-        
+
         await unitOfWork.Connection.ExecuteAsync(updateOrderSql, new
         {
             Id = order.Id.Value,

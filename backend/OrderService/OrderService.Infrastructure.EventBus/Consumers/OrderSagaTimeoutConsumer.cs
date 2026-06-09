@@ -3,7 +3,7 @@ using IntegrationEvents.Shared;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace OrderService.Infrastructure.EventBus.EventBus.Consumers;
+namespace OrderService.Infrastructure.EventBus.Consumers;
 
 public class OrderSagaTimeoutConsumer : IConsumer<OrderSagaTimeout>
 {

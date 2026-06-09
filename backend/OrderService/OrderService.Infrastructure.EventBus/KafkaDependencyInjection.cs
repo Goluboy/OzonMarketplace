@@ -3,11 +3,10 @@ using IntegrationEvents.Shared;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OrderService.Application.Commands.Common;
-using OrderService.Infrastructure.EventBus.EventBus.Consumers;
+using OrderService.Infrastructure.EventBus.Consumers;
 using Quartz;
 
-namespace OrderService.Infrastructure.EventBus.EventBus;
+namespace OrderService.Infrastructure.EventBus;
 
 public static class KafkaDependencyInjection
 {
@@ -23,7 +22,7 @@ public static class KafkaDependencyInjection
 
             q.UsePersistentStore(s =>
             {
-                s.UsePostgres(connectionString);
+                s.UsePostgres(connectionString!);
                 s.UseSystemTextJsonSerializer();
 
                 s.UseClustering(c =>
@@ -33,9 +32,7 @@ public static class KafkaDependencyInjection
                 });
             });
         });
-
-        services.AddScoped<IEventPublisher, MassTransitEventPublisher>();
-
+        
         services.AddMassTransit(x =>
         {
             x.AddPublishMessageScheduler();

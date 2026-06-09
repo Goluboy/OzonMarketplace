@@ -5,15 +5,15 @@ namespace OrderService.Domain.Entities;
 
 public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
 {
-    public Guid Id { get; init; }
-    public OrderId? OrderId { get; private set; }
-    public Guid ProductId { get; private set; }
+    public Guid Id { get; init; } = default!;
+    public OrderId? OrderId { get; private set; } = default!;
+    public Guid ProductId { get; private set; } = default!;
     public string ProductName { get; private set; } = null!;
-    public int Quantity { get; private set; }
-    public Money PriceAtPurchase { get; private set; }
-    public Money Subtotal { get; private set; }
-    public DateTime CreatedAt { get; init; }
-    public DateTime? UpdatedAt { get; private set;  }
+    public int Quantity { get; private set; } = default!;
+    public Money PriceAtPurchase { get; private set; } = default!;
+    public Money Subtotal { get; private set; } = default!;
+    public DateTime CreatedAt { get; init; } = default!;
+    public DateTime? UpdatedAt { get; private set; } = default!;
 
     private OrderItem() { }
 

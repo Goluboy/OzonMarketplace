@@ -8,4 +8,4 @@ public record ProductSearchFilter(
     string SortBy,    // "name", "price", "createdAt"
     string SortOrder, // "asc", "desc"
     string? Cursor,
-    int PageSize);
+    int PageSize = 10);

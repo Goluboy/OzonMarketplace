@@ -3,9 +3,9 @@ using ProductService.Presentation.Models;
 
 namespace ProductService.Presentation.Validator;
 
-public class SaveCategoryRequestValidator : AbstractValidator<SaveCategoryRequest>
+public class UpsertCategoryRequestValidator : AbstractValidator<UpsertCategoryRequest>
 {
-    public SaveCategoryRequestValidator()
+    public UpsertCategoryRequestValidator()
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Название категории обязательно для заполнения.")

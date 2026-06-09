@@ -11,8 +11,8 @@ public record ProductDetailsDto
     public decimal PriceAmount { get; init; }
     public required string PriceCurrency { get; init; }
     public int CategoryId { get; init; }
-    public string? CategoryName { get; init; }
-    public string? CategoryPath { get; init; }
+    public required string CategoryName { get; init; }
+    public required string CategoryPath { get; init; }
     public List<string> Images { get; init; } = [];
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; init; }

@@ -5,7 +5,6 @@ namespace ProductService.Application.DTO.Product;
 
 public record UpdateProductDto(
     Guid ProductId,
-    long Sku,
     string Name,
     string Description,
     MoneyDto Price,

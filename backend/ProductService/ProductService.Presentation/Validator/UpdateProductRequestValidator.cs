@@ -3,13 +3,10 @@ using ProductService.Presentation.Models;
 
 namespace ProductService.Presentation.Validator;
 
-public class UpsertProductRequestValidator : AbstractValidator<UpsertProductRequest>
+public class UpdateProductRequestValidator : AbstractValidator<UpdateProductRequest>
 {
-    public UpsertProductRequestValidator()
+    public  UpdateProductRequestValidator()
     {
-        RuleFor(x => x.Sku)
-            .GreaterThan(0).WithMessage("SKU (артикул) должен быть положительным числом.");
-
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Название товара обязательно для заполнения.")
             .MaximumLength(255).WithMessage("Название товара не может превышать 200 символов.");

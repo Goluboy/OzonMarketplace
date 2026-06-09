@@ -136,7 +136,6 @@ public class ProductCommandServiceTests
         
         var dto = new UpdateProductDto(
             ProductId: productId,
-            Sku: 1001L,
             Name: "Same Name",
             Description: "Same Description",
             CategoryId: 15,
@@ -184,7 +183,6 @@ public class ProductCommandServiceTests
         
         var dto = new UpdateProductDto(
             ProductId: productId,
-            Sku: 1001L,
             Name: "NEW Name",
             Description: "Same Description",
             CategoryId: 15,
@@ -220,7 +218,7 @@ public class ProductCommandServiceTests
         // Arrange
         var ct = CancellationToken.None;
         var nonExistentId = Guid.NewGuid();
-        var dto = new UpdateProductDto(nonExistentId, 1001L, "Name", "Desc", new MoneyDto(100m, "USD"), 15, []);
+        var dto = new UpdateProductDto(nonExistentId, "Name", "Desc", new MoneyDto(100m, "USD"), 15, []);
 
         var dbCategory = Category.Reconstruct(15, "Category", "path");
         _categoryRepository.GetAsync(15).Returns(dbCategory);

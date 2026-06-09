@@ -1,6 +1,6 @@
 ﻿namespace ProductService.Presentation.Models;
 
-public record SaveCategoryRequest(
+public record UpsertCategoryRequest(
     string Name,
     string Path
 );

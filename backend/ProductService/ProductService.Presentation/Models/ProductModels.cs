@@ -2,19 +2,34 @@
 
 public record MoneyDto(
     string Amount,
-    string Currency
-);
+    string Currency);
 
 public record ProductImageDto(string Url);
 
-public record UpsertProductRequest(
+public record CreateProductRequest(
     long Sku,
     string Name,
     string Description,
     MoneyDto Price,
     int CategoryId,
-    List<ProductImageDto> Images
-);
+    List<ProductImageDto> Images);
+
+public record UpdateProductRequest(
+    string Name,
+    string Description,
+    MoneyDto Price,
+    int CategoryId,
+    List<ProductImageDto> Images);
+
+public record ProductSearchFilterRequest(
+    string? Search,
+    int? CategoryId,
+    MoneyDto? MinPrice, 
+    MoneyDto? MaxPrice,
+    string SortBy,    // "name", "price", "createdAt"
+    string SortOrder, // "asc", "desc"
+    string? Cursor,
+    int PageSize);
 
 public record ProductResponse(
     Guid Id,
@@ -28,19 +43,16 @@ public record ProductResponse(
     string CategoryPath,
     List<ProductImageDto> Images,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt
-);
+    DateTimeOffset UpdatedAt);
 
 public record ProductCardResponse(
     Guid Id,
     string Name,
     MoneyDto Price,
     string ImageUrl,
-    int CategoryId
-);
+    int CategoryId);
 
 public record ProductCursorPagedResponse(
     IReadOnlyCollection<ProductCardResponse> Items,
     string? NextCursor,
-    int PageSize
-);
+    int PageSize);

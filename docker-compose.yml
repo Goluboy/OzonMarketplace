@@ -31,7 +31,7 @@ services:
       - app-net
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:0.7.2
     container_name: kafka-ui
     ports:
       - "8080:8080"
@@ -44,7 +44,7 @@ services:
       - kafka
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: postgres
     environment:
       POSTGRES_USER: dev

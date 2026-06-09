@@ -10,13 +10,13 @@ public class UnitOfWork(IDbConnection connection) : IUnitOfWork
 
     public IDbTransaction? CurrentTransaction => _transaction;
 
-    public async Task BeginTransactionAsync(CancellationToken ct = default)
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         if (connection.State != ConnectionState.Open)
         {
             if (connection is System.Data.Common.DbConnection dbConn)
             {
-                await dbConn.OpenAsync(ct);
+                await dbConn.OpenAsync(cancellationToken);
             }
             else
             {
@@ -27,7 +27,7 @@ public class UnitOfWork(IDbConnection connection) : IUnitOfWork
         _transaction = connection.BeginTransaction();
     }
 
-    public async Task CommitAsync(CancellationToken ct = default)
+    public async Task CommitAsync(CancellationToken cancellationToken = default)
     {
         if (_transaction == null)
             throw new InvalidOperationException("No transaction has been started. Call BeginTransactionAsync first.");
@@ -43,7 +43,7 @@ public class UnitOfWork(IDbConnection connection) : IUnitOfWork
         }
     }
 
-    public async Task RollbackAsync(CancellationToken ct = default)
+    public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
         if (_transaction == null)
             return;

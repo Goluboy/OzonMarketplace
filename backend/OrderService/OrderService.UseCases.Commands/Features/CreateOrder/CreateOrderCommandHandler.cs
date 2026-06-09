@@ -13,9 +13,9 @@ public class CreateOrderCommandHandler(
     IUnitOfWork unitOfWork,
     IPublishEndpoint publishEndpoint) : ICommandHandler<CreateOrderCommand, Guid>
 {
-    public async Task<Guid> HandleAsync(CreateOrderCommand command, CancellationToken ct = default)
+    public async Task<Guid> HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
-        await unitOfWork.BeginTransactionAsync(ct);
+        await unitOfWork.BeginTransactionAsync(cancellationToken);
 
         try
         {
@@ -30,9 +30,9 @@ public class CreateOrderCommandHandler(
                 command.DeliveryAddress,
                 items);
 
-            await orderRepository.SaveAsync(order, ct);
+            await orderRepository.SaveAsync(order, cancellationToken);
 
-            await unitOfWork.CommitAsync(ct);
+            await unitOfWork.CommitAsync(cancellationToken);
 
             var integrationEvent = new OrderCreatedEvent
             {
@@ -42,13 +42,13 @@ public class CreateOrderCommandHandler(
                 Items = order.Items.Select(i => new OrderItemDto(i.ProductId, i.Quantity)).ToList()
             };
 
-            await publishEndpoint.Publish(integrationEvent, ct);
+            await publishEndpoint.Publish(integrationEvent, cancellationToken);
 
             return order.Id.Value;
         }
         catch
         {
-            await unitOfWork.RollbackAsync(ct);
+            await unitOfWork.RollbackAsync(cancellationToken);
             throw;
         }
     }

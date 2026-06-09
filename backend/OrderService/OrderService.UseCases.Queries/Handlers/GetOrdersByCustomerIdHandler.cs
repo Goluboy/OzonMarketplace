@@ -7,9 +7,9 @@ namespace OrderService.UseCases.Queries.Handlers;
 
 public class GetOrdersByCustomerIdHandler(IOrderRepository orderRepository) : IQueryHandler<GetOrdersByCustomerIdQuery, List<OrderModel>>
 {
-    public async Task<List<OrderModel>> HandleAsync(GetOrdersByCustomerIdQuery query, CancellationToken ct = default)
+    public async Task<List<OrderModel>> HandleAsync(GetOrdersByCustomerIdQuery query, CancellationToken cancellationToken = default)
     {
-        var orders = await orderRepository.GetByCustomerIdAsync(query.CustomerId, ct);
+        var orders = await orderRepository.GetByCustomerIdAsync(query.CustomerId, cancellationToken);
 
         return orders.Select(order => new OrderModel(
             Id: order.Id.Value,

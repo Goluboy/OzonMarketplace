@@ -2,7 +2,7 @@
 using FluentValidation;
 using ProductService.Presentation.Models;
 
-namespace ProductService.Presentation.Validator;
+namespace ProductService.Presentation.Validators;
 
 public class ProductSearchFilterRequestValidator : AbstractValidator<ProductSearchFilterRequest>
 {

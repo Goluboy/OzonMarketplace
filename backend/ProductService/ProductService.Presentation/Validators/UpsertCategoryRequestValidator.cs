@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using ProductService.Presentation.Models;
 
-namespace ProductService.Presentation.Validator;
+namespace ProductService.Presentation.Validators;
 
 public class UpsertCategoryRequestValidator : AbstractValidator<UpsertCategoryRequest>
 {

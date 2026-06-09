@@ -1,12 +1,15 @@
 ﻿using FluentValidation;
 using ProductService.Presentation.Models;
 
-namespace ProductService.Presentation.Validator;
+namespace ProductService.Presentation.Validators;
 
-public class UpdateProductRequestValidator : AbstractValidator<UpdateProductRequest>
+public class CreateProductRequestValidator : AbstractValidator<CreateProductRequest>
 {
-    public  UpdateProductRequestValidator()
+    public CreateProductRequestValidator()
     {
+        RuleFor(x => x.Sku)
+            .GreaterThan(0).WithMessage("SKU (артикул) должен быть положительным числом.");
+
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Название товара обязательно для заполнения.")
             .MaximumLength(255).WithMessage("Название товара не может превышать 200 символов.");

@@ -9,4 +9,5 @@ public interface ICategoryService
     Task<CategoryDto> CreateAsync(CreateCategoryDto dto, CancellationToken ct);
     Task<CategoryDto> UpdateAsync(UpdateCategoryDto dto, CancellationToken ct);
     Task DeleteAsync(int id, CancellationToken ct);
+    Task<string> GetVersionETagAsync(CancellationToken ct);
 }

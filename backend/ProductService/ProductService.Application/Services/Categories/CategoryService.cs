@@ -121,4 +121,10 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             throw;
         }
     }
+
+    public Task<string> GetVersionETagAsync(CancellationToken ct)
+    {
+        //TODO Redis кеширование версии категорий
+        return Task.FromResult("1");
+    }
 }

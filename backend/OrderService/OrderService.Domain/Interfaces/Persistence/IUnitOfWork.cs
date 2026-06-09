@@ -6,8 +6,8 @@ public interface IUnitOfWork : IDisposable
 {
     IDbConnection Connection { get; }
     IDbTransaction? CurrentTransaction { get; }
-    Task BeginTransactionAsync(CancellationToken ct = default);
-    Task CommitAsync(CancellationToken ct = default);
-    Task RollbackAsync(CancellationToken ct = default);
+    Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+    Task CommitAsync(CancellationToken cancellationToken = default);
+    Task RollbackAsync(CancellationToken cancellationToken = default);
 }
 

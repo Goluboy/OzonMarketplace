@@ -1,15 +1,15 @@
-﻿using FluentValidation;
+﻿using FluentMigrator.Runner;
+using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Npgsql;
+using OrderService.Infrastructure.Persistence;
 using System.Data;
 using System.Text;
-using FluentMigrator.Runner;
-using OrderService.Infrastructure.EventBus.EventBus;
-using OrderService.Infrastructure.Persistence;
+using OrderService.Infrastructure.EventBus;
 
 namespace OrderService.Http
 {

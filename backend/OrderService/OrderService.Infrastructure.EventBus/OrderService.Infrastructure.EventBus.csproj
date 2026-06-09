@@ -17,7 +17,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\OrderService.Application.Commands\OrderService.Application.Commands.csproj" />
 		<ProjectReference Include="..\OrderService.Domain\OrderService.Domain.csproj" />
 	</ItemGroup>
 

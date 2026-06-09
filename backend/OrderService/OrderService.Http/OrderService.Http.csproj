@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -34,7 +34,6 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\OrderService.Infrastructure.EventBus\OrderService.Infrastructure.EventBus.csproj" />
 	  <ProjectReference Include="..\OrderService.Infrastructure.Persistence\OrderService.Infrastructure.Persistence.csproj" />
-	  <ProjectReference Include="..\OrderService.Infrastructure\OrderService.Infrastructure.EventBus.csproj" />
 	</ItemGroup>
 
 </Project>

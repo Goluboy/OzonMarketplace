@@ -1,4 +1,5 @@
 ﻿using Amazon.S3;
+using Core.Minio.Helpers;
 using Core.Minio.Service;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,7 +25,8 @@ public static class MinioServiceExtensions
         });
 
         services.AddSingleton<IS3StorageService, MinioStorageService>();
-
+        services.AddSingleton<IS3UrlFormatter, MinioUrlFormatter>();
+        
         return services;
     }
 }

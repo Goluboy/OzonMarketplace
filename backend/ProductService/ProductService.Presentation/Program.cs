@@ -1,4 +1,5 @@
 
+using Core.Minio;
 using ProductService.Application;
 using ProductService.Infrastructure;
 using ProductService.Infrastructure.Persistence;
@@ -32,6 +33,18 @@ public static class Program
         app.MapControllers();
             
         app.Run();
+    }
+
+    private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddInfrastructure(configuration)
+            .AddApplication()
+            .AddPresentation();
+
+        services.AddMinioStorage(options =>
+        {
+            configuration.GetSection("Minio").Bind(options);
+        });
     }
     
     private static void ConfigureMiddleware(this IApplicationBuilder builder)

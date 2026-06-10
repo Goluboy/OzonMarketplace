@@ -60,15 +60,4 @@ public class MinioStorageService(IAmazonS3 s3Client, IOptions<MinioOptions> opti
 
         await s3Client.DeleteObjectsAsync(request, ct);
     }
-
-    public string GetKeyFromUrl(string url)
-    {
-        if (string.IsNullOrEmpty(url))
-        {
-            return string.Empty;
-        }
-        
-        var prefix = $"{_options.ExternalEndpoint}/{_options.BucketName}/";
-        return url.Replace(prefix, "");
-    }
 }

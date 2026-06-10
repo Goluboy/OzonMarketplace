@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using ProductService.Application.Services.Categories;
+using ProductService.Application.Services.Media;
 using ProductService.Application.Services.Products;
 using ProductService.Application.Services.Products.Command;
 using ProductService.Application.Services.Products.Query;
@@ -14,6 +15,7 @@ public static class ApplicationExtensions
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IProductQueryService, ProductQueryService>();
         services.AddScoped<IProductCommandService, ProductCommandService>();
+        services.AddScoped<IMediaService, MediaService>();
         
         return services;
     }

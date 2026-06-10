@@ -5,7 +5,8 @@ namespace ProductService.Application.Services.Media;
 
 public class MediaService(IS3StorageService storageService) : IMediaService
 {
-    public UploadFilesBatchOutput PrepareBatchUploadAsync(UploadFilesBatchInput input, CancellationToken ct = default)
+    private readonly Random _random = new();
+    public UploadFilesBatchOutput PrepareBatchUpload(UploadFilesBatchInput input, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
         
@@ -15,7 +16,7 @@ public class MediaService(IS3StorageService storageService) : IMediaService
 
         foreach (var fileName in input.FileNames)
         {
-            var objectKey = $"products/{input.ProductId}/{Guid.NewGuid()}_{fileName}";
+            var objectKey = $"products/{_random.Next()}_{fileName}"; //TODO Добавить секцию в пути по SellerId
             var (uploadUrl, publicUrl) = storageService.GenerateUploadUrls(objectKey);
             
             urlPairs.Add(new UploadFileMetadata(fileName, uploadUrl, publicUrl));

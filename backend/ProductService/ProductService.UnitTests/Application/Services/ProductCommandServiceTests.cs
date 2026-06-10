@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Core.Minio.Helpers;
 using FluentAssertions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -20,11 +21,12 @@ public class ProductCommandServiceTests
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly IProductRepository _productRepository = Substitute.For<IProductRepository>();
     private readonly ICategoryRepository _categoryRepository = Substitute.For<ICategoryRepository>();
+    private readonly IS3UrlFormatter _s3UrlFormatter = Substitute.For<IS3UrlFormatter>();
     private readonly ProductCommandService _service;
 
     public ProductCommandServiceTests()
     {
-        _service = new ProductCommandService(_unitOfWork, _productRepository, _categoryRepository);
+        _service = new ProductCommandService(_unitOfWork, _productRepository, _categoryRepository, _s3UrlFormatter);
     }
 
     #region CreateProductAsync Tests

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Core.Minio.Helpers;
 using ProductService.Application.DTO.Category;
 using ProductService.Application.DTO.Product;
 using ProductService.Application.Exceptions;
@@ -13,7 +14,8 @@ using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 
 namespace ProductService.Application.Services.Products.Command;
 
-public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository productRepository, ICategoryRepository categoryRepository) : IProductCommandService
+public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository productRepository,
+    ICategoryRepository categoryRepository, IS3UrlFormatter urlFormatter) : IProductCommandService
 {
     public async Task<ProductDetailsDto> CreateProductAsync(CreateProductDto dto, CancellationToken ct = default)
     {
@@ -24,11 +26,11 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         var categoryDto = await EnsureCategoryExistsAsync(dto.CategoryId, ct);
         
         var price = new Money(dto.Price.Amount, dto.Price.Currency);
-        var images = dto.ImagesUrl
-            .Select(url => new ProductImage(url))
+        var relativeImages = dto.ImagesUrl
+            .Select(url => new ProductImage(urlFormatter.ToObjectKey(url)))
             .ToList();
         
-        var product = Product.Create(dto.Sku, dto.Name, dto.Description, dto.CategoryId, sellerId, price, images);
+        var product = Product.Create(dto.Sku, dto.Name, dto.Description, dto.CategoryId, sellerId, price, relativeImages);
 
         await unitOfWork.BeginTransactionAsync(ct); //TODO BeginOutboxTransactionAsync для outbox
         try
@@ -44,7 +46,11 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             
             product.ClearDomainEvents();
             
-            return product.ToDto(categoryDto);
+            var absoluteImages = product.Images
+                .Select(img => urlFormatter.ToAbsoluteUrl(img.Url))
+                .ToList();
+            
+            return product.ToDto(categoryDto, absoluteImages);
         }
         catch
         {
@@ -78,13 +84,21 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             product.ChangePrice(newPrice);
         }
         
-        product.UpdateImages(dto.ImagesUrl);
+        var relativeImagesUrls = dto.ImagesUrl
+            .Select(urlFormatter.ToObjectKey)
+            .ToList(); 
+        
+        product.UpdateImages(relativeImagesUrls);
         
         product.IncrementVersion();
         
         if (product.DomainEvents.Count == 0)
         {
-            return product.ToDto(categoryDto);
+            var currentAbsoluteImages = product.Images
+                .Select(img => urlFormatter.ToAbsoluteUrl(img.Url))
+                .ToList();
+            
+            return product.ToDto(categoryDto, currentAbsoluteImages);
         }
         
         await unitOfWork.BeginTransactionAsync(ct);
@@ -105,7 +119,11 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             
             product.ClearDomainEvents();
             
-            return product.ToDto(categoryDto);
+            var absoluteImageUrls = product.Images
+                .Select(img => urlFormatter.ToAbsoluteUrl(img.Url))
+                .ToList();
+            
+            return product.ToDto(categoryDto, absoluteImageUrls);
         }
         catch
         {

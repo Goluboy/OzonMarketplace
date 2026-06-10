@@ -8,7 +8,7 @@ namespace ProductService.Application.Mappers;
 
 public static class ProductMapper
 {
-    public static ProductDetailsDto ToDto(this Product product, CategoryDto categoryDto)
+    public static ProductDetailsDto ToDto(this Product product, CategoryDto categoryDto, List<string> absoluteImageUrls)
     {
         return new ProductDetailsDto
         {

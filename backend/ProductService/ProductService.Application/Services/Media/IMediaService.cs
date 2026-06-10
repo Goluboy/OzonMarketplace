@@ -4,5 +4,5 @@ namespace ProductService.Application.Services.Media;
 
 public interface IMediaService
 {
-    UploadFilesBatchOutput PrepareBatchUploadAsync(UploadFilesBatchInput input, CancellationToken ct = default);
+    UploadFilesBatchOutput PrepareBatchUpload(UploadFilesBatchInput input, CancellationToken ct = default);
 }

@@ -1,4 +1,21 @@
 services:
+  product-service:
+    build:
+      context: ./backend/ProductService
+      dockerfile: Dockerfile
+    container_name: product-service
+    ports:
+      - "5001:8080"
+    environment:
+      ConnectionStrings__PostgresConnectionString: Host=postgres;Port=5432;Database=marketplace;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      KafkaSettings__Servers: kafka:9092
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      - postgres
+      - kafka
+    networks:
+      - app-net
+
   kafka:
     image: apache/kafka:3.7.0
     container_name: kafka

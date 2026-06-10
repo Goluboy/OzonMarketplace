@@ -2,11 +2,12 @@ using Dapper;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.Domain.ValueObjects;
+using OrderService.Infrastructure.Persistence.UnitOfWork;
 using System.Data;
 
 namespace OrderService.Infrastructure.Persistence.Repositories;
 
-public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
+public class OrderRepository(IDbSession dbSession) : IOrderRepository
 {
     private static Order RehydrateOrderAggregate(IEnumerable<dynamic> rows)
     {
@@ -75,7 +76,7 @@ public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
                            ORDER BY o."Id", i."CreatedAt"
                            """;
 
-        var rows = await unitOfWork.Connection.QueryAsync(sql, new { Id = id }, transaction: unitOfWork.CurrentTransaction);
+        var rows = await dbSession.Connection.QueryAsync(sql, new { Id = id }, transaction: dbSession.Transaction);
 
         if (!rows.Any())
             return null;
@@ -96,8 +97,8 @@ public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
                            ORDER BY o."Id", i."CreatedAt"
                            """;
 
-        var rows = await unitOfWork.Connection.QueryAsync(sql, new { CustomerId = customerId }, transaction: unitOfWork.CurrentTransaction);
-        
+        var rows = await dbSession.Connection.QueryAsync(sql, new { CustomerId = customerId }, transaction: dbSession.Transaction);
+
         var groupedRows = rows.GroupBy(r => r.Id);
         var orders = new List<Order>();
 
@@ -125,7 +126,7 @@ public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
                 "Version" = EXCLUDED."Version"
             """;
 
-        await unitOfWork.Connection.ExecuteAsync(updateOrderSql, new
+        await dbSession.Connection.ExecuteAsync(updateOrderSql, new
         {
             Id = order.Id.Value,
             order.CustomerId,
@@ -138,34 +139,33 @@ public class OrderRepository(IUnitOfWork unitOfWork) : IOrderRepository
             order.UpdatedAt,
             order.CancelledAt,
             order.Version
-        }, transaction: unitOfWork.CurrentTransaction);
+        }, transaction: dbSession.Transaction);
 
-        await unitOfWork.Connection.ExecuteAsync("DELETE FROM \"OrderItems\" WHERE \"OrderId\" = @Id", new { Id = order.Id.Value }, transaction: unitOfWork.CurrentTransaction);
+        await dbSession.Connection.ExecuteAsync("DELETE FROM \"OrderItems\" WHERE \"OrderId\" = @Id", new { Id = order.Id.Value }, transaction: dbSession.Transaction);
 
         const string insertItemSql = """
             INSERT INTO "OrderItems" ("Id", "OrderId", "ProductId", "ProductName", "Quantity", "PriceAtPurchase", "Subtotal", "CreatedAt", "UpdatedAt")
             VALUES (@Id, @OrderId, @ProductId, @ProductName, @Quantity, @PriceAtPurchase, @Subtotal, @CreatedAt, @UpdatedAt)
             """;
 
-        foreach (var item in order.Items)
+        var itemsParams = order.Items.Select(item => new
         {
-            await unitOfWork.Connection.ExecuteAsync(insertItemSql, new
-            {
-                item.Id,
-                OrderId = order.Id.Value,
-                item.ProductId,
-                item.ProductName,
-                item.Quantity,
-                PriceAtPurchase = item.PriceAtPurchase.Value,
-                Subtotal = item.Subtotal.Value,
-                item.CreatedAt,
-                item.UpdatedAt
-            }, transaction: unitOfWork.CurrentTransaction);
-        }
+            item.Id,
+            OrderId = order.Id.Value,
+            item.ProductId,
+            item.ProductName,
+            item.Quantity,
+            PriceAtPurchase = item.PriceAtPurchase.Value,
+            Subtotal = item.Subtotal.Value,
+            item.CreatedAt,
+            item.UpdatedAt
+        });
+
+        await dbSession.Connection.ExecuteAsync(insertItemSql, itemsParams, transaction: dbSession.Transaction);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await unitOfWork.Connection.ExecuteAsync("DELETE FROM \"Orders\" WHERE \"Id\" = @Id", new { Id = id }, transaction: unitOfWork.CurrentTransaction);
+        await dbSession.Connection.ExecuteAsync("DELETE FROM \"Orders\" WHERE \"Id\" = @Id", new { Id = id }, transaction: dbSession.Transaction);
     }
 }

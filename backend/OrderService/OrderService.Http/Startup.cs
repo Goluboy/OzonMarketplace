@@ -6,10 +6,14 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Npgsql;
+using OrderService.Infrastructure.EventBus;
 using OrderService.Infrastructure.Persistence;
+using OrderService.UseCases.Commands;
+using OrderService.UseCases.Queries;
 using System.Data;
 using System.Text;
-using OrderService.Infrastructure.EventBus;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OrderService.Http
 {
@@ -20,9 +24,10 @@ namespace OrderService.Http
             services.AddControllers()
                 .AddJsonOptions(options =>
                 {
-                    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+                    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                     options.JsonSerializerOptions.DefaultIgnoreCondition =
-                        System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+                        JsonIgnoreCondition.WhenWritingNull;
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
             var jwtKey = configuration["Jwt:Key"] ?? "asfddfgaessedrfggseradfergaswe23234234r4234rw234rw23r23r4w23r";
@@ -53,6 +58,8 @@ namespace OrderService.Http
                 new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
             services.AddPersistenceServices(configuration);
+            services.AddCommands();
+            services.AddQueries();
 
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();

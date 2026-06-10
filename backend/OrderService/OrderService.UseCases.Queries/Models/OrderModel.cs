@@ -1,3 +1,5 @@
+using OrderService.Domain.ValueObjects;
+
 namespace OrderService.UseCases.Queries.Models;
 
 public record OrderModel(
@@ -6,7 +8,7 @@ public record OrderModel(
     string CustomerName,
     string CustomerEmail,
     string? DeliveryAddress,
-    string Status,
+    OrderStatus Status,
     decimal TotalAmount,
     DateTime CreatedAt,
     DateTime? UpdatedAt,

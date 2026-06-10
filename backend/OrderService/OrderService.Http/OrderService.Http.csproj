@@ -34,6 +34,8 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\OrderService.Infrastructure.EventBus\OrderService.Infrastructure.EventBus.csproj" />
 	  <ProjectReference Include="..\OrderService.Infrastructure.Persistence\OrderService.Infrastructure.Persistence.csproj" />
+	  <ProjectReference Include="..\OrderService.UseCases.Commands\OrderService.UseCases.Commands.csproj" />
+	  <ProjectReference Include="..\OrderService.UseCases.Queries\OrderService.UseCases.Queries.csproj" />
 	</ItemGroup>
 
 </Project>

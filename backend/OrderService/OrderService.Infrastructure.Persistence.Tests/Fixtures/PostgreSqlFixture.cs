@@ -33,7 +33,7 @@ public class PostgreSqlFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _container = new PostgreSqlBuilder("postgres:16-alpine")
+        _container = new PostgreSqlBuilder("postgres:18-alpine")
             .WithDatabase(DbName)
             .WithUsername(DbUser)
             .WithPassword(DbPassword)

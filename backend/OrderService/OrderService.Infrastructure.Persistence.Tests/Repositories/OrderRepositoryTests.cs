@@ -290,7 +290,7 @@ public class OrderRepositoryTests(PostgreSqlFixture dbFixture) : IAsyncLifetime,
         var order = _orderFixture.CreateValidOrder();
 
         await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
-        Assert.NotNull(_unitOfWorkFixture.UnitOfWork.CurrentTransaction);
+        Assert.NotNull(_unitOfWorkFixture.UnitOfWork.Transaction);
 
         await _repository.SaveAsync(order);
         await _unitOfWorkFixture.UnitOfWork.CommitAsync();

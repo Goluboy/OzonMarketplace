@@ -16,6 +16,49 @@ services:
     networks:
       - app-net
 
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/var/lib/minio/data
+    networks:
+      - app-net
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio_init
+    depends_on:
+      - minio
+    entrypoint: |
+      /bin/sh -c "
+      echo 'Ожидание запуска MinIO...';
+      until /usr/bin/mc alias set localminio http://minio:9000 minioadmin minioadmin > /dev/null 2>&1; do
+        echo 'MinIO еще не готов, повторная попытка через 2 секунды...';
+        sleep 2;
+      done;
+      echo 'Соединение установлено. Настройка бакета...';
+      if ! /usr/bin/mc ls localminio/marketplace-bucket > /dev/null 2>&1; then
+        /usr/bin/mc mb localminio/marketplace-bucket;
+        /usr/bin/mc anonymous set download localminio/marketplace-bucket;
+        echo 'Бакет marketplace-bucket успешно создан.';
+      else
+        echo 'Бакет уже существует.';
+      fi;
+      /usr/bin/mc anonymous set download localminio/marketplace-bucket;
+      echo 'Публичный доступ (download) успешно применен к бакету.';
+      exit 0;
+      "
+    networks:
+      - app-net
+
   kafka:
     image: apache/kafka:3.7.0
     container_name: kafka
@@ -77,6 +120,7 @@ services:
 volumes:
   kafka-data:
   postgres-data:
+  minio-data:
 
 networks:
   app-net:

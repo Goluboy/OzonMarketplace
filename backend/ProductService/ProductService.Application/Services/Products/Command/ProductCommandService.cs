@@ -99,7 +99,7 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             await productRepository.UpdateAsync(product);
             await unitOfWork.CommitAsync();
             
-            // TODO BackgroundWorker для удаления файлов из Minio, urls лежат в imagesUpdateEvent.RemovedUrls
+            // TODO BackgroundWorker для удаления файлов из S3, urls лежат в imagesUpdateEvent.RemovedUrls
             // TODO Invalidation (Redis) - Инвалидировать/удалить кэш каталога и списков, так как появился новый товар
             // TODO Kafka - Опубликовать событие ProductUpdatedEvent в брокер сообщений
             
@@ -135,7 +135,7 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             // TODO: Invalidation (Redis) - Сбросить кэш детальной карточки "products:details:{id}",
             // легкой карточки "products:card:{id}" и сбросить кэш каталога.
             // TODO Kafka - Опубликовать событие ProductDeletedEvent в брокер сообщений
-            // TODO BackgroundWorker для удаления файлов из Minio
+            // TODO BackgroundWorker для удаления файлов из S3
         }
         catch
         {

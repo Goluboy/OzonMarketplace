@@ -1,5 +1,7 @@
 <Solution>
-  <Folder Name="/common/" />
+  <Folder Name="/common/">
+    <Project Path="../S3/S3.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="ProductService.Application/ProductService.Application.csproj" />
     <Project Path="ProductService.Domain/ProductService.Domain.csproj" />

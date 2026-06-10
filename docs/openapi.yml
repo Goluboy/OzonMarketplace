@@ -413,6 +413,38 @@ paths:
         '404':
           description: Товар не найден
 
+  /api/products/upload-urls:
+    post:
+      tags:
+        - Products
+      summary: Получение пакета pre-signed ссылок для загрузки файлов (только продавцы)
+      description: Принимает список имен файлов и генерирует для каждого временную pre-signed ссылку для прямой загрузки в S3 (PUT) и публичный URL.
+      security:
+        - JwtBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadFilesBatchRequest'
+      responses:
+        '200':
+          description: Пакет ссылок успешно сгенерирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadFilesBatchOutput'
+        '400':
+          description: Неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Неавторизован
+        '403':
+          description: Недостаточно прав
+
   # === Pricing (Discounts Service) ===
   /api/pricing/products/{productId}:
     get:
@@ -1287,3 +1319,41 @@ components:
               type: string
           example:
             email: ["Неверный формат email", "Email уже зарегистрирован"]
+    UploadFilesBatchRequest:
+      type: object
+      required:
+        - fileNames
+      properties:
+        fileNames:
+          type: array
+          items:
+            type: string
+          description: Список оригинальных имен файлов, выбранных пользователем на клиенте
+
+    UploadFileMetadata:
+      type: object
+      required:
+        - fileName
+        - uploadUrl
+        - publicUrl
+      properties:
+        fileName:
+          type: string
+          description: Оригинальное имя файла
+        uploadUrl:
+          type: string
+          description: Временная pre-signed ссылка для отправки PUT-запроса с файлом напрямую в S3/Minio
+        publicUrl:
+          type: string
+          description: Постоянный публичный URL файла для хранения в БД после успешной загрузки
+
+    UploadFilesBatchOutput:
+      type: object
+      required:
+        - filesMetadata
+      properties:
+        filesMetadata:
+          type: array
+          items:
+            $ref: '#/components/schemas/UploadFileMetadata'
+          description: Список сгенерированных метаданных для каждого файла

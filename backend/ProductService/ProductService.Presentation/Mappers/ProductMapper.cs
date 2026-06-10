@@ -3,6 +3,7 @@ using ProductService.Application.DTO.Product;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Presentation.Models;
 using MoneyDto = ProductService.Presentation.Models.MoneyDto;
+using ProductImageDto = ProductService.Presentation.Models.ProductImageDto;
 
 namespace ProductService.Presentation.Mappers;
 
@@ -55,7 +56,7 @@ public static class ProductMapper
             dto.CategoryId,
             dto.CategoryName,
             dto.CategoryPath,
-            dto.Images.Select(url => new ProductImageDto(url)).ToList(),
+            dto.Images.Select(imageDto => imageDto.ToHttpResponse()).ToList(),
             dto.CreatedAt,
             dto.UpdatedAt);
     }
@@ -66,6 +67,16 @@ public static class ProductMapper
             dto.Items.Select(i => i.ToHttpResponse()).ToList(),
             dto.NextCursor,
             dto.PageSize);
+    }
+
+    public static ProductImageDto ToHttpResponse(this Infrastructure.Abstractions.DTO.Product.Query.ProductImageDto dto)
+    {
+        return new ProductImageDto(dto.Url);
+    }
+    
+    public static Infrastructure.Abstractions.DTO.Product.Query.ProductImageDto ToDto(this ProductImageDto dto)
+    {
+        return new Infrastructure.Abstractions.DTO.Product.Query.ProductImageDto(dto.Url);
     }
     
     private static ProductCardResponse ToHttpResponse(this ProductCardDto dto)

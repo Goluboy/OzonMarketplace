@@ -13,7 +13,7 @@ public record ProductDetailsDto
     public int CategoryId { get; init; }
     public required string CategoryName { get; init; }
     public required string CategoryPath { get; init; }
-    public List<string> Images { get; init; } = [];
+    public List<ProductImageDto> Images { get; init; } = [];
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; init; }
 }

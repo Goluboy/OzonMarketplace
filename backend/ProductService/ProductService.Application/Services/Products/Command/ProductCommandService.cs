@@ -78,9 +78,9 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             product.ChangePrice(newPrice);
         }
         
-        
-        
         product.UpdateImages(dto.ImagesUrl);
+        
+        product.IncrementVersion();
         
         if (product.DomainEvents.Count == 0)
         {

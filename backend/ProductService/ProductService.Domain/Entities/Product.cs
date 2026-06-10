@@ -128,7 +128,7 @@ public class Product : IEquatable<Product>
     {
         var oldPrice = Price;
         Price = newPrice ?? throw new ArgumentNullException(nameof(newPrice));
-        UpdateTimestamp();
+        
         
         _domainEvents.Add(new ProductPriceChangedEvent(
             Id,
@@ -153,7 +153,6 @@ public class Product : IEquatable<Product>
         Name = name;
         Description = description;
         CategoryId = categoryId;
-        UpdateTimestamp();
         
         _domainEvents.Add(new ProductDetailsUpdatedEvent(
             Id,
@@ -192,10 +191,14 @@ public class Product : IEquatable<Product>
         {
             _images.Add(new ProductImage(url));
         }
-
-        UpdateTimestamp();
         
         _domainEvents.Add(new ProductImagesUpdatedEvent(Id, _images.Select(i => i.Url).ToList(), imagesToRemove));
+    }
+
+    public void IncrementVersion()
+    {
+        UpdatedAt = DateTimeOffset.UtcNow;
+        Version++;
     }
     
     public bool Equals(Product? other)
@@ -216,12 +219,6 @@ public class Product : IEquatable<Product>
     public override bool Equals(object? obj) => Equals(obj as Product);
 
     public override int GetHashCode() => Id.GetHashCode();
-    
-    private void UpdateTimestamp()
-    {
-        UpdatedAt = DateTimeOffset.UtcNow;
-        Version++;
-    }
     
     public static bool operator ==(Product? left, Product? right)
     {

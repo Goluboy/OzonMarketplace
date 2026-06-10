@@ -15,7 +15,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         await using var connection = connectionFactory.GetConnection();
         
         const string sql = """
-                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'Url', '') as main_image_url 
+                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'url', '') as main_image_url 
                            FROM products 
                            WHERE sku = @Sku;
                            """;
@@ -30,7 +30,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         await using var connection = connectionFactory.GetConnection();
         
         const string sql = """
-                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'Url', '') as main_image_url 
+                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'url', '') as main_image_url 
                            FROM products 
                            WHERE id = ANY(@Ids);
                            """;
@@ -45,7 +45,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         await using var connection = connectionFactory.GetConnection();
         
         const string sql = """
-                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'Url', '') as main_image_url 
+                           SELECT id, seller_id, category_id, name, price_amount, price_currency, COALESCE(images->0->>'url', '') as main_image_url 
                            FROM products 
                            WHERE id = @Id;
                            """;

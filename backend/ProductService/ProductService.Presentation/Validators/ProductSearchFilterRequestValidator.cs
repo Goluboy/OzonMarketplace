@@ -44,12 +44,12 @@ public class ProductSearchFilterRequestValidator : AbstractValidator<ProductSear
         
         RuleFor(x => x.SortBy)
             .NotEmpty().WithMessage("Поле сортировки обязательно для заполнения.")
-            .Must(sortBy => new[] { "name", "price", "createdAt" }.Contains(sortBy))
+            .Must(sortBy => sortBy != null && new[] { "name", "price", "createdAt" }.Contains(sortBy))
             .WithMessage("Сортировка возможна только по полям: 'name', 'price', 'createdAt'.");
 
         RuleFor(x => x.SortOrder)
             .NotEmpty().WithMessage("Порядок сортировки обязателен для заполнения.")
-            .Must(order => new[] { "asc", "desc" }.Contains(order.ToLowerInvariant()))
+            .Must(order => order != null && new[] { "asc", "desc" }.Contains(order.ToLowerInvariant()))
             .WithMessage("Порядок сортировки должен быть 'asc' или 'desc'.");
         
         RuleFor(x => x.PageSize)

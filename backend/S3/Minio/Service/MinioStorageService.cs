@@ -9,7 +9,8 @@ public class MinioStorageService(IAmazonS3 s3Client, IOptions<MinioOptions> opti
 {
     private readonly MinioOptions _options = options.Value;
 
-    public (string UploadUrl, string PublicUrl) GenerateUploadUrls(string objectKey, int expirationMinutes = 15)
+    public (string UploadUrl, string PublicUrl) GenerateUploadUrls(string objectKey,
+        int expirationMinutes = 15)
     {
         var provider = new FileExtensionContentTypeProvider();
         if (!provider.TryGetContentType(objectKey, out var contentType))
@@ -42,15 +43,22 @@ public class MinioStorageService(IAmazonS3 s3Client, IOptions<MinioOptions> opti
         return (uploadUrl, publicUrl);
     }
 
-    public async Task DeleteFileAsync(string objectKey)
+    public async Task DeleteFilesAsync(IReadOnlyList<string> objectKeys, CancellationToken ct = default)
     {
-        var request = new DeleteObjectRequest
+        if (objectKeys.Count == 0)
+        {
+            return;
+        }
+        
+        var request = new DeleteObjectsRequest
         {
             BucketName = _options.BucketName,
-            Key = objectKey
+            Objects = objectKeys
+                .Select(key => new KeyVersion { Key = key })
+                .ToList()
         };
 
-        await s3Client.DeleteObjectAsync(request);
+        await s3Client.DeleteObjectsAsync(request, ct);
     }
 
     public string GetKeyFromUrl(string url)

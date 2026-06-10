@@ -9,7 +9,7 @@ namespace ProductService.Application;
 
 public static class ApplicationExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IProductQueryService, ProductQueryService>();

@@ -38,8 +38,8 @@ public class ProductQueryServiceTests
 
         var skuCards = new List<ProductCardDto>
         {
-            new(Guid.NewGuid(), Guid.NewGuid(), 1, "Phone Store 1", 1000m, "RUB", "img1.png"),
-            new(Guid.NewGuid(), Guid.NewGuid(), 1, "Phone Store 2", 950m, "RUB", "img2.png")
+            new() { Id = Guid.NewGuid(), SellerId = Guid.NewGuid(), CategoryId = 1, Name = "Phone Store 1", PriceAmount = 1000m, PriceCurrency = "RUB", MainImageUrl = "img1.png"},
+            new() { Id = Guid.NewGuid(), SellerId = Guid.NewGuid(), CategoryId = 1, Name = "Phone Store 2", PriceAmount = 950m, PriceCurrency = "RUB", MainImageUrl = "img2.png"},
         };
 
         _repository.GetCardsAsync(123456).Returns(skuCards);
@@ -107,9 +107,9 @@ public class ProductQueryServiceTests
 
         var dbCards = new List<ProductCardDto>
         {
-            new(id1, sellerId, 1, "Notebook Middle", 1000m, "RUB", "img1.png"),
-            new(id2, sellerId, 1, "Notebook Cheap", 500m, "RUB", "img2.png"),
-            new(id3, sellerId, 1, "Notebook Expensive", 2000m, "RUB", "img3.png")
+            new() { Id = id1, SellerId = sellerId, CategoryId = 1, Name = "Notebook Middle", PriceAmount = 1000m, PriceCurrency = "RUB", MainImageUrl = "img1.png"},
+            new() { Id = id2, SellerId = sellerId, CategoryId = 1, Name = "Notebook Cheap", PriceAmount = 500m, PriceCurrency = "RUB", MainImageUrl = "img2.png"},
+            new() { Id = id3, SellerId = sellerId, CategoryId = 1, Name = "Notebook Expensive", PriceAmount = 2000m, PriceCurrency = "RUB", MainImageUrl = "img3.png"},
         };
         _repository.GetCardsAsync(pagedIds).Returns(dbCards);
 
@@ -151,7 +151,7 @@ public class ProductQueryServiceTests
             CategoryId = 1,
             CategoryName = "Electronics",
             CategoryPath = "electronics",
-            Images = ["img1.png"],
+            Images = [new ProductImageDto("img1.png")],
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };

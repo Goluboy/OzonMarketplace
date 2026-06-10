@@ -80,6 +80,8 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         
         product.UpdateImages(dto.ImagesUrl);
         
+        product.IncrementVersion();
+        
         if (product.DomainEvents.Count == 0)
         {
             return product.ToDto(categoryDto);

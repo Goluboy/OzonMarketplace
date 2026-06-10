@@ -19,7 +19,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         _fixture = fixture;
         _repository = _fixture.CreateProductQueryRepository(_fixture.CreateConnectionFactory());
         
-        SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<ProductImageDao>>());
+        SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<ProductImageDto>>());
         SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<string>>());
     }
     
@@ -87,7 +87,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var categoryId = await InsertCategoryDirectlyAsync("Electronics", "electronics");
         var productId = Guid.NewGuid();
         var sellerId = Guid.NewGuid();
-        const string imagesJson = "[{\"Url\": \"http://img1.png\"}, {\"Url\": \"http://img2.png\"}]";
+        const string imagesJson = "[{\"url\": \"http://img1.png\"}, {\"url\": \"http://img2.png\"}]";
         
         await SeedProductAsync(productId, 12345, sellerId, "Smartphone", "Desc",
             999.99m, "RUB", categoryId, imagesJson, DateTimeOffset.UtcNow);
@@ -144,7 +144,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var categoryId = await InsertCategoryDirectlyAsync("Clothing", "clothing");
         var productId = Guid.NewGuid();
         var sellerId = Guid.NewGuid();
-        var imagesJson = "[\"http://img1.png\"]";
+        var imagesJson = "[{\"url\": \"http://img1.png\"}]";
         var createdAt = DateTimeOffset.UtcNow;
         
         await SeedProductAsync(productId, 555, sellerId, "T-Shirt", "Best T-Shirt",
@@ -165,7 +165,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         result.CategoryId.Should().Be(categoryId);
         result.CategoryName.Should().Be("Clothing");
         result.CategoryPath.Should().Be("clothing");
-        result.Images.Should().ContainSingle().Which.Should().Be("http://img1.png");
+        result.Images.Should().ContainSingle().Which.Should().Be(new ProductImageDto("http://img1.png"));
     }
 
     [Fact]
@@ -525,8 +525,8 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var idSeller2 = Guid.NewGuid();
         var idOtherProduct = Guid.NewGuid();
         
-        await SeedProductAsync(idSeller1, targetSku, seller1Id, "iPhone 15 (Store 1)", "Desc", 999m, "USD", categoryId, "[{\"Url\": \"http://img1.png\"}]", DateTimeOffset.UtcNow);
-        await SeedProductAsync(idSeller2, targetSku, seller2Id, "iPhone 15 (Store 2)", "Desc", 950m, "USD", categoryId, "[{\"Url\": \"http://img2.png\"}]", DateTimeOffset.UtcNow);
+        await SeedProductAsync(idSeller1, targetSku, seller1Id, "iPhone 15 (Store 1)", "Desc", 999m, "USD", categoryId, "[{\"url\": \"http://img1.png\"}]", DateTimeOffset.UtcNow);
+        await SeedProductAsync(idSeller2, targetSku, seller2Id, "iPhone 15 (Store 2)", "Desc", 950m, "USD", categoryId, "[{\"url\": \"http://img2.png\"}]", DateTimeOffset.UtcNow);
         
         await SeedProductAsync(idOtherProduct, 111111, Guid.NewGuid(), "Other Product", "Desc", 100m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
 
@@ -597,8 +597,8 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var id2 = Guid.NewGuid();
         var idOther = Guid.NewGuid(); 
         
-        await SeedProductAsync(id1, 101, Guid.NewGuid(), "iPhone 15", "Desc", 999m, "USD", categoryId, "[{\"Url\": \"http://img1.png\"}]", DateTimeOffset.UtcNow);
-        await SeedProductAsync(id2, 102, Guid.NewGuid(), "PlayStation 5", "Desc", 499m, "USD", categoryId, "[{\"Url\": \"http://img2.png\"}, {\"Url\": \"http://img3.png\"}]", DateTimeOffset.UtcNow);
+        await SeedProductAsync(id1, 101, Guid.NewGuid(), "iPhone 15", "Desc", 999m, "USD", categoryId, "[{\"url\": \"http://img1.png\"}]", DateTimeOffset.UtcNow);
+        await SeedProductAsync(id2, 102, Guid.NewGuid(), "PlayStation 5", "Desc", 499m, "USD", categoryId, "[{\"url\": \"http://img2.png\"}, {\"url\": \"http://img3.png\"}]", DateTimeOffset.UtcNow);
         await SeedProductAsync(idOther, 103, Guid.NewGuid(), "Other Product", "Desc", 100m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
 
         var targetIds = new List<Guid> { id1, id2 };

@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
@@ -17,7 +18,9 @@ public static class InfrastructureExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<ProductImageDao>>());
+        DefaultTypeMap.MatchNamesWithUnderscores = true;
+        
+        SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<ProductImageDto>>());
 
         services.AddSingleton<IPostgresConnectionFactory, PostgresConnectionFactory>();
 
@@ -29,6 +32,24 @@ public static class InfrastructureExtensions
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IProductQueryRepository, ProductQueryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        
+        services.AddCap(x =>
+        {
+            x.UsePostgreSql(opt =>
+            {
+                opt.ConnectionString = configuration.GetConnectionString("PostgresConnectionString") 
+                                       ?? throw new NullReferenceException("Connection string 'PostgresConnectionString' not found.");
+                opt.Schema = "cap";
+            });
+            
+            x.UseKafka(kafka =>
+            {
+                kafka.Servers = configuration.GetValue<string>("KafkaSettings:Servers") 
+                                ?? throw new NullReferenceException("Connection string 'KafkaSettings' not found."); 
+            });
+
+            x.UseDashboard();
+        });
         
         return services;
     }

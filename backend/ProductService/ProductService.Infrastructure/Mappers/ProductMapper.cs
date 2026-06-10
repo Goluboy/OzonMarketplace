@@ -1,5 +1,6 @@
 ﻿using ProductService.Domain.Entities;
 using ProductService.Domain.ValueObjects;
+using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Infrastructure.DAO;
 
 namespace ProductService.Infrastructure.Mappers;
@@ -29,7 +30,7 @@ public static class ProductMapper
     public static ProductDao ToDao(this Product product)
     {
         var daoImages =  product.Images
-            .Select(img => new ProductImageDao(img.Url))
+            .Select(img => new ProductImageDto(img.Url))
             .ToList();
         
         return new ProductDao

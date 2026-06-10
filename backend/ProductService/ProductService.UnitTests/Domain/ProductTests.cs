@@ -124,6 +124,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
         
         // Act
         product.UpdateDetails(newName, newDescription, newCategoryId);
+        product.IncrementVersion();
         
         // Assert
         product.Name.Should().Be(newName);
@@ -211,6 +212,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
         
         // Act
         product.ChangePrice(newPrice);
+        product.IncrementVersion();
         
         // Assert
         product.Price.Should().Be(newPrice);
@@ -251,6 +253,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
 
         // Act
         product.UpdateImages(newUrls);
+        product.IncrementVersion();
 
         // Assert
         product.Images.Should().HaveCount(2);
@@ -277,6 +280,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
 
         // Act
         product.UpdateImages(emptyUrls);
+        product.IncrementVersion();
 
         // Assert
         product.Images.Should().BeEmpty();
@@ -301,6 +305,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
 
         // Act
         product.UpdateImages(remainingUrls);
+        product.IncrementVersion();
 
         // Assert
         product.Images.Should().ContainSingle();
@@ -326,6 +331,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
 
         // Act
         product.UpdateImages(updatedUrls);
+        product.IncrementVersion();
 
         // Assert
         product.Images.Should().HaveCount(2);
@@ -351,6 +357,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
 
         // Act
         product.UpdateImages(brandNewUrls);
+        product.IncrementVersion();
 
         // Assert
         product.Images.Should().HaveCount(2);

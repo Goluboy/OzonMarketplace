@@ -1,23 +1,23 @@
 ﻿using OrderService.Domain.Events;
-using OrderService.Domain.Interfaces;
+using OrderService.Domain.Interfaces.Domain;
 using OrderService.Domain.ValueObjects;
 
 namespace OrderService.Domain.Entities;
 
 public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
 {
-    public OrderId Id { get; init; }
-    public Guid CustomerId { get; private set; }
+    public OrderId Id { get; init; } = default!;
+    public Guid CustomerId { get; private set; } = default!;
     public string CustomerName { get; private set; } = null!;
     public Email CustomerEmail { get; private set; } = null!;
     public DeliveryAddress? DeliveryAddress { get; private set; }
 
-    public OrderStatus Status { get; private set; }
-    public Money TotalAmount { get; private set; }
+    public OrderStatus Status { get; private set; } = default!;
+    public Money TotalAmount { get; private set; } = default!;
 
-    public DateTime CreatedAt { get; private set; }
-    public DateTime? UpdatedAt { get; private set; }
-    public DateTime? CancelledAt { get; private set; }
+    public DateTime CreatedAt { get; private set; } = default!;
+    public DateTime? UpdatedAt { get; private set; } = default!;
+    public DateTime? CancelledAt { get; private set; } = default!;
 
     public int Version { get; private set; }
 
@@ -42,6 +42,43 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
     };
 
     private Order() { }
+
+    public static Order Rehydrate(
+        OrderId id,
+        Guid customerId,
+        string customerName,
+        Email customerEmail,
+        DeliveryAddress? deliveryAddress,
+        OrderStatus status,
+        Money totalAmount,
+        DateTime createdAt,
+        DateTime? updatedAt,
+        DateTime? cancelledAt,
+        int version,
+        IEnumerable<OrderItem> items)
+    {
+        var order = new Order
+        {
+            Id = id,
+            CustomerId = customerId,
+            CustomerName = customerName,
+            CustomerEmail = customerEmail,
+            DeliveryAddress = deliveryAddress,
+            Status = status,
+            TotalAmount = totalAmount,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            CancelledAt = cancelledAt,
+            Version = version
+        };
+
+        foreach (var item in items)
+        {
+            order._items.Add(item);
+        }
+
+        return order;
+    }
 
     public static Order Create(
         Guid customerId,

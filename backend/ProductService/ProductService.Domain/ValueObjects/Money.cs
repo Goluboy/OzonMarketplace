@@ -18,7 +18,7 @@ public record Money
         }
 
         Amount = amount;
-        Currency = currency;
+        Currency = currency.Trim().ToUpperInvariant();
     }
     
     public override string ToString() => $"{Amount:0.00} {Currency}";

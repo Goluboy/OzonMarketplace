@@ -1,14 +1,14 @@
-﻿using FluentValidation;
+﻿using FluentMigrator.Runner;
+using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Npgsql;
+using OrderService.Infrastructure.Persistence;
 using System.Data;
 using System.Text;
-using FluentMigrator.Runner;
-using OrderService.Infrastructure;
 using OrderService.Infrastructure.EventBus;
 
 namespace OrderService.Http
@@ -52,7 +52,7 @@ namespace OrderService.Http
             services.AddScoped<IDbConnection>(sp =>
                 new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
-            services.AddFluentMigrator(configuration);
+            services.AddPersistenceServices(configuration);
 
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();

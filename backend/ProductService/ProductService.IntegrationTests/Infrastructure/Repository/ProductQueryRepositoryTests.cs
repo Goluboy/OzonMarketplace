@@ -19,7 +19,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         _fixture = fixture;
         _repository = _fixture.CreateProductQueryRepository(_fixture.CreateConnectionFactory());
         
-        SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<ProductImageDao>>());
+        SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<ProductImageDto>>());
         SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<string>>());
     }
     
@@ -87,13 +87,13 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var categoryId = await InsertCategoryDirectlyAsync("Electronics", "electronics");
         var productId = Guid.NewGuid();
         var sellerId = Guid.NewGuid();
-        const string imagesJson = "[{\"Url\": \"http://img1.png\"}, {\"Url\": \"http://img2.png\"}]";
+        const string imagesJson = "[{\"url\": \"http://img1.png\"}, {\"url\": \"http://img2.png\"}]";
         
         await SeedProductAsync(productId, 12345, sellerId, "Smartphone", "Desc",
             999.99m, "RUB", categoryId, imagesJson, DateTimeOffset.UtcNow);
         
         // Act
-        var result = await _repository.GetCardByIdAsync(productId);
+        var result = await _repository.GetCardAsync(productId);
         
         // Assert
         result.Should().NotBeNull();
@@ -116,7 +116,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
             999.99m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
 
         // Act
-        var result = await _repository.GetCardByIdAsync(productId);
+        var result = await _repository.GetCardAsync(productId);
 
         // Assert
         result.Should().NotBeNull();
@@ -127,7 +127,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
     public async Task GetCardByIdAsync_WhenProductDoesNotExist_ShouldReturnNull()
     {
         // Act
-        var result = await _repository.GetCardByIdAsync(Guid.NewGuid());
+        var result = await _repository.GetCardAsync(Guid.NewGuid());
 
         // Assert
         result.Should().BeNull();
@@ -144,14 +144,14 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var categoryId = await InsertCategoryDirectlyAsync("Clothing", "clothing");
         var productId = Guid.NewGuid();
         var sellerId = Guid.NewGuid();
-        var imagesJson = "[\"http://img1.png\"]";
+        var imagesJson = "[{\"url\": \"http://img1.png\"}]";
         var createdAt = DateTimeOffset.UtcNow;
         
         await SeedProductAsync(productId, 555, sellerId, "T-Shirt", "Best T-Shirt",
             19.99m, "USD", categoryId, imagesJson, createdAt);
         
         // Act
-        var result = await _repository.GetDetailsByIdAsync(productId);
+        var result = await _repository.GetDetailsAsync(productId);
         
         // Assert
         result.Should().NotBeNull();
@@ -165,7 +165,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         result.CategoryId.Should().Be(categoryId);
         result.CategoryName.Should().Be("Clothing");
         result.CategoryPath.Should().Be("clothing");
-        result.Images.Should().ContainSingle().Which.Should().Be("http://img1.png");
+        result.Images.Should().ContainSingle().Which.Should().Be(new ProductImageDto("http://img1.png"));
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         await connection.ExecuteAsync($"DELETE FROM categories WHERE id = {categoryId};");
         
         // Act
-        var result = await _repository.GetDetailsByIdAsync(productId);
+        var result = await _repository.GetDetailsAsync(productId);
         
         // Assert
         result.Should().NotBeNull();
@@ -195,7 +195,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
     public async Task GetDetailsByIdAsync_WhenProductDoesNotExist_ShouldReturnNull()
     {
         // Act
-        var result = await _repository.GetDetailsByIdAsync(Guid.NewGuid());
+        var result = await _repository.GetDetailsAsync(Guid.NewGuid());
 
         // Assert
         result.Should().BeNull();
@@ -525,13 +525,13 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         var idSeller2 = Guid.NewGuid();
         var idOtherProduct = Guid.NewGuid();
         
-        await SeedProductAsync(idSeller1, targetSku, seller1Id, "iPhone 15 (Store 1)", "Desc", 999m, "USD", categoryId, "[{\"Url\": \"http://img1.png\"}]", DateTimeOffset.UtcNow);
-        await SeedProductAsync(idSeller2, targetSku, seller2Id, "iPhone 15 (Store 2)", "Desc", 950m, "USD", categoryId, "[{\"Url\": \"http://img2.png\"}]", DateTimeOffset.UtcNow);
+        await SeedProductAsync(idSeller1, targetSku, seller1Id, "iPhone 15 (Store 1)", "Desc", 999m, "USD", categoryId, "[{\"url\": \"http://img1.png\"}]", DateTimeOffset.UtcNow);
+        await SeedProductAsync(idSeller2, targetSku, seller2Id, "iPhone 15 (Store 2)", "Desc", 950m, "USD", categoryId, "[{\"url\": \"http://img2.png\"}]", DateTimeOffset.UtcNow);
         
         await SeedProductAsync(idOtherProduct, 111111, Guid.NewGuid(), "Other Product", "Desc", 100m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
 
         // Act
-        var result = await _repository.GetCardsBySkuAsync(targetSku);
+        var result = await _repository.GetCardsAsync(targetSku);
 
         // Assert
         result.Should().NotBeNull();
@@ -559,7 +559,7 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         await SeedProductAsync(productId, targetSku, Guid.NewGuid(), "No Image Phone", "Desc", 500m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
 
         // Act
-        var result = await _repository.GetCardsBySkuAsync(targetSku);
+        var result = await _repository.GetCardsAsync(targetSku);
 
         // Assert
         result.Should().ContainSingle();
@@ -576,7 +576,84 @@ public class ProductQueryRepositoryTests : IClassFixture<PostgresFixture>, IAsyn
         await SeedProductAsync(Guid.NewGuid(), 111111, Guid.NewGuid(), "Product", "Desc", 100m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
 
         // Act
-        var result = await _repository.GetCardsBySkuAsync(999999);
+        var result = await _repository.GetCardsAsync(999999);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+    }
+
+    #endregion
+    
+    #region GetCardsAsync Tests
+
+    [Fact]
+    public async Task GetCardsAsync_WhenMultipleProductsExist_ShouldReturnMatchingCards()
+    {
+        // Arrange
+        var categoryId = await InsertCategoryDirectlyAsync("Electronics", "electronics");
+
+        var id1 = Guid.NewGuid();
+        var id2 = Guid.NewGuid();
+        var idOther = Guid.NewGuid(); 
+        
+        await SeedProductAsync(id1, 101, Guid.NewGuid(), "iPhone 15", "Desc", 999m, "USD", categoryId, "[{\"url\": \"http://img1.png\"}]", DateTimeOffset.UtcNow);
+        await SeedProductAsync(id2, 102, Guid.NewGuid(), "PlayStation 5", "Desc", 499m, "USD", categoryId, "[{\"url\": \"http://img2.png\"}, {\"url\": \"http://img3.png\"}]", DateTimeOffset.UtcNow);
+        await SeedProductAsync(idOther, 103, Guid.NewGuid(), "Other Product", "Desc", 100m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
+
+        var targetIds = new List<Guid> { id1, id2 };
+
+        // Act
+        var result = await _repository.GetCardsAsync(targetIds);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(2); 
+        
+        var card1 = result.Should().Contain(c => c.Id == id1).Subject;
+        card1.Name.Should().Be("iPhone 15");
+        card1.PriceAmount.Should().Be(999m);
+        card1.MainImageUrl.Should().Be("http://img1.png");
+        
+        var card2 = result.Should().Contain(c => c.Id == id2).Subject;
+        card2.Name.Should().Be("PlayStation 5");
+        card2.PriceAmount.Should().Be(499m);
+        card2.MainImageUrl.Should().Be("http://img2.png");
+
+        result.Should().NotContain(c => c.Id == idOther);
+    }
+
+    [Fact]
+    public async Task GetCardsAsync_WhenProductHasNoImages_ShouldReturnCardWithEmptyMainImageUrl()
+    {
+        // Arrange
+        var categoryId = await InsertCategoryDirectlyAsync("Electronics", "electronics");
+        
+        var id = Guid.NewGuid();
+        await SeedProductAsync(id, 101, Guid.NewGuid(), "No Image Product", "Desc", 150m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
+
+        // Act
+        var result = await _repository.GetCardsAsync(new List<Guid> { id });
+
+        // Assert
+        result.Should().ContainSingle();
+        result[0].Id.Should().Be(id);
+        result[0].MainImageUrl.Should().BeEmpty(); 
+    }
+
+    [Fact]
+    public async Task GetCardsAsync_WhenNoProductsMatchIds_ShouldReturnEmptyList()
+    {
+        // Arrange
+        var categoryId = await InsertCategoryDirectlyAsync("Electronics", "electronics");
+        
+        var id = Guid.NewGuid();
+        await SeedProductAsync(id, 101, Guid.NewGuid(), "Product", "Desc", 100m, "USD", categoryId, "[]", DateTimeOffset.UtcNow);
+        
+        var nonExistentIds = new List<Guid> { Guid.NewGuid() };
+
+        // Act
+        var result = await _repository.GetCardsAsync(nonExistentIds);
 
         // Assert
         result.Should().NotBeNull();

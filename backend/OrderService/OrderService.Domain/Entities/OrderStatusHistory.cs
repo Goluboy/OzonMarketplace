@@ -5,14 +5,14 @@ namespace OrderService.Domain.Entities;
 
 public class OrderStatusHistory
 {
-    public Guid Id { get; private set; }
-    public OrderId OrderId { get; private set; }
-    public OrderStatus? OldStatus { get; private set; }
-    public OrderStatus NewStatus { get; private set; }
+    public Guid Id { get; private set; } = default!;
+    public OrderId OrderId { get; private set; } = default!;
+    public OrderStatus? OldStatus { get; private set; } = default!;
+    public OrderStatus NewStatus { get; private set; } = default!;
 
-    public DateTime ChangedAt { get; private set; }
-    public Guid? ChangedBy { get; private set; }
-    public string? Comment { get; private set; }
+    public DateTime ChangedAt { get; private set; } = default!;
+    public Guid? ChangedBy { get; private set; } = default!;
+    public string? Comment { get; private set; } = default!;
 
     private OrderStatusHistory() { }
 

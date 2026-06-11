@@ -68,7 +68,7 @@ public class CategoryRepositoryTests(PostgresFixture fixture) : IClassFixture<Po
         var repository = fixture.CreateCategoryRepository(session);
 
         // Act
-        var result = await repository.GetByIdAsync(id);
+        var result = await repository.GetAsync(id);
 
         // Assert
         result.Should().NotBeNull();
@@ -86,7 +86,7 @@ public class CategoryRepositoryTests(PostgresFixture fixture) : IClassFixture<Po
         const int nonExistentId = 9999;
 
         // Act
-        var result = await repository.GetByIdAsync(nonExistentId);
+        var result = await repository.GetAsync(nonExistentId);
 
         // Assert
         result.Should().BeNull();

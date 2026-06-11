@@ -72,7 +72,10 @@ public class Product : IEquatable<Product>
             Version = 1
         };
 
-        product._images.AddRange(images);
+        if (images.Count != 0)
+        {
+            product._images.AddRange(images);
+        }
 
         product._domainEvents.Add(new ProductCreatedEvent(
             product.Id,
@@ -119,16 +122,16 @@ public class Product : IEquatable<Product>
         return product;
     }
     
-    public bool IsOwnedBy(Guid sellerId)
+    public bool IsOwnedBy(Guid userId)
     {
-        return SellerId == sellerId;
+        return SellerId == userId;
     }
     
     public void ChangePrice(Money newPrice)
     {
         var oldPrice = Price;
         Price = newPrice ?? throw new ArgumentNullException(nameof(newPrice));
-        UpdateTimestamp();
+        
         
         _domainEvents.Add(new ProductPriceChangedEvent(
             Id,
@@ -153,7 +156,6 @@ public class Product : IEquatable<Product>
         Name = name;
         Description = description;
         CategoryId = categoryId;
-        UpdateTimestamp();
         
         _domainEvents.Add(new ProductDetailsUpdatedEvent(
             Id,
@@ -161,43 +163,46 @@ public class Product : IEquatable<Product>
             Description,
             CategoryId));
     }
-    
-    public void AddImage(ProductImage image)
+
+    public void UpdateImages(IReadOnlyList<ProductImage> imageUrlsSnapshot)
     {
-        ArgumentNullException.ThrowIfNull(image);
-
-        if (_images.Any(i => i.Url.Equals(image.Url, StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new ArgumentException("Image with the same URL already exists", nameof(image));
-        }
-
-        _images.Add(image);
-        UpdateTimestamp();
+        ArgumentNullException.ThrowIfNull(imageUrlsSnapshot);
         
-        _domainEvents.Add(new ProductImagesUpdatedEvent(
-            Id,
-            _images.Select(i => i.Url).ToList()));
-    }
-    
-    public void RemoveImage(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
+        var inputUrlsSet = new HashSet<ProductImage>(imageUrlsSnapshot);
+        
+        var currentUrlsSet = new HashSet<ProductImage>(_images);
+
+        var imagesToRemove = currentUrlsSet
+            .Where(url => !inputUrlsSet.Contains(url))
+            .ToList();
+        
+        var imagesToAdd = inputUrlsSet
+            .Where(url => !currentUrlsSet.Contains(url))
+            .ToList();
+        
+        if (imagesToRemove.Count == 0 && imagesToAdd.Count == 0)
         {
             return;
         }
 
-        var imageToRemove = _images.FirstOrDefault(i => i.Url.Equals(url, StringComparison.OrdinalIgnoreCase));
-        if (imageToRemove == null)
+        if (imagesToRemove.Count != 0)
         {
-            throw new ArgumentException("Image not found", nameof(url));
+            _images.RemoveAll(img => !inputUrlsSet.Contains(img));
+        }
+
+        foreach (var img in imagesToAdd)
+        {
+            _images.Add(img);
         }
         
-        _images.Remove(imageToRemove);
-        UpdateTimestamp();
-        
-        _domainEvents.Add(new ProductImagesUpdatedEvent(
-            Id,
-            _images.Select(i => i.Url).ToList()));
+        _domainEvents.Add(new ProductImagesUpdatedEvent(Id, _images.Select(i => i.Url).ToList(),
+            imagesToRemove.Select(img => img.Url).ToList()));
+    }
+
+    public void IncrementVersion()
+    {
+        UpdatedAt = DateTimeOffset.UtcNow;
+        Version++;
     }
     
     public bool Equals(Product? other)
@@ -218,12 +223,6 @@ public class Product : IEquatable<Product>
     public override bool Equals(object? obj) => Equals(obj as Product);
 
     public override int GetHashCode() => Id.GetHashCode();
-    
-    private void UpdateTimestamp()
-    {
-        UpdatedAt = DateTimeOffset.UtcNow;
-        Version++;
-    }
     
     public static bool operator ==(Product? left, Product? right)
     {

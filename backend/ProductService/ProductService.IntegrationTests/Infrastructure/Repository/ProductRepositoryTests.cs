@@ -4,6 +4,7 @@ using FluentAssertions;
 using Npgsql;
 using ProductService.Domain.Entities;
 using ProductService.Domain.ValueObjects;
+using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Helpers.JsonbSerialization;
@@ -19,7 +20,7 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
     {
         _fixture = fixture;
         
-        SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<ProductImageDao>>());
+        SqlMapper.AddTypeHandler(new JsonbTypeHandler<List<ProductImageDto>>());
         
         var (_, session) = _fixture.CreateUnitOfWorkContext();
         _repository = _fixture.CreateProductRepository(session);
@@ -101,7 +102,7 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
             CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
             UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
             Version = 1,
-            Images = [new ProductImageDao("http://image.png")]
+            Images = [new ProductImageDto("http://image.png")]
         };
 
         await SeedProductDirectlyAsync(dao);
@@ -110,7 +111,7 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
 
         // Act
         await uow.BeginTransactionAsync();
-        var result = await _repository.GetByIdAsync(productId);
+        var result = await _repository.GetAsync(productId);
         await uow.CommitAsync();
 
         // Assert
@@ -131,7 +132,7 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
 
         // Act
         await uow.BeginTransactionAsync();
-        var result = await _repository.GetByIdAsync(Guid.NewGuid());
+        var result = await _repository.GetAsync(Guid.NewGuid());
         await uow.CommitAsync();
 
         // Assert

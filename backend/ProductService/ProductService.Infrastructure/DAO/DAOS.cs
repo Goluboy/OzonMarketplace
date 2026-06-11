@@ -1,4 +1,6 @@
-﻿namespace ProductService.Infrastructure.DAO;
+﻿using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
+
+namespace ProductService.Infrastructure.DAO;
 
 public record CategoryDao
 {
@@ -22,7 +24,5 @@ public record ProductDao
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; init; }
     public int Version { get; init; }
-    public List<ProductImageDao> Images { get; init; } = [];
+    public List<ProductImageDto> Images { get; init; } = [];
 }
-
-public record ProductImageDao(string Url);

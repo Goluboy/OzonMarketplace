@@ -11,6 +11,8 @@
       <PackageReference Include="Dapper" Version="2.1.79" />
       <PackageReference Include="Dapper.SqlBuilder" Version="2.1.66" />
       <PackageReference Include="DotNetCore.CAP" Version="10.0.1" />
+      <PackageReference Include="DotNetCore.CAP.Dashboard" Version="10.0.1" />
+      <PackageReference Include="DotNetCore.CAP.InMemoryStorage" Version="10.0.1" />
       <PackageReference Include="DotNetCore.CAP.Kafka" Version="10.0.1" />
       <PackageReference Include="DotNetCore.CAP.PostgreSql" Version="10.0.1" />
       <PackageReference Include="FluentMigrator" Version="8.0.1" />

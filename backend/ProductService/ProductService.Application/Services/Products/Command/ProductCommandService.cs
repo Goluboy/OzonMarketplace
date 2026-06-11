@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Core.Minio.Helpers;
+using Core.Minio.Service;
+using Microsoft.Extensions.Logging;
 using ProductService.Application.DTO.Category;
 using ProductService.Application.DTO.Product;
 using ProductService.Application.Exceptions;
@@ -16,7 +17,8 @@ using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 namespace ProductService.Application.Services.Products.Command;
 
 public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository productRepository,
-    ICategoryRepository categoryRepository, IProductImageUrlHelper urlHelper) : IProductCommandService
+    ICategoryRepository categoryRepository, IProductImageUrlHelper urlHelper, IS3StorageService storageService,
+    ILogger<ProductCommandService> logger) : IProductCommandService
 {
     public async Task<ProductDetailsDto> CreateProductAsync(CreateProductDto dto, CancellationToken ct = default)
     {
@@ -107,6 +109,11 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             // TODO Invalidation (Redis) - Инвалидировать/удалить кэш каталога и списков, так как появился новый товар
             // TODO Kafka - Опубликовать событие ProductUpdatedEvent в брокер сообщений
             
+            if (imagesUpdateEvent != null && imagesUpdateEvent.RemovedUrls.Count != 0)
+            {
+                DeleteImagesAsync(imagesUpdateEvent.RemovedUrls);
+            }
+            
             product.ClearDomainEvents();
 
             return ToDtoWithAbsoluteUrls(product, categoryDto);
@@ -133,13 +140,19 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         {
             ct.ThrowIfCancellationRequested();
             
+            var imageUrlsToRemove = product.Images.Select(img => img.Url).ToList(); 
+            
             await productRepository.DeleteAsync(id);
             await unitOfWork.CommitAsync();
             
             // TODO: Invalidation (Redis) - Сбросить кэш детальной карточки "products:details:{id}",
             // легкой карточки "products:card:{id}" и сбросить кэш каталога.
             // TODO Kafka - Опубликовать событие ProductDeletedEvent в брокер сообщений
-            // TODO BackgroundWorker для удаления файлов из S3
+
+            if (imageUrlsToRemove.Count != 0)
+            {
+                DeleteImagesAsync(imageUrlsToRemove);
+            }
         }
         catch
         {
@@ -148,6 +161,21 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         }
     }
 
+    private void DeleteImagesAsync(List<string> imageUrlsToRemove)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await storageService.DeleteFilesAsync(imageUrlsToRemove, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred during S3 file deletion. Error: {Message}", ex.Message);
+            }
+        }, CancellationToken.None);
+    }
+    
     private ProductDetailsDto ToDtoWithAbsoluteUrls(Product product, CategoryDto categoryDto)
     {
         var detailsDto = product.ToDto(categoryDto);

@@ -1,6 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Core.Minio.Helpers;
+using Core.Minio.Service;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 using NSubstitute;
 using NSubstitute.Core;
 using NSubstitute.ExceptionExtensions;
@@ -15,6 +18,7 @@ using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using Xunit;
+using ILogger = Amazon.Runtime.Internal.Util.ILogger;
 
 namespace ProductService.UnitTests.Application.Services;
 
@@ -24,11 +28,14 @@ public class ProductCommandServiceTests
     private readonly IProductRepository _productRepository = Substitute.For<IProductRepository>();
     private readonly ICategoryRepository _categoryRepository = Substitute.For<ICategoryRepository>();
     private readonly IProductImageUrlHelper _productImageUrlHelper = Substitute.For<IProductImageUrlHelper>();
+    private readonly IS3StorageService _s3Storage = Substitute.For<IS3StorageService>();
+    private readonly ILogger<ProductCommandService> _logger = Substitute.For<ILogger<ProductCommandService>>();
     private readonly ProductCommandService _service;
 
     public ProductCommandServiceTests()
     {
-        _service = new ProductCommandService(_unitOfWork, _productRepository, _categoryRepository, _productImageUrlHelper);
+        _service = new ProductCommandService(_unitOfWork, _productRepository, _categoryRepository, _productImageUrlHelper,
+            _s3Storage, _logger);
     }
 
     #region CreateProductAsync Tests

@@ -106,6 +106,28 @@ services:
     networks:
       - app-net
 
+  keycloak-init:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak-init
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - ./keycloak/init-users.sh:/tmp/init-users.sh:ro
+    entrypoint: ["/bin/bash", "/tmp/init-users.sh"]
+    environment:
+      KC_ADMIN: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_SERVER_URL: http://keycloak:8080
+      KC_REALM: marketplace
+      TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test@example.com}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-password}
+      ADMIN_USER_EMAIL: ${ADMIN_USER_EMAIL:-admin@example.com}
+      ADMIN_USER_PASSWORD: ${ADMIN_USER_PASSWORD:-admin123}
+    networks:
+      - app-net
+    restart: "no"
+
 volumes:
   kafka-data:
   postgres-data:

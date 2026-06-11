@@ -30,9 +30,8 @@ namespace OrderService.Http
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
-            var keycloakAuthority = configuration["Keycloak:Authority"]
-                    ?? "http://localhost:8080/realms/marketplace";
-            var audience = configuration["Keycloak:Audience"] ?? "api-services";
+            var keycloakAuthority = configuration["Keycloak:Authority"];
+            var audience = configuration["Keycloak:Audience"];
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>

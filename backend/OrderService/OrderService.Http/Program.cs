@@ -9,10 +9,8 @@ namespace OrderService.Http
         {
             var host = CreateHostBuilder(args).Build();
 
-            // === АВТОМАТИЧЕСКИЙ ЗАПУСК МИГРАЦИЙ ===
             await RunMigrationsAsync(host);
 
-            // Запуск приложения
             await host.RunAsync();
         }
 
@@ -24,18 +22,17 @@ namespace OrderService.Http
 
             try
             {
-                logger.LogInformation("🔄 Starting database migrations...");
+                logger.LogInformation("Starting database migrations...");
 
                 var runner = services.GetRequiredService<IMigrationRunner>();
 
-                // Применяем все непримененные миграции
                 runner.MigrateUp();
 
-                logger.LogInformation("✅ All migrations completed successfully!");
+                logger.LogInformation("All migrations completed successfully!");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "❌ An error occurred while migrating the database");
+                logger.LogError(ex, "An error occurred while migrating the database");
 
                 // В Production: падаем, если миграции не прошли!
                 // Лучше упасть на старте, чем работать с некорректной схемой БД

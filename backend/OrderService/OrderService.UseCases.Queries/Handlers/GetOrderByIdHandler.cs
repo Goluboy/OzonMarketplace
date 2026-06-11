@@ -22,7 +22,7 @@ public class GetOrderByIdHandler(IOrderRepository orderRepository) : IQueryHandl
             CustomerName: order.CustomerName,
             CustomerEmail: order.CustomerEmail.Value,
             DeliveryAddress: order.DeliveryAddress?.AddressLine,
-            Status: order.Status.ToString(),
+            Status: order.Status,
             TotalAmount: order.TotalAmount.Value,
             CreatedAt: order.CreatedAt,
             UpdatedAt: order.UpdatedAt,

@@ -6,10 +6,14 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Npgsql;
-using OrderService.Infrastructure.Persistence;
-using System.Data;
-using System.Text;
 using OrderService.Infrastructure.EventBus;
+using OrderService.Infrastructure.Persistence;
+using OrderService.UseCases.Commands;
+using OrderService.UseCases.Queries;
+using System.Data;
+using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OrderService.Http
 {
@@ -20,39 +24,95 @@ namespace OrderService.Http
             services.AddControllers()
                 .AddJsonOptions(options =>
                 {
-                    options.JsonSerializerOptions.PropertyNamingPolicy = null;
+                    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                     options.JsonSerializerOptions.DefaultIgnoreCondition =
-                        System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+                        JsonIgnoreCondition.WhenWritingNull;
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
-            var jwtKey = configuration["Jwt:Key"] ?? "asfddfgaessedrfggseradfergaswe23234234r4234rw234rw23r23r4w23r";
-            var jwtIssuer = configuration["Jwt:Issuer"];
-            var jwtAudience = configuration["Jwt:Audience"];
+            var keycloakAuthority = configuration["Keycloak:Authority"];
+            var audience = configuration["Keycloak:Audience"];
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
+                    options.Authority = keycloakAuthority;
+                    options.Audience = audience;
+
+                    options.RequireHttpsMetadata = false;
+
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
+                        ValidIssuer = keycloakAuthority,
+
                         ValidateAudience = true,
+                        ValidAudience = audience,
+
                         ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = jwtIssuer,
-                        ValidAudience = jwtAudience,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                        ClockSkew = TimeSpan.FromMinutes(1),
+                        RoleClaimType = "roles"
+                    };
+
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnTokenValidated = context =>
+                        {
+                            var identity = context.Principal?.Identity as ClaimsIdentity;
+                            if (identity == null) return Task.CompletedTask;
+
+                            var realmAccessClaim = context.Principal?.Claims
+                                .FirstOrDefault(c => c.Type == "realm_access")?.Value;
+
+                            if (!string.IsNullOrEmpty(realmAccessClaim))
+                            {
+                                try
+                                {
+                                    using var doc = JsonDocument.Parse(realmAccessClaim);
+                                    if (doc.RootElement.TryGetProperty("roles", out var rolesElement))
+                                    {
+                                        foreach (var role in rolesElement.EnumerateArray())
+                                        {
+                                            var roleName = role.GetString();
+                                            if (!string.IsNullOrEmpty(roleName))
+                                            {
+                                                identity.AddClaim(new Claim(ClaimTypes.Role, roleName));
+                                                identity.AddClaim(new Claim("roles", roleName));
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Failed to parse realm_access: {ex.Message}");
+                                }
+                            }
+
+                            return Task.CompletedTask;
+                        },
+
+                        OnAuthenticationFailed = context =>
+                        {
+                            Console.WriteLine($"[AUTH FAILED] {context.Exception.Message}");
+                            return Task.CompletedTask;
+                        }
                     };
                 });
 
             services.AddAuthorization(options =>
             {
+                options.AddPolicy("CustomerOnly", policy => policy.RequireRole("customer"));
+                options.AddPolicy("SellerOnly", policy => policy.RequireRole("seller"));
                 options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
+                options.AddPolicy("AnyAuthenticated", policy => policy.RequireAuthenticatedUser());
             });
 
             services.AddScoped<IDbConnection>(sp =>
                 new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection")));
 
             services.AddPersistenceServices(configuration);
+            services.AddCommands();
+            services.AddQueries();
 
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();
@@ -108,7 +168,7 @@ namespace OrderService.Http
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Marketplace API v1"));
             }
-            
+
             app.UseHttpsRedirection();
             app.UseRouting();
 
@@ -120,6 +180,6 @@ namespace OrderService.Http
             {
                 endpoints.MapControllers();
             });
-        }   
+        }
     }
 }

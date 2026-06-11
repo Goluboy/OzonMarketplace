@@ -1153,17 +1153,17 @@ components:
       type: object
       required:
         - items
-        - customerName
-        - customerEmail
       properties:
         customerName:
           type: string
           minLength: 2
           maxLength: 100
+          description: "Имя получателя. Если не указано, берётся из профиля пользователя"
           example: "Иван Иванов"
         customerEmail:
           type: string
           format: email
+          description: "Email для уведомлений. Если не указан, берётся из профиля"
           example: "ivan@example.com"
         items:
           type: array

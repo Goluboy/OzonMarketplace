@@ -32,10 +32,8 @@ public class OrdersController(
         [FromQuery] OrderStatus? status = null, 
         CancellationToken cancellationToken = default)
     {
-        page = Math.Max(page, 1);
-        pageSize = Math.Clamp(pageSize, 1, 100);
-
         var customerId = User.GetUserId();
+
         var orders = await getOrdersByCustomerIdHandler.HandleAsync(
             new GetOrdersByCustomerIdQuery(customerId),
             cancellationToken);
@@ -66,11 +64,35 @@ public class OrdersController(
         CancellationToken cancellationToken = default)
     {
         var customerId = User.GetUserId();
+        var userEmail = User.GetEmail();
+        var userName = User.GetName();
+
+        if (request.Items is null || request.Items.Count == 0)
+        {
+            ModelState.AddModelError(nameof(request.Items), "At least one order item is required");
+            return ValidationProblem(ModelState);
+        }
+
+        var customerEmail = !string.IsNullOrWhiteSpace(request.CustomerEmail)
+            ? request.CustomerEmail
+            : userEmail;
+
+        if (string.IsNullOrWhiteSpace(customerEmail))
+        {
+            ModelState.AddModelError(
+                nameof(request.CustomerEmail),
+                "customerEmail is required either in request body or in user profile");
+            return ValidationProblem(ModelState);
+        }
+
+        var customerName = !string.IsNullOrWhiteSpace(request.CustomerName)
+            ? request.CustomerName
+            : userName ?? "Customer";
 
         var command = new CreateOrderCommand(
             customerId,
-            request.CustomerName,
-            request.CustomerEmail,
+            customerName,
+            customerEmail,
             request.DeliveryAddress,
             request.Items.Select(item => new CreateOrderCommand.CreateOrderItemCommand(
                 item.ProductId,
@@ -78,12 +100,21 @@ public class OrdersController(
                 item.Quantity,
                 0m)).ToList());
 
-        var orderId = await createOrderHandler.HandleAsync(command, cancellationToken);
+        try
+        {
+            var orderId = await createOrderHandler.HandleAsync(command, cancellationToken);
 
-        return Accepted(new CreateOrderAcceptedResponse(
-            orderId,
-            OrderStatus.Created,
-            $"/api/orders/{orderId}/status"));
+            return Accepted(new CreateOrderAcceptedResponse(
+                orderId,
+                OrderStatus.Created,
+                $"/api/orders/{orderId}/status"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(HttpContext.CreateProblemDetails(
+                "Order cannot be created",
+                ex.Message));
+        }
     }
 
     [HttpGet("{id:guid}")]
@@ -136,40 +167,6 @@ public class OrdersController(
         {
             return BadRequest(HttpContext.CreateProblemDetails(
                 "Cannot cancel order",
-                ex.Message));
-        }
-    }
-
-    [HttpPut("{id:guid}")]
-    [Authorize(Policy = "AdminOnly")]
-    [ProducesResponseType(typeof(OrderDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OrderDto>> UpdateOrderStatus(
-        Guid id,
-        [FromBody] UpdateOrderStatusRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var updated = await updateOrderStatusHandler.HandleAsync(
-                new UpdateOrderStatusCommand(id, request.NewStatus, User.GetUserId(), request.Comment),
-                cancellationToken);
-
-            if (!updated)
-            {
-                return NotFound();
-            }
-
-            var order = await getOrderByIdHandler.HandleAsync(new GetOrderByIdQuery(id), cancellationToken);
-            return Ok(order!.ToDto());
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(HttpContext.CreateProblemDetails(
-                "Invalid status transition",
                 ex.Message));
         }
     }

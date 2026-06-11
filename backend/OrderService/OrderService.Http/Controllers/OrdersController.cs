@@ -13,6 +13,7 @@ using OrderService.UseCases.Queries.Queries;
 namespace OrderService.Http.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/orders")]
 public class OrdersController(
     ICommandHandler<CreateOrderCommand, Guid> createOrderHandler,
@@ -28,7 +29,7 @@ public class OrdersController(
     public async Task<ActionResult<OrderPagedResult>> GetOrders(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] OrderStatus? status = null,
+        [FromQuery] OrderStatus? status = null, 
         CancellationToken cancellationToken = default)
     {
         page = Math.Max(page, 1);
@@ -59,6 +60,7 @@ public class OrdersController(
     [ProducesResponseType(typeof(CreateOrderAcceptedResponse), StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<CreateOrderAcceptedResponse>> CreateOrder(
         [FromBody] CreateOrderRequest request,
         CancellationToken cancellationToken = default)

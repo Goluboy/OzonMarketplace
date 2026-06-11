@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/common/">
     <Project Path="../S3/S3.csproj" />
+    <Project Path="Redis/Redis.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="ProductService.Application/ProductService.Application.csproj" />

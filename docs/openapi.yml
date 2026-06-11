@@ -4,7 +4,6 @@ info:
   description: >-
     Упрощенная система маркетплейса. Включает сервис продуктов и сервис заказов.
     Реализовано на стеке: ASP.NET Core, Dapper, PostgreSQL.
-    Все идентификаторы используют формат UUID (Guid).
     Для защищенных эндпоинтов требуется JWT токен в заголовке Authorization.
   version: 1.0.0
   contact:
@@ -744,10 +743,119 @@ paths:
         '404':
           description: Заказ не найден
 
-    put:
+  /api/orders/{id}/status:
+    get:
       tags:
         - Orders
-      summary: Обновление статуса заказа (только администратор)
+      summary: Проверка статуса обработки заказа (для SAGA)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Текущий статус обработки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusCheckResponse'
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Заказ не найден
+  /api/admin/orders:
+    get:
+      tags:
+        - Admin - Orders
+      summary: Получение всех заказов с фильтрацией
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - in: query
+          name: customerId
+          schema:
+            type: string
+            format: uuid
+          description: Фильтр по ID покупателя
+        - in: query
+          name: dateFrom
+          schema:
+            type: string
+            format: date-time
+          description: Фильтр по дате создания (от)
+        - in: query
+          name: dateTo
+          schema:
+            type: string
+            format: date-time
+          description: Фильтр по дате создания (до)
+      responses:
+        '200':
+          description: Список всех заказов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrderPagedResult'
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+
+  /api/admin/orders/{id}:
+    get:
+      tags:
+        - Admin - Orders
+      summary: Получение деталей любого заказа
+      security:
+        - JwtBearer: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Детали заказа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrderDto'
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Заказ не найден
+
+  /api/admin/orders/{id}/status:
+    put:
+      tags:
+        - Admin - Orders
+      summary: Обновление статуса заказа
       security:
         - JwtBearer: []
       parameters:
@@ -769,37 +877,58 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrderDto'
+                $ref: '#/components/schemas/AdminOrderDto'
         '400':
           description: Недопустимый переход статуса
         '401':
           description: Неавторизован
         '403':
-          description: Недостаточно прав
+          description: Доступ запрещен
         '404':
           description: Заказ не найден
 
-  /api/orders/{id}/status:
-    get:
-      summary: Проверка статуса обработки заказа (для SAGA)
+  /api/admin/orders/{id}/force-cancel:
+    post:
+      tags:
+        - Admin - Orders
+      summary: Принудительная отмена заказа (администратор)
+      security:
+        - JwtBearer: []
       parameters:
         - in: path
           name: id
           required: true
-          schema: { type: string, format: uuid }
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  example: "Подозрительная активность"
       responses:
         '200':
-          description: Текущий статус обработки
+          description: Заказ принудительно отменен
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status: { $ref: '#/components/schemas/OrderStatus' }
-                  message: 
-                    type: string
-                    example: "Waiting for stock reservation..."
-                  updatedAt: { type: string, format: date-time }
+                $ref: '#/components/schemas/AdminOrderDto'
+        '400':
+          description: Ошибка валидации
+        '401':
+          description: Неавторизован
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Заказ не найден
 
 components:
   securitySchemes:
@@ -1194,6 +1323,57 @@ components:
           maximum: 99
           example: 2
 
+    AdminOrderPagedResult:
+      type: object
+      required:
+        - items
+        - totalCount
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminOrderDto'
+        totalCount:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+
+    AdminOrderDto:
+      allOf:
+        - $ref: '#/components/schemas/OrderDto'
+        - type: object
+          properties:
+            customerId:
+              type: string
+              format: uuid
+              readOnly: true
+              description: ID покупателя
+            auditLog:
+              type: array
+              items:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                  action:
+                    type: string
+                  adminId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                  comment:
+                    type: string
+                    nullable: true
+
     OrderDto:
       type: object
       required:
@@ -1300,6 +1480,17 @@ components:
           maxLength: 500
           nullable: true
           description: Комментарий к смене статуса (опционально)
+
+    OrderStatusCheckResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        message:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
 
     OrderStatus:
       type: string

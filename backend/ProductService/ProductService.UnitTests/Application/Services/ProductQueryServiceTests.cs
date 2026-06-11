@@ -1,6 +1,7 @@
 ﻿using FluentAssertions;
 using NSubstitute;
 using ProductService.Application.Exceptions;
+using ProductService.Application.Helpers;
 using ProductService.Application.Services.Products;
 using ProductService.Application.Services.Products.Query;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
@@ -12,11 +13,12 @@ namespace ProductService.UnitTests.Application.Services;
 public class ProductQueryServiceTests
 {
     private readonly IProductQueryRepository _repository = Substitute.For<IProductQueryRepository>();
+    private readonly IProductImageUrlHelper _productImageUrlHelper = Substitute.For<IProductImageUrlHelper>();
     private readonly ProductQueryService _service;
     
     public ProductQueryServiceTests()
     {
-        _service = new ProductQueryService(_repository);
+        _service = new ProductQueryService(_repository, _productImageUrlHelper);
     }
     
     #region GetCatalogAsync Tests
@@ -43,12 +45,16 @@ public class ProductQueryServiceTests
         };
 
         _repository.GetCardsAsync(123456).Returns(skuCards);
+        _productImageUrlHelper.ToAbsoluteUrl("img1.png").Returns("http://img1.png");
+        _productImageUrlHelper.ToAbsoluteUrl("img2.png").Returns("http://img2.png");
 
         var result = await _service.GetCatalogAsync(filter, ct);
 
         result.Should().NotBeNull();
         result.Items.Should().HaveCount(2);
         result.NextCursor.Should().BeNull();
+        result.Items.First().MainImageUrl.Should().Be("http://img1.png");
+        result.Items.Last().MainImageUrl.Should().Be("http://img2.png");
 
         await _repository.DidNotReceive().GetPagedAsync(Arg.Any<ProductSearchFilter>());
         await _repository.DidNotReceive().GetCardsAsync(Arg.Any<IReadOnlyList<Guid>>());
@@ -112,6 +118,9 @@ public class ProductQueryServiceTests
             new() { Id = id3, SellerId = sellerId, CategoryId = 1, Name = "Notebook Expensive", PriceAmount = 2000m, PriceCurrency = "RUB", MainImageUrl = "img3.png"},
         };
         _repository.GetCardsAsync(pagedIds).Returns(dbCards);
+        _productImageUrlHelper.ToAbsoluteUrl("img1.png").Returns("http://img1.png");
+        _productImageUrlHelper.ToAbsoluteUrl("img2.png").Returns("http://img2.png");
+        _productImageUrlHelper.ToAbsoluteUrl("img3.png").Returns("http://img3.png");
 
         var result = await _service.GetCatalogAsync(filter, ct);
 
@@ -122,12 +131,15 @@ public class ProductQueryServiceTests
         var itemsList = result.Items.ToList();
         itemsList[0].Id.Should().Be(id3);
         itemsList[0].Name.Should().Be("Notebook Expensive");
+        itemsList[0].MainImageUrl.Should().Be("http://img3.png");
 
         itemsList[1].Id.Should().Be(id1);
         itemsList[1].Name.Should().Be("Notebook Middle");
+        itemsList[1].MainImageUrl.Should().Be("http://img1.png");
 
         itemsList[2].Id.Should().Be(id2);
         itemsList[2].Name.Should().Be("Notebook Cheap");
+        itemsList[2].MainImageUrl.Should().Be("http://img2.png");
     }
 
     #endregion
@@ -157,6 +169,7 @@ public class ProductQueryServiceTests
         };
 
         _repository.GetDetailsAsync(productId).Returns(detailsDto);
+        _productImageUrlHelper.ToAbsoluteImageDtos(Arg.Any<IEnumerable<ProductImageDto>>()).Returns([new ProductImageDto("http://img1.png")]);
 
         var result = await _service.GetProductAsync(productId, ct);
 
@@ -165,6 +178,7 @@ public class ProductQueryServiceTests
         result.Name.Should().Be("Smartphone");
         result.Description.Should().Be("Full description");
         result.CategoryName.Should().Be("Electronics");
+        result.Images.Should().ContainSingle().Which.Should().Be(new ProductImageDto("http://img1.png"));
     }
 
     [Fact]

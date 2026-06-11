@@ -1,7 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Core.Minio.Service;
+using Microsoft.Extensions.Logging;
 using ProductService.Application.DTO.Category;
 using ProductService.Application.DTO.Product;
 using ProductService.Application.Exceptions;
+using ProductService.Application.Helpers;
 using ProductService.Application.Mappers;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Events;
@@ -13,7 +16,9 @@ using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 
 namespace ProductService.Application.Services.Products.Command;
 
-public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository productRepository, ICategoryRepository categoryRepository) : IProductCommandService
+public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository productRepository,
+    ICategoryRepository categoryRepository, IProductImageUrlHelper urlHelper, IS3StorageService storageService,
+    ILogger<ProductCommandService> logger) : IProductCommandService
 {
     public async Task<ProductDetailsDto> CreateProductAsync(CreateProductDto dto, CancellationToken ct = default)
     {
@@ -24,11 +29,10 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         var categoryDto = await EnsureCategoryExistsAsync(dto.CategoryId, ct);
         
         var price = new Money(dto.Price.Amount, dto.Price.Currency);
-        var images = dto.ImagesUrl
-            .Select(url => new ProductImage(url))
-            .ToList();
         
-        var product = Product.Create(dto.Sku, dto.Name, dto.Description, dto.CategoryId, sellerId, price, images);
+        var storedImages = urlHelper.ToStoredImages(dto.ImagesUrl);
+        
+        var product = Product.Create(dto.Sku, dto.Name, dto.Description, dto.CategoryId, sellerId, price, storedImages);
 
         await unitOfWork.BeginTransactionAsync(ct); //TODO BeginOutboxTransactionAsync для outbox
         try
@@ -44,7 +48,7 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             
             product.ClearDomainEvents();
             
-            return product.ToDto(categoryDto);
+            return ToDtoWithAbsoluteUrls(product, categoryDto);
         }
         catch
         {
@@ -78,13 +82,15 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             product.ChangePrice(newPrice);
         }
         
-        product.UpdateImages(dto.ImagesUrl);
+        var storedImages = urlHelper.ToStoredImages(dto.ImagesUrl);
+        
+        product.UpdateImages(storedImages);
         
         product.IncrementVersion();
         
         if (product.DomainEvents.Count == 0)
         {
-            return product.ToDto(categoryDto);
+            return ToDtoWithAbsoluteUrls(product, categoryDto);
         }
         
         await unitOfWork.BeginTransactionAsync(ct);
@@ -99,13 +105,18 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             await productRepository.UpdateAsync(product);
             await unitOfWork.CommitAsync();
             
-            // TODO BackgroundWorker для удаления файлов из Minio, urls лежат в imagesUpdateEvent.RemovedUrls
+            // TODO BackgroundWorker для удаления файлов из S3, urls лежат в imagesUpdateEvent.RemovedUrls
             // TODO Invalidation (Redis) - Инвалидировать/удалить кэш каталога и списков, так как появился новый товар
             // TODO Kafka - Опубликовать событие ProductUpdatedEvent в брокер сообщений
             
-            product.ClearDomainEvents();
+            if (imagesUpdateEvent != null && imagesUpdateEvent.RemovedUrls.Count != 0)
+            {
+                DeleteImagesAsync(imagesUpdateEvent.RemovedUrls);
+            }
             
-            return product.ToDto(categoryDto);
+            product.ClearDomainEvents();
+
+            return ToDtoWithAbsoluteUrls(product, categoryDto);
         }
         catch
         {
@@ -129,19 +140,49 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         {
             ct.ThrowIfCancellationRequested();
             
+            var imageUrlsToRemove = product.Images.Select(img => img.Url).ToList(); 
+            
             await productRepository.DeleteAsync(id);
             await unitOfWork.CommitAsync();
             
             // TODO: Invalidation (Redis) - Сбросить кэш детальной карточки "products:details:{id}",
             // легкой карточки "products:card:{id}" и сбросить кэш каталога.
             // TODO Kafka - Опубликовать событие ProductDeletedEvent в брокер сообщений
-            // TODO BackgroundWorker для удаления файлов из Minio
+
+            if (imageUrlsToRemove.Count != 0)
+            {
+                DeleteImagesAsync(imageUrlsToRemove);
+            }
         }
         catch
         {
             await unitOfWork.RollbackAsync();
             throw;
         }
+    }
+
+    private void DeleteImagesAsync(List<string> imageUrlsToRemove)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await storageService.DeleteFilesAsync(imageUrlsToRemove, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred during S3 file deletion. Error: {Message}", ex.Message);
+            }
+        }, CancellationToken.None);
+    }
+    
+    private ProductDetailsDto ToDtoWithAbsoluteUrls(Product product, CategoryDto categoryDto)
+    {
+        var detailsDto = product.ToDto(categoryDto);
+        return detailsDto with
+        {
+            Images = urlHelper.ToAbsoluteImageDtos(detailsDto.Images)
+        };
     }
     
     private async Task<CategoryDto> EnsureCategoryExistsAsync(int categoryId, CancellationToken ct)

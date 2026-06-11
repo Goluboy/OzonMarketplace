@@ -1,31 +1,31 @@
 ﻿namespace ProductService.Presentation.Models;
 
-public record MoneyDto(
+public record MoneyHttpDto(
     string Amount,
     string Currency);
 
-public record ProductImageDto(string Url);
+public record ProductImageHttpDto(string Url);
 
 public record CreateProductRequest(
     long Sku,
     string Name,
     string Description,
-    MoneyDto Price,
+    MoneyHttpDto Price,
     int CategoryId,
-    List<ProductImageDto> Images);
+    List<ProductImageHttpDto> Images);
 
 public record UpdateProductRequest(
     string Name,
     string Description,
-    MoneyDto Price,
+    MoneyHttpDto Price,
     int CategoryId,
-    List<ProductImageDto> Images);
+    List<ProductImageHttpDto> Images);
 
 public record ProductSearchFilterRequest(
     string? Search,
     int? CategoryId,
-    MoneyDto? MinPrice, 
-    MoneyDto? MaxPrice,
+    MoneyHttpDto? MinPrice, 
+    MoneyHttpDto? MaxPrice,
     string SortBy,    // "name", "price", "createdAt"
     string SortOrder, // "asc", "desc"
     string? Cursor,
@@ -37,18 +37,18 @@ public record ProductResponse(
     Guid SellerId,
     string Name,
     string Description,
-    MoneyDto Price,
+    MoneyHttpDto Price,
     int CategoryId,
     string CategoryName,
     string CategoryPath,
-    List<ProductImageDto> Images,
+    List<ProductImageHttpDto> Images,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
 public record ProductCardResponse(
     Guid Id,
     string Name,
-    MoneyDto Price,
+    MoneyHttpDto Price,
     string ImageUrl,
     int CategoryId);
 

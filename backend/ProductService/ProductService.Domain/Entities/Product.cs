@@ -72,7 +72,10 @@ public class Product : IEquatable<Product>
             Version = 1
         };
 
-        product._images.AddRange(images);
+        if (images.Count != 0)
+        {
+            product._images.AddRange(images);
+        }
 
         product._domainEvents.Add(new ProductCreatedEvent(
             product.Id,
@@ -161,13 +164,13 @@ public class Product : IEquatable<Product>
             CategoryId));
     }
 
-    public void UpdateImages(IReadOnlyList<string> imageUrlsSnapshot)
+    public void UpdateImages(IReadOnlyList<ProductImage> imageUrlsSnapshot)
     {
         ArgumentNullException.ThrowIfNull(imageUrlsSnapshot);
         
-        var inputUrlsSet = new HashSet<string>(imageUrlsSnapshot, StringComparer.OrdinalIgnoreCase);
+        var inputUrlsSet = new HashSet<ProductImage>(imageUrlsSnapshot);
         
-        var currentUrlsSet = new HashSet<string>(_images.Select(img => img.Url), StringComparer.OrdinalIgnoreCase);
+        var currentUrlsSet = new HashSet<ProductImage>(_images);
 
         var imagesToRemove = currentUrlsSet
             .Where(url => !inputUrlsSet.Contains(url))
@@ -184,15 +187,16 @@ public class Product : IEquatable<Product>
 
         if (imagesToRemove.Count != 0)
         {
-            _images.RemoveAll(img => !inputUrlsSet.Contains(img.Url));
+            _images.RemoveAll(img => !inputUrlsSet.Contains(img));
         }
 
-        foreach (var url in imagesToAdd)
+        foreach (var img in imagesToAdd)
         {
-            _images.Add(new ProductImage(url));
+            _images.Add(img);
         }
         
-        _domainEvents.Add(new ProductImagesUpdatedEvent(Id, _images.Select(i => i.Url).ToList(), imagesToRemove));
+        _domainEvents.Add(new ProductImagesUpdatedEvent(Id, _images.Select(i => i.Url).ToList(),
+            imagesToRemove.Select(img => img.Url).ToList()));
     }
 
     public void IncrementVersion()

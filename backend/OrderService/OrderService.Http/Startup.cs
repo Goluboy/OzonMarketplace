@@ -37,6 +37,11 @@ namespace OrderService.Http
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
+                    options.Authority = keycloakAuthority;
+                    options.Audience = audience;
+
+                    options.RequireHttpsMetadata = false;
+
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
@@ -97,7 +102,10 @@ namespace OrderService.Http
 
             services.AddAuthorization(options =>
             {
+                options.AddPolicy("CustomerOnly", policy => policy.RequireRole("customer"));
+                options.AddPolicy("SellerOnly", policy => policy.RequireRole("seller"));
                 options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
+                options.AddPolicy("AnyAuthenticated", policy => policy.RequireAuthenticatedUser());
             });
 
             services.AddScoped<IDbConnection>(sp =>

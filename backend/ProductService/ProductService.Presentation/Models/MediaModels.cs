@@ -1,4 +1,5 @@
-﻿namespace ProductService.Presentation.Models;
+﻿
+namespace ProductService.Presentation.Models;
 
 public record UploadFilesRequest(
     List<string> FileNames);

@@ -3,7 +3,7 @@ using ProductService.Presentation.Models;
 
 namespace ProductService.Presentation.Validators;
 
-public class ProductImageDtoValidator : AbstractValidator<ProductImageDto>
+public class ProductImageDtoValidator : AbstractValidator<ProductImageHttpDto>
 {
     public ProductImageDtoValidator()
     {

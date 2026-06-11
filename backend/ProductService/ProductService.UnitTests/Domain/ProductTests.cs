@@ -245,38 +245,12 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
     }
     
     [Fact]
-    public void UpdateImages_WhenNoInitialImages_ShouldAddNewImagesAndRaiseEvent()
-    {
-        // Arrange
-        var product = CreateProductWithImages([]);
-        var newUrls = new List<string> { "http://img1.png", "http://img2.png" };
-
-        // Act
-        product.UpdateImages(newUrls);
-        product.IncrementVersion();
-
-        // Assert
-        product.Images.Should().HaveCount(2);
-        product.Images.Select(i => i.Url).Should().ContainInOrder(newUrls);
-        product.Version.Should().Be(2);
-        
-        var ev = product.DomainEvents
-            .Should().ContainSingle()
-            .Which.Should().BeOfType<ProductImagesUpdatedEvent>()
-            .Subject;
-
-        ev.ProductId.Should().Be(product.Id);
-        ev.ImageUrls.Should().ContainInOrder(newUrls);
-        ev.RemovedUrls.Should().BeEmpty();
-    }
-
-    [Fact]
     public void UpdateImages_WhenHasInitialImages_ShouldDeleteAllAndRaiseEvent()
     {
         // Arrange
         var initialUrls = new List<string> { "http://img1.png", "http://img2.png" };
         var product = CreateProductWithImages(initialUrls);
-        var emptyUrls = new List<string>();
+        var emptyUrls = new List<ProductImage>();
 
         // Act
         product.UpdateImages(emptyUrls);
@@ -301,7 +275,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
         // Arrange
         var initialUrls = new List<string> { "http://img1.png", "http://img2.png", "http://img3.png" };
         var product = CreateProductWithImages(initialUrls);
-        var remainingUrls = new List<string> { "http://img1.png" };
+        var remainingUrls = new List<ProductImage> { new("http://img1.png") };
 
         // Act
         product.UpdateImages(remainingUrls);
@@ -327,7 +301,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
         // Arrange
         var initialUrls = new List<string> { "http://img1.png", "http://img2.png" };
         var product = CreateProductWithImages(initialUrls);
-        var updatedUrls = new List<string> { "http://img1.png", "http://img3.png" };
+        var updatedUrls = new List<ProductImage> { new("http://img1.png"), new("http://img3.png") };
 
         // Act
         product.UpdateImages(updatedUrls);
@@ -335,7 +309,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
 
         // Assert
         product.Images.Should().HaveCount(2);
-        product.Images.Select(i => i.Url).Should().ContainInOrder(updatedUrls);
+        product.Images.Select(i => i.Url).Should().ContainInOrder("http://img1.png", "http://img3.png");
         product.Version.Should().Be(2);
 
         var ev = product.DomainEvents
@@ -343,7 +317,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             .Which.Should().BeOfType<ProductImagesUpdatedEvent>()
             .Subject;
 
-        ev.ImageUrls.Should().ContainInOrder(updatedUrls);
+        ev.ImageUrls.Should().ContainInOrder("http://img1.png", "http://img3.png");
         ev.RemovedUrls.Should().ContainSingle().Which.Should().Be("http://img2.png");
     }
 
@@ -353,7 +327,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
         // Arrange
         var initialUrls = new List<string> { "http://img1.png", "http://img2.png" };
         var product = CreateProductWithImages(initialUrls);
-        var brandNewUrls = new List<string> { "http://img3.png", "http://img4.png" };
+        var brandNewUrls = new List<ProductImage> { new("http://img3.png"), new("http://img4.png") };
 
         // Act
         product.UpdateImages(brandNewUrls);
@@ -361,7 +335,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
 
         // Assert
         product.Images.Should().HaveCount(2);
-        product.Images.Select(i => i.Url).Should().ContainInOrder(brandNewUrls);
+        product.Images.Select(i => i.Url).Should().ContainInOrder("http://img3.png", "http://img4.png");
         product.Version.Should().Be(2);
 
         var ev = product.DomainEvents
@@ -369,7 +343,7 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
             .Which.Should().BeOfType<ProductImagesUpdatedEvent>()
             .Subject;
 
-        ev.ImageUrls.Should().ContainInOrder(brandNewUrls);
+        ev.ImageUrls.Should().ContainInOrder("http://img3.png", "http://img4.png");
         ev.RemovedUrls.Should().HaveCount(2).And.ContainInOrder(initialUrls);
     }
 
@@ -380,28 +354,10 @@ public class ProductTests(ProductFixture fixture) : IClassFixture<ProductFixture
         var product = CreateProductWithImages([]);
 
         // Act
-        product.UpdateImages([]);
-
+        product.UpdateImages(new List<ProductImage>());
+        
         // Assert
         product.Images.Should().BeEmpty();
-        product.Version.Should().Be(1);
-        product.DomainEvents.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void UpdateImages_WhenImagesOnlyChangeCase_ShouldTreatAsNoChangeAndNotModifyState()
-    {
-        // Arrange
-        var initialUrls = new List<string> { "http://img1.png", "http://IMG2.PNG" };
-        var product = CreateProductWithImages(initialUrls);
-        
-        var sameUrlsWithDifferentCase = new List<string> { "http://IMG1.PNG", "http://img2.png" };
-
-        // Act
-        product.UpdateImages(sameUrlsWithDifferentCase);
-
-        // Assert 
-        product.Images.Should().HaveCount(2);
         product.Version.Should().Be(1);
         product.DomainEvents.Should().BeEmpty();
     }

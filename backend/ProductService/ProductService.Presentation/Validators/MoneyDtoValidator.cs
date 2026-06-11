@@ -3,7 +3,7 @@ using ProductService.Presentation.Models;
 
 namespace ProductService.Presentation.Validators;
 
-public class MoneyDtoValidator : AbstractValidator<MoneyDto>
+public class MoneyDtoValidator : AbstractValidator<MoneyHttpDto>
 {
     public MoneyDtoValidator()
     {

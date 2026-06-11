@@ -11,8 +11,7 @@ public record ProductImage
             throw new ArgumentException("URL cannot be null or empty.");
         }
         
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uriResult) || 
-            (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
+        if (!Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out _))
         {
             throw new ArgumentException("Incorrect URL format.");
         }

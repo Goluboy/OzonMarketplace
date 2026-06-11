@@ -3,6 +3,7 @@ using Core.Minio.Helpers;
 using ProductService.Application.DTO.Category;
 using ProductService.Application.DTO.Product;
 using ProductService.Application.Exceptions;
+using ProductService.Application.Helpers;
 using ProductService.Application.Mappers;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Events;
@@ -15,7 +16,7 @@ using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 namespace ProductService.Application.Services.Products.Command;
 
 public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository productRepository,
-    ICategoryRepository categoryRepository, IS3UrlFormatter urlFormatter) : IProductCommandService
+    ICategoryRepository categoryRepository, IProductImageUrlHelper urlHelper) : IProductCommandService
 {
     public async Task<ProductDetailsDto> CreateProductAsync(CreateProductDto dto, CancellationToken ct = default)
     {
@@ -26,11 +27,10 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         var categoryDto = await EnsureCategoryExistsAsync(dto.CategoryId, ct);
         
         var price = new Money(dto.Price.Amount, dto.Price.Currency);
-        var relativeImages = dto.ImagesUrl
-            .Select(url => new ProductImage(urlFormatter.ToObjectKey(url)))
-            .ToList();
         
-        var product = Product.Create(dto.Sku, dto.Name, dto.Description, dto.CategoryId, sellerId, price, relativeImages);
+        var storedImages = urlHelper.ToStoredImages(dto.ImagesUrl);
+        
+        var product = Product.Create(dto.Sku, dto.Name, dto.Description, dto.CategoryId, sellerId, price, storedImages);
 
         await unitOfWork.BeginTransactionAsync(ct); //TODO BeginOutboxTransactionAsync для outbox
         try
@@ -46,11 +46,7 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             
             product.ClearDomainEvents();
             
-            var absoluteImages = product.Images
-                .Select(img => urlFormatter.ToAbsoluteUrl(img.Url))
-                .ToList();
-            
-            return product.ToDto(categoryDto, absoluteImages);
+            return ToDtoWithAbsoluteUrls(product, categoryDto);
         }
         catch
         {
@@ -84,21 +80,15 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             product.ChangePrice(newPrice);
         }
         
-        var relativeImagesUrls = dto.ImagesUrl
-            .Select(urlFormatter.ToObjectKey)
-            .ToList(); 
+        var storedImages = urlHelper.ToStoredImages(dto.ImagesUrl);
         
-        product.UpdateImages(relativeImagesUrls);
+        product.UpdateImages(storedImages);
         
         product.IncrementVersion();
         
         if (product.DomainEvents.Count == 0)
         {
-            var currentAbsoluteImages = product.Images
-                .Select(img => urlFormatter.ToAbsoluteUrl(img.Url))
-                .ToList();
-            
-            return product.ToDto(categoryDto, currentAbsoluteImages);
+            return ToDtoWithAbsoluteUrls(product, categoryDto);
         }
         
         await unitOfWork.BeginTransactionAsync(ct);
@@ -118,12 +108,8 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             // TODO Kafka - Опубликовать событие ProductUpdatedEvent в брокер сообщений
             
             product.ClearDomainEvents();
-            
-            var absoluteImageUrls = product.Images
-                .Select(img => urlFormatter.ToAbsoluteUrl(img.Url))
-                .ToList();
-            
-            return product.ToDto(categoryDto, absoluteImageUrls);
+
+            return ToDtoWithAbsoluteUrls(product, categoryDto);
         }
         catch
         {
@@ -160,6 +146,15 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             await unitOfWork.RollbackAsync();
             throw;
         }
+    }
+
+    private ProductDetailsDto ToDtoWithAbsoluteUrls(Product product, CategoryDto categoryDto)
+    {
+        var detailsDto = product.ToDto(categoryDto);
+        return detailsDto with
+        {
+            Images = urlHelper.ToAbsoluteImageDtos(detailsDto.Images)
+        };
     }
     
     private async Task<CategoryDto> EnsureCategoryExistsAsync(int categoryId, CancellationToken ct)

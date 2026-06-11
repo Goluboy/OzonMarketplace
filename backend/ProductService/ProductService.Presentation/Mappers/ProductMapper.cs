@@ -2,8 +2,6 @@
 using ProductService.Application.DTO.Product;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Presentation.Models;
-using MoneyDto = ProductService.Presentation.Models.MoneyDto;
-using ProductImageDto = ProductService.Presentation.Models.ProductImageDto;
 
 namespace ProductService.Presentation.Mappers;
 
@@ -30,7 +28,7 @@ public static class ProductMapper
             request.Description,
             request.Price.ToDto(),
             request.CategoryId,
-            request.Images.Select(url => url.Url).ToList());
+            request.Images.Select(img => img.ToDto()).ToList());
     }
     
     public static UpdateProductDto ToDto(this UpdateProductRequest request, Guid productId)
@@ -41,7 +39,7 @@ public static class ProductMapper
             request.Description,
             request.Price.ToDto(),
             request.CategoryId,
-            request.Images.Select(url => url.Url).ToList());
+            request.Images.Select(img => img.ToDto()).ToList());
     }
 
     public static ProductResponse ToHttpResponse(this ProductDetailsDto dto)
@@ -52,7 +50,7 @@ public static class ProductMapper
             dto.SellerId,
             dto.Name,
             dto.Description,
-            new MoneyDto(dto.PriceAmount.ToString(CultureInfo.InvariantCulture), dto.PriceCurrency),
+            new MoneyHttpDto(dto.PriceAmount.ToString(CultureInfo.InvariantCulture), dto.PriceCurrency),
             dto.CategoryId,
             dto.CategoryName,
             dto.CategoryPath,
@@ -69,14 +67,14 @@ public static class ProductMapper
             dto.PageSize);
     }
 
-    public static ProductImageDto ToHttpResponse(this Infrastructure.Abstractions.DTO.Product.Query.ProductImageDto dto)
+    public static ProductImageHttpDto ToHttpResponse(this ProductImageDto dto)
     {
-        return new ProductImageDto(dto.Url);
+        return new ProductImageHttpDto(dto.Url);
     }
     
-    public static Infrastructure.Abstractions.DTO.Product.Query.ProductImageDto ToDto(this ProductImageDto dto)
+    public static ProductImageDto ToDto(this ProductImageHttpDto httpDto)
     {
-        return new Infrastructure.Abstractions.DTO.Product.Query.ProductImageDto(dto.Url);
+        return new ProductImageDto(httpDto.Url);
     }
     
     private static ProductCardResponse ToHttpResponse(this ProductCardDto dto)
@@ -84,15 +82,15 @@ public static class ProductMapper
         return new ProductCardResponse(
             dto.Id,
             dto.Name,
-            new MoneyDto(dto.PriceAmount.ToString(CultureInfo.InvariantCulture), dto.PriceCurrency),
+            new MoneyHttpDto(dto.PriceAmount.ToString(CultureInfo.InvariantCulture), dto.PriceCurrency),
             dto.MainImageUrl,
             dto.CategoryId);
     }
     
-    private static Infrastructure.Abstractions.DTO.Product.Query.MoneyDto ToDto(this MoneyDto dto)
+    private static MoneyDto ToDto(this MoneyHttpDto httpDto)
     {
-        var amount = decimal.Parse(dto.Amount, CultureInfo.InvariantCulture);
+        var amount = decimal.Parse(httpDto.Amount, CultureInfo.InvariantCulture);
         
-        return new Infrastructure.Abstractions.DTO.Product.Query.MoneyDto(amount, dto.Currency);
+        return new MoneyDto(amount, httpDto.Currency);
     }
 }

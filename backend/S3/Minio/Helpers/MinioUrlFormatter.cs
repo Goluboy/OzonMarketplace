@@ -1,7 +1,16 @@
-﻿namespace Core.Minio.Helpers;
+﻿using Microsoft.Extensions.Options;
 
-public class MinioUrlFormatter(MinioOptions options) : IS3UrlFormatter
+namespace Core.Minio.Helpers;
+
+public class MinioUrlFormatter : IS3UrlFormatter
 {
+    private readonly MinioOptions _options;
+    
+    public MinioUrlFormatter(IOptions<MinioOptions> options)
+    {
+        _options = options.Value;
+    }
+    
     public string ToAbsoluteUrl(string objectKey)
     {
         if (string.IsNullOrEmpty(objectKey))
@@ -15,7 +24,7 @@ public class MinioUrlFormatter(MinioOptions options) : IS3UrlFormatter
             return objectKey;
         }
         
-        return $"{options.ExternalEndpoint}/{options.BucketName}/{objectKey}";
+        return $"{_options.ExternalEndpoint}/{_options.BucketName}/{objectKey}";
     }
 
     public string ToObjectKey(string absoluteUrl)
@@ -25,7 +34,7 @@ public class MinioUrlFormatter(MinioOptions options) : IS3UrlFormatter
             return string.Empty;
         }
         
-        var prefix = $"{options.ExternalEndpoint}/{options.BucketName}/";
+        var prefix = $"{_options.ExternalEndpoint}/{_options.BucketName}/";
         return absoluteUrl.Replace(prefix, "");
     }
 }

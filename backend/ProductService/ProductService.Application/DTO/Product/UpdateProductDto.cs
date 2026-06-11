@@ -9,4 +9,4 @@ public record UpdateProductDto(
     string Description,
     MoneyDto Price,
     int CategoryId,
-    List<string> ImagesUrl);
+    List<ProductImageDto> ImagesUrl);

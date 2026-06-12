@@ -87,7 +87,7 @@ public class AdminOrdersController(
         try
         {
             await updateOrderStatusHandler.HandleAsync(
-                new UpdateOrderStatusCommand(id, (Domain.ValueObjects.OrderStatus)request.NewStatus, User.GetUserId(), request.Comment),
+                new UpdateOrderStatusCommand(id, request.NewStatus, User.GetUserId(), request.Comment),
                 cancellationToken);
 
             // Re-fetch the updated order to return

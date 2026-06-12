@@ -47,7 +47,7 @@ public static class KafkaDependencyInjection
 
                 rider.UsingKafka((context, k) =>
                 {
-                    k.Host("localhost:29092");
+                    k.Host("kafka:9092");
 
                     k.TopicEndpoint<StockReservedEvent>("products.stock.reserved", "order-service-stock-group", cfg =>
                     {

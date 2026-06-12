@@ -1,5 +1,3 @@
-using OrderService.Http.Dtos.Shared;
-
 namespace OrderService.Http.Dtos.Requests;
 
 public record CreateOrderRequest(

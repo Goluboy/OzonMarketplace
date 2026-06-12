@@ -24,7 +24,7 @@ public class OrderItemRemovedEventTests
             refundedAmount,
             newTotalAmount,
             changedAt);
-        
+
         orderEvent.OrderId.Should().Be(orderId);
         orderEvent.OrderItemId.Should().Be(orderItemId);
         orderEvent.ProductId.Should().Be(productId);

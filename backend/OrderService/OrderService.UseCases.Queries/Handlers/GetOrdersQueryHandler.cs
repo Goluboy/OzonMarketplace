@@ -16,7 +16,7 @@ namespace OrderService.UseCases.Queries.Handlers
         public async Task<OrderModel[]> HandleAsync(GetOrdersQuery query, CancellationToken cancellationToken)
         {
             var (orders, totalCount) = await _orderRepository.GetAllAsync(query.Page, query.PageSize);
-            
+
             var orderModels = orders.Select(order => new OrderModel(
                 order.Id.Value,
                 order.CustomerId,

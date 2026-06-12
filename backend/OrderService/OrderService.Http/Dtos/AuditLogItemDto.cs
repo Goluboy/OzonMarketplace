@@ -1,5 +1,3 @@
-using OrderService.Http.Dtos.Shared;
-
 namespace OrderService.Http.Dtos;
 
 public record AuditLogItemDto(

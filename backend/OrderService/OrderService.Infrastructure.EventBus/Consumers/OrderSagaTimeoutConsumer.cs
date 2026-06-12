@@ -20,7 +20,7 @@ public class OrderSagaTimeoutConsumer : IConsumer<OrderSagaTimeout>
     {
         var correlationId = context.Message.CorrelationId;
         _logger.LogInformation("Order saga timeout received for {CorrelationId}", correlationId);
-        
+
         var cancelEvent = new OrderCancelledEvent
         {
             CorrelationId = correlationId,

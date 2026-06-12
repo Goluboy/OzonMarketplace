@@ -3,16 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using OrderService.Domain.ValueObjects;
 using OrderService.Http.Dtos;
 using OrderService.Http.Dtos.Requests;
-using OrderService.Http.Dtos.Shared;
 using OrderService.Http.Extensions;
 using OrderService.Http.Mappings;
 using OrderService.UseCases.Commands.Commands;
 using OrderService.UseCases.Commands.Interfaces;
 using OrderService.UseCases.Queries;
-using OrderService.UseCases.Queries.Handlers;
 using OrderService.UseCases.Queries.Interfaces;
 using OrderService.UseCases.Queries.Models;
-using OrderService.UseCases.Queries.Queries;
 
 namespace OrderService.Http.controllers;
 
@@ -61,7 +58,7 @@ public class AdminOrdersController(
             dateTo);
 
         var ordersPaged = await getAllOrdersQueryHandler.HandleAsync(query, cancellationToken);
-        
+
         return Ok(ordersPaged);
     }
 

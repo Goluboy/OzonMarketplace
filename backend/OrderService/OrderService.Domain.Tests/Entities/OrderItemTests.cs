@@ -1,6 +1,6 @@
-﻿using OrderService.Domain.Entities;
+﻿using FluentAssertions;
+using OrderService.Domain.Entities;
 using OrderService.Domain.Tests.Fixtures;
-using FluentAssertions;
 using OrderService.Domain.ValueObjects;
 
 namespace OrderService.Domain.Tests.Entities;

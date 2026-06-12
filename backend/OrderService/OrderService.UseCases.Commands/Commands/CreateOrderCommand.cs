@@ -1,6 +1,4 @@
-﻿using OrderService.UseCases.Commands.Commands;
-
-namespace OrderService.UseCases.Commands.Commands;
+﻿namespace OrderService.UseCases.Commands.Commands;
 
 public record CreateOrderCommand(
     Guid CustomerId,

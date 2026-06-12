@@ -4,13 +4,11 @@ using OrderService.Domain.ValueObjects;
 using OrderService.Http.Dtos;
 using OrderService.Http.Dtos.Requests;
 using OrderService.Http.Dtos.Responses;
-using OrderService.Http.Dtos.Shared;
 using OrderService.Http.Extensions;
 using OrderService.Http.Mappings;
 using OrderService.UseCases.Commands.Commands;
 using OrderService.UseCases.Commands.Interfaces;
 using OrderService.UseCases.Queries;
-using OrderService.UseCases.Queries.Handlers;
 using OrderService.UseCases.Queries.Interfaces;
 using OrderService.UseCases.Queries.Models;
 
@@ -58,7 +56,7 @@ public class OrdersController(
         var ordersPaged = await getOrdersByCustomerIdHandler.HandleAsync(
             query,
             cancellationToken);
-        
+
         return Ok(ordersPaged);
     }
 
@@ -197,7 +195,7 @@ public class OrdersController(
         {
             return Forbid();
         }
-        
+
         // Assuming CancelOrderCommand handles the business logic for cancellation rules
         try
         {

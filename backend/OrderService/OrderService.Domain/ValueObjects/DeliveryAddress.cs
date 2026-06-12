@@ -25,7 +25,7 @@ public sealed record DeliveryAddress
     }
 
     public override string ToString() => AddressLine;
-    
+
     public static implicit operator string?(DeliveryAddress? address) => address?.AddressLine;
 
     public static explicit operator DeliveryAddress(string value) => CreateRequired(value);

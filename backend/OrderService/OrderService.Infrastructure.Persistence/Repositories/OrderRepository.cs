@@ -285,10 +285,41 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
         await dbSession.Connection.ExecuteAsync("DELETE FROM \"Orders\" WHERE \"Id\" = @Id", new { Id = id }, transaction: dbSession.Transaction);
     }
 
-    public async Task<OrderStatus> GetStatusAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<int> GetTotalCountAsync(Guid? customerId, OrderStatus? status, DateTime? dateFrom, DateTime? dateTo, CancellationToken cancellationToken = default)
     {
-        const string sql = "SELECT \"Status\" FROM \"Orders\" WHERE \"Id\" = @Id";
-        var status = await dbSession.Connection.QuerySingleAsync<int>(sql, new { Id = id }, transaction: dbSession.Transaction);
-        return (OrderStatus)status;
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (customerId.HasValue)
+        {
+            conditions.Add("o.\"CustomerId\" = @CustomerId");
+            parameters.Add("@CustomerId", customerId.Value);
+        }
+
+        if (status.HasValue)
+        {
+            conditions.Add("o.\"Status\" = @Status");
+            parameters.Add("@Status", (int)status.Value);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            conditions.Add("o.\"CreatedAt\" >= @DateFrom");
+            parameters.Add("@DateFrom", dateFrom.Value);
+        }
+
+        if (dateTo.HasValue)
+        {
+            conditions.Add("o.\"CreatedAt\" <= @DateTo");
+            parameters.Add("@DateTo", dateTo.Value);
+        }
+
+        var whereClause = conditions.Any() ? "WHERE " + string.Join(" AND ", conditions) : "";
+
+        const string sql = "SELECT COUNT(*) FROM \"Orders\" o {WhereClause}";
+
+        var fullSql = sql.Replace("{WhereClause}", whereClause);
+
+        return await dbSession.Connection.QuerySingleAsync<int>(fullSql, parameters, transaction: dbSession.Transaction);
     }
 }

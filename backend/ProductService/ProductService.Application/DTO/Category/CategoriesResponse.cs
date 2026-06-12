@@ -2,5 +2,5 @@
 
 public record CategoriesResponse(
     IReadOnlyCollection<CategoryDto> Categories,
-    string Etag,
+    string ETag,
     bool IsModified);

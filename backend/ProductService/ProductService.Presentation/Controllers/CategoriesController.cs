@@ -18,20 +18,23 @@ public class CategoriesController(ICategoryService categoryService) : Controller
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
-        var etagVersion = await categoryService.GetVersionETagAsync(ct);
+        string? clientEtag = Request.Headers.IfNoneMatch;
         
-        if (Request.Headers.TryGetValue(HeaderNames.IfNoneMatch, out var clientETag))
+        if (!string.IsNullOrEmpty(clientEtag))
         {
-            if (clientETag.ToString() == etagVersion)
-            {
-                return StatusCode(StatusCodes.Status304NotModified);
-            }
+            clientEtag = clientEtag.Trim('"');
         }
         
-        var categoriesDto = await categoryService.GetAllAsync(ct);
-        var response = categoriesDto.Select(x => x.ToHttpResponse()).ToList();
+        var categoriesResponse = await categoryService.GetAllAsync(clientEtag, ct);
+
+        if (!categoriesResponse.IsModified)
+        {
+            return new StatusCodeResult(StatusCodes.Status304NotModified);
+        }
         
-        Response.Headers[HeaderNames.ETag] = etagVersion;
+        var response = categoriesResponse.Categories.Select(x => x.ToHttpResponse()).ToList();
+        
+        Response.Headers[HeaderNames.ETag] = $"\"{categoriesResponse.ETag}\"";
         Response.Headers[HeaderNames.CacheControl] = "no-cache";
         
         return Ok(response);

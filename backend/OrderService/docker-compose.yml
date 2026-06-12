@@ -1,0 +1,6 @@
+services:
+  orderservice.http:
+    image: ${DOCKER_REGISTRY-}orderservicehttp
+    build:
+      context: .
+      dockerfile: OrderService.Http/Dockerfile

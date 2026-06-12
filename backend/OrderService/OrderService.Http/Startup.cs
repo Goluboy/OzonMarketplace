@@ -45,7 +45,7 @@ namespace OrderService.Http
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
-                        ValidIssuer = keycloakAuthority,
+                        ValidIssuer = "http://localhost:8080/realms/marketplace",
 
                         ValidateAudience = true,
                         ValidAudience = audience,

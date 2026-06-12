@@ -110,8 +110,13 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
         return orders;
     }
 
-    public async Task<IEnumerable<Order>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<(IEnumerable<Order> Orders, int TotalCount)> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken = default)
     {
+        // Получение общего количества заказов
+        const string countSql = "SELECT COUNT(*) FROM \"Orders\"";
+        var totalCount = await dbSession.Connection.QuerySingleAsync<int>(countSql, transaction: dbSession.Transaction);
+
+        // Получение заказов с пагинацией
         const string sql = """
                            SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
                                   o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
@@ -134,7 +139,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
             orders.Add(RehydrateOrderAggregate(group));
         }
 
-        return orders;
+        return (orders, totalCount);
     }
 
     public async Task<IEnumerable<Order>> GetAllAsync(Guid? customerId, OrderStatus? status, DateTime? dateFrom, DateTime? dateTo, int page, int pageSize, CancellationToken cancellationToken = default)

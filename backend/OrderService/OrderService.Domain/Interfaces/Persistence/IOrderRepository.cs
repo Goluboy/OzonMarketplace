@@ -7,7 +7,7 @@ public interface IOrderRepository
 {
     Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IEnumerable<Order>> GetByCustomerIdAsync(Guid customerId, CancellationToken cancellationToken = default);
-    Task<IEnumerable<Order>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<(IEnumerable<Order> Orders, int TotalCount)> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<IEnumerable<Order>> GetAllAsync(Guid? customerId, OrderStatus? status, DateTime? dateFrom, DateTime? dateTo, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<Order?> GetByIdForAdminAsync(Guid id, CancellationToken cancellationToken = default);
     Task SaveAsync(Order order, CancellationToken cancellationToken = default);

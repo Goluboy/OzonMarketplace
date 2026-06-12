@@ -15,12 +15,29 @@ namespace OrderService.UseCases.Queries.Handlers
 
         public async Task<OrderModel[]> HandleAsync(GetOrdersQuery query, CancellationToken cancellationToken)
         {
-            var (orders, totalCount) = await _orderRepository.GetOrdersAsync(query.Page, query.PageSize);
+            var (orders, totalCount) = await _orderRepository.GetAllAsync(query.Page, query.PageSize);
             
-            var orderModels = orders.Select(order => new OrderModel(order.Id, order.Status, order.CreatedAt, order.UpdatedAt, 
-                order.CustomerName, order.CustomerEmail, order.DeliveryAddress, order.TotalAmount.Amount, order.TotalAmount.Currency.ToString(),
-                order.Items.Select(item => new OrderItemModel(item.ProductId, item.ProductName, item.Quantity, item.Price.Amount, item.Price.Currency.ToString()))
-                .ToList())).ToList();
+            var orderModels = orders.Select(order => new OrderModel(
+                order.Id.Value,
+                order.CustomerId,
+                order.CustomerName,
+                order.CustomerEmail.Value,
+                order.DeliveryAddress?.AddressLine,
+                order.Status,
+                order.TotalAmount.Amount,
+                order.TotalAmount.Currency,
+                order.CreatedAt,
+                order.UpdatedAt,
+                order.Items.Select(item => new OrderItemModel(
+                    item.Id,
+                    item.ProductId,
+                    item.ProductName,
+                    item.Quantity,
+                    item.PriceAtPurchase.Amount,
+                    item.PriceAtPurchase.Currency,
+                    item.Subtotal.Amount
+                )).ToList()
+            )).ToArray();
 
             return orderModels;
         }

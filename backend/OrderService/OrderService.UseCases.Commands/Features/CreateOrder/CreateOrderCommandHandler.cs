@@ -1,4 +1,8 @@
-﻿using OrderService.Domain.Interfaces.Persistence;
+﻿using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.Shared;
+using MassTransit;
+using OrderService.Domain.Entities;
+using OrderService.Domain.Interfaces.Persistence;
 using OrderService.UseCases.Commands.Commands;
 using OrderService.UseCases.Commands.Interfaces;
 

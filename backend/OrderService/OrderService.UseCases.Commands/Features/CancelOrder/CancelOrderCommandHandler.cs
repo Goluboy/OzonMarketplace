@@ -1,4 +1,5 @@
 using OrderService.Domain.Interfaces.Persistence;
+using OrderService.Domain.ValueObjects;
 using OrderService.UseCases.Commands.Commands;
 using OrderService.UseCases.Commands.Interfaces;
 

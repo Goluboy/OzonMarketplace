@@ -80,11 +80,11 @@ internal class RedisCacheService : ICacheService
     {
         if (string.IsNullOrWhiteSpace(key))
         {
-            throw new ArgumentException("Ключ не может быть пустым.", nameof(key));
+            throw new ArgumentException("Key cannot be null or empty.", nameof(key));
         }
         if (value == null)
         {
-            throw new ArgumentNullException(nameof(value), "Запись null-значений в кэш не разрешена.");
+            throw new ArgumentNullException( nameof(value), "Value cannot be null.");
         }
         
         var bytes = JsonSerializer.SerializeToUtf8Bytes(value, _jsonOptions);

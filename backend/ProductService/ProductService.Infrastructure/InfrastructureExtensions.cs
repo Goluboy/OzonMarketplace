@@ -1,16 +1,20 @@
 ﻿using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ProductService.Infrastructure.Abstractions.Caching.Abstractions;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
+using ProductService.Infrastructure.Caching;
 using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Helpers.JsonbSerialization;
 using ProductService.Infrastructure.Persistence.Provider;
 using ProductService.Infrastructure.Repository;
+using ProductService.Infrastructure.Repository.Decorators;
 using ProductService.Infrastructure.Repository.Products;
 using ProductService.Infrastructure.UnitOfWork;
+using Redis.Service;
 
 namespace ProductService.Infrastructure;
 
@@ -28,8 +32,17 @@ public static class InfrastructureExtensions
         
         services.AddScoped<IDbSession>(sp => sp.GetRequiredService<UnitOfWork.UnitOfWork>());
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork.UnitOfWork>());
+
+        services.AddSingleton<RedisCategoryVersionProvider>();
+        services.AddSingleton<ICategoryVersionProvider>(sp => sp.GetRequiredService<RedisCategoryVersionProvider>());
+        services.AddSingleton<ICategoryVersionUpdater>(sp => sp.GetRequiredService<RedisCategoryVersionProvider>());
         
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        // Декоратор над CategoryRepository
+        services.AddScoped<CategoryRepository>();
+        services.AddScoped<ICategoryRepository>(sp => new CachedCategoryRepository(
+            sp.GetRequiredService<CategoryRepository>(),
+            sp.GetRequiredService<ICacheService>()));
+        
         services.AddScoped<IProductQueryRepository, ProductQueryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         

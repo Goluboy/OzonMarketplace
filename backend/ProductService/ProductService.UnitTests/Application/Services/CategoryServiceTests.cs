@@ -7,6 +7,7 @@ using ProductService.Application.Exceptions;
 using ProductService.Application.Services;
 using ProductService.Application.Services.Categories;
 using ProductService.Domain.Entities;
+using ProductService.Infrastructure.Abstractions.Caching.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using Xunit;
@@ -17,50 +18,96 @@ public class CategoryServiceTests
 {
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICategoryRepository _repository = Substitute.For<ICategoryRepository>();
+    private readonly ICategoryVersionProvider _versionProvider = Substitute.For<ICategoryVersionProvider>();
     private readonly CategoryService _service;
 
     public CategoryServiceTests()
     {
-        _service = new CategoryService(_uow, _repository);
+        _service = new CategoryService(_uow, _repository, _versionProvider);
     }
 
     #region GetAllAsync Tests
 
     [Fact]
-    public async Task GetAllAsync_WhenCategoriesExist_ShouldReturnMappedDtos()
+    public async Task GetAllAsync_WhenEtagMatches_ShouldReturnNotModifiedAndAvoidDatabaseCall()
     {
         // Arrange
         var ct = CancellationToken.None;
+        const string matchingEtag = "etag-12345";
+
+        // Настраиваем получение актуального E-Tag из Redis
+        _versionProvider.GetVersionETagAsync(ct).Returns(matchingEtag);
+
+        // Act
+        // Передаем клиентом точно такой же E-Tag, какой лежит в кэше
+        var result = await _service.GetAllAsync(matchingEtag, ct);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Categories.Should().BeEmpty();
+        result.ETag.Should().Be(matchingEtag);
+        result.IsModified.Should().BeFalse();
+
+        // Важнейшая проверка для High-Load: репозиторий НЕ должен вызываться за данными!
+        await _repository.DidNotReceive().GetAllAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WhenEtagMismatches_ShouldFetchFromRepositoryAndReturnModified()
+    {
+        // Arrange
+        var ct = CancellationToken.None;
+        const string actualEtag = "new-etag-999";
+        const string clientOldEtag = "old-etag-111";
+
         var categories = new List<Category>
         {
             Category.Reconstruct(1, "Electronics", "electronics"),
             Category.Reconstruct(2, "Books", "books")
         };
 
+        _versionProvider.GetVersionETagAsync(ct).Returns(actualEtag);
         _repository.GetAllAsync(ct).Returns(categories);
 
         // Act
-        var result = await _service.GetAllAsync(ct);
+        // Передаем устаревший E-Tag клиента
+        var result = await _service.GetAllAsync(clientOldEtag, ct);
 
         // Assert
-        result.Should().HaveCount(2);
-        result.First().Id.Should().Be(1);
-        result.First().Name.Should().Be("Electronics");
-        result.Last().Id.Should().Be(2);
+        result.Should().NotBeNull();
+        result.IsModified.Should().BeTrue();
+        result.ETag.Should().Be(actualEtag);
+        
+        result.Categories.Should().HaveCount(2);
+        result.Categories.First().Id.Should().Be(1);
+        result.Categories.First().Name.Should().Be("Electronics");
+        result.Categories.Last().Id.Should().Be(2);
+
+        // Проверяем, что к репозиторию был совершен вызов за данными
+        await _repository.Received(1).GetAllAsync(ct);
     }
 
     [Fact]
-    public async Task GetAllAsync_WhenNoCategoriesExist_ShouldReturnEmptyCollection()
+    public async Task GetAllAsync_WhenClientHasNoEtag_ShouldFetchFromRepositoryAndReturnModified()
     {
         // Arrange
         var ct = CancellationToken.None;
+        const string actualEtag = "some-current-etag";
+        
+        _versionProvider.GetVersionETagAsync(ct).Returns(actualEtag);
         _repository.GetAllAsync(ct).Returns(new List<Category>());
 
         // Act
-        var result = await _service.GetAllAsync(ct);
+        // Клиент делает первый запрос (If-None-Match отсутствует)
+        var result = await _service.GetAllAsync(null, ct);
 
         // Assert
-        result.Should().BeEmpty();
+        result.Should().NotBeNull();
+        result.Categories.Should().BeEmpty();
+        result.ETag.Should().Be(actualEtag);
+        result.IsModified.Should().BeTrue();
+
+        await _repository.Received(1).GetAllAsync(ct);
     }
 
     #endregion

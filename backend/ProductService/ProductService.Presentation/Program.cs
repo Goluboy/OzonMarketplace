@@ -2,6 +2,7 @@ using Core.Minio;
 using ProductService.Application;
 using ProductService.Infrastructure;
 using ProductService.Infrastructure.Persistence;
+using Redis;
 using Serilog;
 
 namespace ProductService.Presentation;
@@ -40,6 +41,10 @@ public static class Program
             .AddMinioStorage(options =>
             {
                 configuration.GetSection("Minio").Bind(options);
+            })
+            .AddRedisCache(options =>
+            {
+                configuration.GetSection("Redis").Bind(options);
             });
     }
     

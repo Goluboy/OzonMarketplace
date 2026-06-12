@@ -30,4 +30,4 @@
 
 ## Ссылки
 - Issue: [#46](https://github.com/Goluboy/OzonMarketplace/issues/46)
-- PR: 
+- PR: [#59](https://github.com/Goluboy/OzonMarketplace/pull/59/)

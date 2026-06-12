@@ -1,11 +1,13 @@
-﻿namespace OrderService.UseCases.Commands.Commands;
+﻿using OrderService.UseCases.Commands.Commands;
+
+namespace OrderService.UseCases.Commands.Commands;
 
 public record CreateOrderCommand(
     Guid CustomerId,
     string CustomerName,
     string CustomerEmail,
     string? DeliveryAddress,
-    List<CreateOrderCommand.CreateOrderItemCommand> Items)
+    List<CreateOrderCommand.CreateOrderItemCommand> Items) : ICommand<Guid>
 {
     public record CreateOrderItemCommand(
         Guid ProductId,

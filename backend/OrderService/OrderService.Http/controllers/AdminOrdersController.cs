@@ -8,6 +8,7 @@ using OrderService.Http.Extensions;
 using OrderService.Http.Mappings;
 using OrderService.UseCases.Commands.Commands;
 using OrderService.UseCases.Commands.Interfaces;
+using OrderService.UseCases.Queries;
 using OrderService.UseCases.Queries.Handlers;
 using OrderService.UseCases.Queries.Interfaces;
 using OrderService.UseCases.Queries.Models;
@@ -22,7 +23,7 @@ public class AdminOrdersController(
     ICommandHandler<UpdateOrderStatusCommand, bool> updateOrderStatusHandler,
     ICommandHandler<ForceCancelOrderCommand, bool> forceCancelOrderHandler,
     IQueryHandler<GetOrderByIdQuery, OrderModel?> getOrderByIdHandler,
-    IQueryHandler<GetAllOrdersQuery, PagedResult<OrderModel>> getAllOrdersQueryHandler) : ControllerBase
+    IQueryHandler<GetAllOrdersQuery, OrderModel[]> getAllOrdersQueryHandler) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(AdminOrderPagedResult), StatusCodes.Status200OK)]
@@ -31,7 +32,7 @@ public class AdminOrdersController(
     public async Task<ActionResult<AdminOrderPagedResult>> GetAllOrders(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] OrderStatusDto? status = null,
+        [FromQuery] OrderStatus? status = null,
         [FromQuery] Guid? customerId = null,
         [FromQuery] DateTime? dateFrom = null,
         [FromQuery] DateTime? dateTo = null,
@@ -50,7 +51,7 @@ public class AdminOrdersController(
 
         var ordersPaged = await getAllOrdersQueryHandler.HandleAsync(query, cancellationToken);
         
-        return Ok(ordersPaged.ToAdminDto());
+        return Ok(ordersPaged);
     }
 
     [HttpGet("{id:guid}")]
@@ -86,7 +87,7 @@ public class AdminOrdersController(
         try
         {
             await updateOrderStatusHandler.HandleAsync(
-                new UpdateOrderStatusCommand(id, (Domain.ValueObjects.OrderStatus)request.NewStatus, request.Comment),
+                new UpdateOrderStatusCommand(id, request.NewStatus, User.GetUserId(), request.Comment),
                 cancellationToken);
 
             // Re-fetch the updated order to return

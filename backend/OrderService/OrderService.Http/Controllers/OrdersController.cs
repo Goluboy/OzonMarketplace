@@ -26,7 +26,8 @@ public class OrdersController(
     ICommandHandler<CancelOrderCommand, bool> cancelOrderHandler,
     ICommandHandler<UpdateOrderStatusCommand, bool> updateOrderStatusHandler,
     IQueryHandler<GetOrderByIdQuery, OrderModel?> getOrderByIdHandler,
-    IQueryHandler<GetOrdersByCustomerIdQuery, List<OrderModel>> getOrdersByCustomerIdHandler) : ControllerBase
+    IQueryHandler<GetOrdersByCustomerIdQuery, List<OrderModel>> getOrdersByCustomerIdHandler,
+    IQueryHandler<GetOrdersQuery, OrderModel[]> getOrdersHandler) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(OrderPagedResult), StatusCodes.Status200OK)]

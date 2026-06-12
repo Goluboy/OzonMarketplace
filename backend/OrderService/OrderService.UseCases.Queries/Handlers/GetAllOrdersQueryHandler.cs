@@ -4,19 +4,33 @@ using OrderService.UseCases.Queries.Models;
 
 namespace OrderService.UseCases.Queries.Handlers
 {
-    public class GetOrdersQueryHandler : IQueryHandler<GetOrdersQuery, OrderModel[]>
+    public class GetAllOrdersQueryHandler : IQueryHandler<GetAllOrdersQuery, OrderModel[]>
     {
         private readonly IOrderRepository _orderRepository;
 
-        public GetOrdersQueryHandler(IOrderRepository orderRepository)
+        public GetAllOrdersQueryHandler(IOrderRepository orderRepository)
         {
             _orderRepository = orderRepository;
         }
 
-        public async Task<OrderModel[]> HandleAsync(GetOrdersQuery query, CancellationToken cancellationToken)
+        public async Task<OrderModel[]> HandleAsync(GetAllOrdersQuery query, CancellationToken cancellationToken)
         {
-            var (orders, totalCount) = await _orderRepository.GetAllAsync(query.Page, query.PageSize);
-            
+            var orders = await _orderRepository.GetAllAsync(
+                query.CustomerId,
+                query.Status,
+                query.DateFrom,
+                query.DateTo,
+                query.Page,
+                query.PageSize,
+                cancellationToken);
+
+            var totalCount = await _orderRepository.GetTotalCountAsync(
+                query.CustomerId,
+                query.Status,
+                query.DateFrom,
+                query.DateTo,
+                cancellationToken);
+
             var orderModels = orders.Select(order => new OrderModel(
                 order.Id.Value,
                 order.CustomerId,
@@ -37,9 +51,9 @@ namespace OrderService.UseCases.Queries.Handlers
                     item.PriceAtPurchase.Currency,
                     item.Subtotal.Amount
                 )).ToList()
-            )).ToArray();
+            )).ToList();
 
-            return orderModels;
+            return orderModels.ToArray();
         }
     }
 }

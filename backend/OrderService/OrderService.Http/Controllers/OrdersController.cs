@@ -24,11 +24,17 @@ namespace OrderService.Http.controllers;
 public class OrdersController(
     ICommandHandler<CreateOrderCommand, Guid> createOrderHandler,
     ICommandHandler<CancelOrderCommand, bool> cancelOrderHandler,
-    ICommandHandler<UpdateOrderStatusCommand, bool> updateOrderStatusHandler,
     IQueryHandler<GetOrderByIdQuery, OrderModel?> getOrderByIdHandler,
-    IQueryHandler<GetOrdersByCustomerIdQuery, List<OrderModel>> getOrdersByCustomerIdHandler,
-    IQueryHandler<GetOrdersQuery, OrderModel[]> getOrdersHandler) : ControllerBase
+    IQueryHandler<GetOrdersByCustomerIdQuery, List<OrderModel>> getOrdersByCustomerIdHandler) : ControllerBase
 {
+    /// <summary>
+    /// Получение списка заказов текущего пользователя
+    /// </summary>
+    /// <param name="page">Номер страницы (начинается с 1)</param>
+    /// <param name="pageSize">Количество элементов на странице</param>
+    /// <param name="status">Фильтр по статусу заказа</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Список заказов</returns>
     [HttpGet]
     [ProducesResponseType(typeof(OrderPagedResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -56,6 +62,15 @@ public class OrdersController(
         return Ok(ordersPaged);
     }
 
+    /// <summary>
+    /// Оформление нового заказа
+    /// </summary>
+    /// <remarks>
+    /// Создает заказ на основе переданного списка товаров из корзины клиента.
+    /// </remarks>
+    /// <param name="request">Запрос на создание заказа</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Заказ принят в обработку</returns>
     [HttpPost]
     [ProducesResponseType(typeof(CreateOrderAcceptedResponse), StatusCodes.Status202Accepted)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -120,6 +135,12 @@ public class OrdersController(
         }
     }
 
+    /// <summary>
+    /// Получение информации о заказе
+    /// </summary>
+    /// <param name="id">Идентификатор заказа</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Информация о заказе</returns>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(OrderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -145,6 +166,15 @@ public class OrdersController(
         return Ok(order.ToDto());
     }
 
+    /// <summary>
+    /// Отмена заказа пользователем
+    /// </summary>
+    /// <remarks>
+    /// Позволяет пользователю отменить свой заказ, если он ещё не перешёл в статус "Собирается".
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Заказ отменен</returns>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -182,6 +212,12 @@ public class OrdersController(
         }
     }
 
+    /// <summary>
+    /// Проверка статуса обработки заказа (для SAGA)
+    /// </summary>
+    /// <param name="id">Идентификатор заказа</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Текущий статус обработки</returns>
     [HttpGet("{id:guid}/status")]
     [ProducesResponseType(typeof(OrderStatusCheckResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

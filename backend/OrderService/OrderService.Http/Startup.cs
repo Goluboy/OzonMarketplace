@@ -2,6 +2,7 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
@@ -11,6 +12,7 @@ using OrderService.Infrastructure.Persistence;
 using OrderService.UseCases.Commands;
 using OrderService.UseCases.Queries;
 using System.Data;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -119,6 +121,11 @@ namespace OrderService.Http
 
             services.AddSwaggerGen(c =>
                 {
+                    var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+
+                    c.IncludeXmlComments(xmlPath);
+
                     c.SwaggerDoc("v1", new OpenApiInfo { Title = "OrderService", Version = "v1" });
                     c.AddSecurityDefinition(
                         "token",

@@ -269,7 +269,7 @@ services:
     ports:
       - "5002:8080"
     environment:
-      ConnectionStrings__PostgresConnectionString: Host=order-db;Port=5432;Database=orders;Username=order_user;Password=order_password;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      ConnectionStrings__DefaultConnection: Host=order-db;Port=5432;Database=orders;Username=order_user;Password=order_password;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
       
       KafkaSettings__Servers: kafka:9092
       
@@ -280,15 +280,12 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       
-      Redis__ConnectionString: redis:6379,password=redispassword,abortConnect=false
     depends_on:
       order-db:
         condition: service_healthy
       kafka:
         condition: service_started
       keycloak:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - app-net

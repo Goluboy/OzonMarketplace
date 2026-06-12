@@ -1,9 +1,10 @@
-using OrderService.Domain.Repositories;
+using OrderService.Domain.Interfaces.Persistence;
+using OrderService.UseCases.Queries.Interfaces;
 using OrderService.UseCases.Queries.Models;
 
 namespace OrderService.UseCases.Queries.Handlers
 {
-    public class GetOrdersQueryHandler : IQueryHandler<GetOrdersQuery, PagedResult<OrderModel>>
+    public class GetOrdersQueryHandler : IQueryHandler<GetOrdersQuery, OrderModel[]>
     {
         private readonly IOrderRepository _orderRepository;
 
@@ -12,7 +13,7 @@ namespace OrderService.UseCases.Queries.Handlers
             _orderRepository = orderRepository;
         }
 
-        public async Task<PagedResult<OrderModel>> Handle(GetOrdersQuery query, CancellationToken cancellationToken)
+        public async Task<OrderModel[]> HandleAsync(GetOrdersQuery query, CancellationToken cancellationToken)
         {
             var (orders, totalCount) = await _orderRepository.GetOrdersAsync(query.Page, query.PageSize);
             
@@ -21,7 +22,7 @@ namespace OrderService.UseCases.Queries.Handlers
                 order.Items.Select(item => new OrderItemModel(item.ProductId, item.ProductName, item.Quantity, item.Price.Amount, item.Price.Currency.ToString()))
                 .ToList())).ToList();
 
-            return new PagedResult<OrderModel>(orderModels, totalCount, query.Page, query.PageSize);
+            return orderModels;
         }
     }
 }

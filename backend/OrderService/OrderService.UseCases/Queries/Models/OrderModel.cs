@@ -4,13 +4,13 @@ namespace OrderService.UseCases.Queries.Models;
 
 public record OrderModel(
     Guid Id,
-    Guid CustomerId,
+    OrderStatus Status,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt,
     string CustomerName,
     string CustomerEmail,
     string? DeliveryAddress,
-    OrderStatus Status,
-    decimal TotalAmount,
-    string Currency,
-    DateTime CreatedAt,
-    DateTime? UpdatedAt,
-    List<OrderItemModel> Items);
+    Money TotalAmount,
+    List<OrderItemModel> Items,
+    Guid CustomerId,
+    List<AuditLogItemModel>? AuditLog);

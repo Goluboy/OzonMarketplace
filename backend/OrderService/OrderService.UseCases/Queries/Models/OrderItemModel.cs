@@ -1,10 +1,9 @@
+using OrderService.Domain.ValueObjects;
+
 namespace OrderService.UseCases.Queries.Models;
 
 public record OrderItemModel(
-    Guid Id,
     Guid ProductId,
     string ProductName,
     int Quantity,
-    decimal Price,
-    string Currency,
-    decimal Subtotal);
+    Money PriceAtPurchase);

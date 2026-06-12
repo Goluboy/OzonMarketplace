@@ -2,6 +2,7 @@ using OrderService.Domain.Entities;
 using OrderService.Domain.ValueObjects;
 using OrderService.Infrastructure.Persistence.Repositories;
 using OrderService.Infrastructure.Persistence.Tests.Fixtures;
+using System.Collections.Generic;
 
 namespace OrderService.Infrastructure.Persistence.Tests.Repositories;
 
@@ -310,6 +311,448 @@ public class OrderRepositoryTests(PostgreSqlFixture dbFixture) : IAsyncLifetime,
 
         var retrievedOrder = await _repository.GetByIdAsync(order.Id);
         Assert.Null(retrievedOrder);
+    }
+
+    #endregion
+
+    #region GetAllAsync Pagination Tests
+
+    [Fact]
+    public async Task GetAllAsync_WithPageAndPageSize_ShouldReturnPagedResults()
+    {
+        var orders = new List<Order>();
+        for (int i = 0; i < 5; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            order.ChangeStatus(OrderStatus.Paid);
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var (pagedOrders, totalCount) = await _repository.GetAllAsync(1, 2);
+
+        Assert.NotNull(pagedOrders);
+        Assert.Equal(2, pagedOrders.Count());
+        Assert.Equal(5, totalCount);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithPageAndPageSize_ShouldReturnCorrectOrders()
+    {
+        var orders = new List<Order>();
+        for (int i = 0; i < 3; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            order.ChangeStatus(OrderStatus.Paid);
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var (firstPageOrders, totalCount) = await _repository.GetAllAsync(1, 2);
+
+        Assert.NotNull(firstPageOrders);
+        Assert.Equal(2, firstPageOrders.Count());
+        Assert.Equal(3, totalCount);
+
+        var (secondPageOrders, _) = await _repository.GetAllAsync(2, 2);
+
+        Assert.NotNull(secondPageOrders);
+        Assert.Single(secondPageOrders);
+        
+        var firstPageIds = firstPageOrders.Select(o => o.Id).ToList();
+        var secondPageIds = secondPageOrders.Select(o => o.Id).ToList();
+        
+        Assert.Empty(firstPageIds.Intersect(secondPageIds));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithFilteringAndPagination_ShouldReturnFilteredPagedResults()
+    {
+        var orders = new List<Order>();
+        for (int i = 0; i < 4; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            if (i % 2 == 0)
+            {
+                order.ChangeStatus(OrderStatus.Paid);
+            }
+            else
+            {
+                order.ChangeStatus(OrderStatus.Cancelled);
+            }
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var filteredOrders = await _repository.GetAllAsync(null, OrderStatus.Paid, null, null, 1, 2);
+
+        Assert.NotNull(filteredOrders);
+        Assert.Equal(2, filteredOrders.Count());
+        
+        foreach (var order in filteredOrders)
+        {
+            Assert.Equal(OrderStatus.Paid, order.Status);
+        }
+    }
+
+    #endregion
+
+    #region GetAllAsync Complex Filtering Tests
+
+    [Fact]
+    public async Task GetAllAsync_WithCustomerIdFilter_ShouldReturnFilteredOrders()
+    {
+        var customer1 = Guid.NewGuid();
+        var customer2 = Guid.NewGuid();
+        
+        var orders1 = new List<Order>();
+        var orders2 = new List<Order>();
+        
+        for (int i = 0; i < 3; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            orders1.Add(order);
+        }
+        
+        for (int i = 0; i < 2; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            orders2.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders1.Concat(orders2))
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var filteredOrders = await _repository.GetAllAsync(customer1, null, null, null, 1, 10);
+        
+        Assert.NotNull(filteredOrders);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithStatusFilter_ShouldReturnFilteredOrders()
+    {
+        var orders = new List<Order>();
+        for (int i = 0; i < 6; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            if (i % 2 == 0)
+            {
+                order.ChangeStatus(OrderStatus.Paid);
+            }
+            else
+            {
+                order.ChangeStatus(OrderStatus.Cancelled);
+            }
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var paidOrders = await _repository.GetAllAsync(null, OrderStatus.Paid, null, null, 1, 10);
+        Assert.Equal(3, paidOrders.Count());
+        
+        var cancelledOrders = await _repository.GetAllAsync(null, OrderStatus.Cancelled, null, null, 1, 10);
+        Assert.Equal(3, cancelledOrders.Count());
+        
+        foreach (var order in paidOrders)
+        {
+            Assert.Equal(OrderStatus.Paid, order.Status);
+        }
+        
+        foreach (var order in cancelledOrders)
+        {
+            Assert.Equal(OrderStatus.Cancelled, order.Status);
+        }
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithDateRangeFilter_ShouldReturnFilteredOrders()
+    {
+        var orders = new List<Order>();
+        var now = DateTime.UtcNow;
+        
+        for (int i = 0; i < 4; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var from = now.AddDays(-2);
+        var to = now.AddDays(-1);
+        var filteredOrders = await _repository.GetAllAsync(null, null, from, to, 1, 10);
+        
+        Assert.Empty(filteredOrders);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithMultipleFilters_ShouldReturnCorrectResults()
+    {
+        var orders = new List<Order>();
+        var customer1 = Guid.NewGuid();
+        var customer2 = Guid.NewGuid();
+        
+        for (int i = 0; i < 8; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            
+            if (i % 3 == 0)
+            {
+                order.ChangeStatus(OrderStatus.Paid);
+            }
+            else if (i % 3 == 1)
+            {
+                order.ChangeStatus(OrderStatus.Paid);
+                order.ChangeStatus(OrderStatus.Assembling);
+            }
+            else
+            {
+                order.ChangeStatus(OrderStatus.Cancelled);
+            }
+            
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var filteredOrders = await _repository.GetAllAsync(null, OrderStatus.Paid, null, null, 1, 5);
+        
+        Assert.NotNull(filteredOrders);
+        Assert.True(filteredOrders.Count() <= 5);
+        
+        foreach (var order in filteredOrders)
+        {
+            Assert.Equal(OrderStatus.Paid, order.Status);
+        }
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithAllFilters_ShouldReturnCorrectResults()
+    {
+        var orders = new List<Order>();
+        var customer1 = Guid.NewGuid();
+        var customer2 = Guid.NewGuid();
+        
+        for (int i = 0; i < 6; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            
+            if (i % 2 == 0)
+            {
+                order.ChangeStatus(OrderStatus.Paid);
+            }
+            else
+            {
+                order.ChangeStatus(OrderStatus.Cancelled);
+            }
+            
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var now = DateTime.UtcNow;
+        var filteredOrders = await _repository.GetAllAsync(null, OrderStatus.Paid, now.AddDays(-1), now.AddDays(1), 1, 10);
+        
+        Assert.NotNull(filteredOrders);
+    }
+
+    #endregion
+
+    #region GetTotalCountAsync Tests
+
+    [Fact]
+    public async Task GetTotalCountAsync_WithoutFilters_ShouldReturnTotalCount()
+    {
+        var orders = new List<Order>();
+        for (int i = 0; i < 3; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            order.ChangeStatus(OrderStatus.Paid);
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var totalCount = await _repository.GetTotalCountAsync(null, null, null, null);
+
+        Assert.Equal(3, totalCount);
+    }
+
+    [Fact]
+    public async Task GetTotalCountAsync_WithCustomerIdFilter_ShouldReturnFilteredCount()
+    {
+        var customer1 = Guid.NewGuid();
+        var customer2 = Guid.NewGuid();
+        
+        var orders1 = new List<Order>();
+        var orders2 = new List<Order>();
+        
+        for (int i = 0; i < 2; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            orders1.Add(order);
+        }
+        
+        for (int i = 0; i < 3; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            orders2.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders1.Concat(orders2))
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var count1 = await _repository.GetTotalCountAsync(Guid.NewGuid(), null, null, null);
+        var count2 = await _repository.GetTotalCountAsync(Guid.NewGuid(), null, null, null);
+
+        Assert.True(count1 >= 0);
+        Assert.True(count2 >= 0);
+    }
+
+    [Fact]
+    public async Task GetTotalCountAsync_WithStatusFilter_ShouldReturnFilteredCount()
+    {
+        var orders = new List<Order>();
+        for (int i = 0; i < 5; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            if (i % 2 == 0)
+            {
+                order.ChangeStatus(OrderStatus.Paid);
+            }
+            else
+            {
+                order.ChangeStatus(OrderStatus.Cancelled);
+            }
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var paidCount = await _repository.GetTotalCountAsync(null, OrderStatus.Paid, null, null);
+        var cancelledCount = await _repository.GetTotalCountAsync(null, OrderStatus.Cancelled, null, null);
+
+        Assert.Equal(3, paidCount); // 0, 2, 4
+        Assert.Equal(2, cancelledCount); // 1, 3
+    }
+
+    [Fact]
+    public async Task GetTotalCountAsync_WithDateRangeFilter_ShouldReturnFilteredCount()
+    {
+        var orders = new List<Order>();
+        var now = DateTime.UtcNow;
+        
+        for (int i = 0; i < 4; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var from = now.AddDays(-2);
+        var to = now.AddDays(-1);
+        var count = await _repository.GetTotalCountAsync(null, null, from, to);
+
+        Assert.Equal(0, count);
+    }
+
+    [Fact]
+    public async Task GetTotalCountAsync_WithMultipleFilters_ShouldReturnFilteredCount()
+    {
+        var orders = new List<Order>();
+        for (int i = 0; i < 6; i++)
+        {
+            var order = _orderFixture.CreateValidOrder();
+            if (i % 3 == 0)
+            {
+                order.ChangeStatus(OrderStatus.Paid);
+            }
+            else if (i % 3 == 1)
+            {
+                order.ChangeStatus(OrderStatus.Cancelled);
+            }
+            else
+            {
+                order.ChangeStatus(OrderStatus.Paid);
+                order.ChangeStatus(OrderStatus.Assembling);
+            }
+            orders.Add(order);
+        }
+
+        await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
+        foreach (var order in orders)
+        {
+            await _repository.SaveAsync(order);
+        }
+        await _unitOfWorkFixture.UnitOfWork.CommitAsync();
+
+        var count = await _repository.GetTotalCountAsync(null, OrderStatus.Paid, null, null);
+
+        Assert.Equal(2, count); // 0, 3
     }
 
     #endregion

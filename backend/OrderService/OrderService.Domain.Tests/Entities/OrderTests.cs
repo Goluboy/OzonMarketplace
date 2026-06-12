@@ -99,7 +99,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
             fixture.DeliveryAddress,
             items);
 
-        order.TotalAmount.Value.Should().Be(65.00m);
+        order.TotalAmount.Amount.Should().Be(65.00m);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         order.AddItem(newItem);
 
         order.Items.Count.Should().Be(initialCount + 1);
-        order.TotalAmount.Value.Should().BeGreaterThan(initialTotal);
+        order.TotalAmount.Amount.Should().BeGreaterThan(initialTotal);
         order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         order.Version.Should().Be(2);
         order.DomainEvents.Last().Should().BeOfType<OrderItemAddedEvent>();
@@ -174,7 +174,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
 
         order.Items.Count.Should().Be(initialCount - 1);
         order.Items.Should().NotContain(i => i.Id == itemToRemove.Id);
-        order.TotalAmount.Value.Should().BeLessThan(order.TotalAmount + refundedAmount);
+        order.TotalAmount.Amount.Should().BeLessThan(order.TotalAmount + refundedAmount);
         order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         order.Version.Should().Be(2);
         order.DomainEvents.Last().Should().BeOfType<OrderItemRemovedEvent>();

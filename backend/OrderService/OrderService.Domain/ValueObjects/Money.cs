@@ -2,7 +2,7 @@
 
 public sealed record Money
 {
-    public decimal Value { get; init; }
+    public decimal Amount { get; init; }
     public string Currency { get; init; }
 
     public Money(decimal value, string currency = "RUB")
@@ -16,14 +16,14 @@ public sealed record Money
             throw new ArgumentException("Currency required", nameof(currency));
         }
 
-        this.Value = value;
+        this.Amount = value;
         this.Currency = currency;
     }
 
 
-    public override string ToString() => $"{Value:0.00} {Currency}";
+    public override string ToString() => $"{Amount:0.00} {Currency}";
 
-    public static implicit operator decimal(Money m) => m.Value;
+    public static implicit operator decimal(Money m) => m.Amount;
     public static explicit operator Money(decimal value) => new(value);
 
     public static Money FromString(string s)
@@ -34,7 +34,7 @@ public sealed record Money
 
     public void Deconstruct(out decimal Value, out string Currency)
     {
-        Value = this.Value;
+        Value = this.Amount;
         Currency = this.Currency;
     }
 }

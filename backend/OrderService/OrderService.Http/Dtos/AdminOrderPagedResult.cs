@@ -1,7 +1,7 @@
 namespace OrderService.Http.Dtos;
 
-public record OrderPagedResult(
-    List<OrderDto> Items,
+public record AdminOrderPagedResult(
+    List<AdminOrderDto> Items,
     int TotalCount,
     int Page,
     int PageSize);

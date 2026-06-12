@@ -1,9 +1,8 @@
 using OrderService.Domain.ValueObjects;
-using OrderService.Http.Dtos.Shared;
 
-namespace OrderService.Http.Dtos;
+namespace OrderService.UseCases.Queries.Models;
 
-public record OrderDto(
+public record OrderModel(
     Guid Id,
     OrderStatus Status,
     DateTime CreatedAt,
@@ -11,5 +10,7 @@ public record OrderDto(
     string CustomerName,
     string CustomerEmail,
     string? DeliveryAddress,
-    MoneyDto TotalAmount,
-    List<OrderItemDto> Items);
+    Money TotalAmount,
+    List<OrderItemModel> Items,
+    Guid CustomerId,
+    List<AuditLogItemModel>? AuditLog);

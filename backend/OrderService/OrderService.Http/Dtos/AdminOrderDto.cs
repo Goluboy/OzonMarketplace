@@ -3,7 +3,7 @@ using OrderService.Http.Dtos.Shared;
 
 namespace OrderService.Http.Dtos;
 
-public record OrderDto(
+public record AdminOrderDto(
     Guid Id,
     OrderStatus Status,
     DateTime CreatedAt,
@@ -12,4 +12,6 @@ public record OrderDto(
     string CustomerEmail,
     string? DeliveryAddress,
     MoneyDto TotalAmount,
-    List<OrderItemDto> Items);
+    List<OrderItemDto> Items,
+    Guid CustomerId)
+    : OrderDto(Id, Status, CreatedAt, UpdatedAt, CustomerName, CustomerEmail, DeliveryAddress, TotalAmount, Items);

@@ -13,7 +13,8 @@ internal class RedisCacheService : ICacheService
     private readonly string _prefix;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public RedisCacheService(IRedisConnectionFactory connectionFactory, IOptions<RedisOptions> options, JsonSerializerOptions? jsonOptions)
+    public RedisCacheService(IRedisConnectionFactory connectionFactory, IOptions<RedisOptions> options,
+        JsonSerializerOptions? jsonOptions = null)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
         

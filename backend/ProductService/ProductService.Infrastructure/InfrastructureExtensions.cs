@@ -7,7 +7,6 @@ using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using ProductService.Infrastructure.Caching;
-using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Helpers.JsonbSerialization;
 using ProductService.Infrastructure.Persistence.Provider;
 using ProductService.Infrastructure.Repository;
@@ -43,8 +42,17 @@ public static class InfrastructureExtensions
             sp.GetRequiredService<CategoryRepository>(),
             sp.GetRequiredService<ICacheService>()));
         
-        services.AddScoped<IProductQueryRepository, ProductQueryRepository>();
-        services.AddScoped<IProductRepository, ProductRepository>();
+        // Декоратор над ProductQueryService
+        services.AddScoped<ProductQueryRepository>();
+        services.AddScoped<IProductQueryRepository>(sp => new CachedProductQueryRepository(
+            sp.GetRequiredService<ProductQueryRepository>(),
+            sp.GetRequiredService<ICacheService>()));
+        
+        // Декоратор над ProductRepository
+        services.AddScoped<ProductRepository>();
+        services.AddScoped<IProductRepository>(sp => new CachedProductRepository(
+            sp.GetRequiredService<ProductRepository>(),
+            sp.GetRequiredService<ICacheService>()));
         
         services.AddCap(x =>
         {

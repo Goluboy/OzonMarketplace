@@ -1,6 +1,8 @@
 ﻿using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Caching;
+using ProductService.Infrastructure.DAO;
+using ProductService.Infrastructure.Mappers;
 using Redis.Service;
 
 namespace ProductService.Infrastructure.Repository.Decorators;
@@ -17,15 +19,19 @@ public class CachedCategoryRepository(
     
     public async Task<IReadOnlyCollection<Category>> GetAllAsync(CancellationToken ct = default)
     {
-        var cachingCategories = await cache.GetAsync<IReadOnlyCollection<Category>>(AllCategoriesKey, ct);
+        var cachingCategories = await cache.GetAsync<IReadOnlyCollection<CategoryDao>>(AllCategoriesKey, ct);
         if (cachingCategories != null)
         {
-            return cachingCategories;
+            return cachingCategories
+                .Select(m => Category.Reconstruct(m.Id, m.Name, m.Path))
+                .ToList();
         }
         
         var categories = await inner.GetAllAsync(ct);
         
-        await cache.SetAsync(AllCategoriesKey, categories, CacheExpiry, ct);
+        var categoriesDaos = categories.Select(category => category.ToDao());
+        
+        await cache.SetAsync(AllCategoriesKey, categoriesDaos, CacheExpiry, ct);
         
         return categories;
     }
@@ -33,16 +39,16 @@ public class CachedCategoryRepository(
     public async Task<Category?> GetAsync(int id)
     {
         var key = GetCategoryKey(id);
-        var cachingCategory = await cache.GetAsync<Category>(key);
+        var cachingCategory = await cache.GetAsync<CategoryDao>(key);
         if (cachingCategory != null)
         {
-            return cachingCategory;
+            return Category.Reconstruct(cachingCategory.Id, cachingCategory.Name, cachingCategory.Path);
         }
 
         var category = await inner.GetAsync(id);
         if (category != null)
         {
-            await cache.SetAsync(key, category, CacheExpiry);
+            await cache.SetAsync(key, category.ToDao(), CacheExpiry);
         }
         
         return category;

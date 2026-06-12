@@ -141,6 +141,7 @@ services:
       ConnectionStrings__PostgresConnectionString: Host=postgres;Port=5432;Database=marketplace;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
       KafkaSettings__Servers: kafka:9092
       ASPNETCORE_ENVIRONMENT: Development
+      Redis__ConnectionString: redis:6379,password=redispassword,abortConnect=false
       
       Minio__Endpoint: http://minio:9000
       Minio__ExternalEndpoint: http://localhost:9000
@@ -149,12 +150,53 @@ services:
       Minio__BucketName: marketplace-bucket
       Minio__UseHttp: true
     depends_on:
-      - postgres
-      - kafka
-      - minio
+      postgres:
+        condition: service_started
+      kafka:
+        condition: service_started
+      minio:
+        condition: service_started
+      redis:
+        condition: service_healthy
     networks:
       - app-net
 
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./Redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    environment:
+      - REDIS_RENAME_COMMANDS=FLUSHALL "" FLUSHDB ""
+    sysctls:
+      net.core.somaxconn: 1024
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli -a redispassword ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-net
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis_insight_data:/data
+    restart: always
+    networks:
+      - app-net
+    depends_on:
+      redis:
+        condition: service_healthy
+  
   minio:
     image: minio/minio:latest
     container_name: minio
@@ -203,6 +245,8 @@ volumes:
   postgres-data:
   keycloak_data:
   minio-data:
+  redis_data:
+  redis_insight_data:
 
 networks:
   app-net:

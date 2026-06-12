@@ -13,5 +13,4 @@ public interface IOrderRepository
     Task<Order?> GetByIdForAdminAsync(Guid id, CancellationToken cancellationToken = default);
     Task SaveAsync(Order order, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<OrderStatus> GetStatusAsync(Guid id, CancellationToken cancellationToken = default);
 }

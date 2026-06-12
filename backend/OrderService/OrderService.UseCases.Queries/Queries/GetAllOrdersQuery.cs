@@ -9,5 +9,5 @@ namespace OrderService.UseCases.Queries
         Domain.ValueObjects.OrderStatus? Status,
         Guid? CustomerId,
         DateTime? DateFrom,
-        DateTime? DateTo) : IQuery<PagedResult<OrderModel>>;
+        DateTime? DateTo) : IQuery<OrderModel[]>;
 }

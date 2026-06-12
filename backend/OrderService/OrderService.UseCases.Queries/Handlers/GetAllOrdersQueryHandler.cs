@@ -4,7 +4,7 @@ using OrderService.UseCases.Queries.Models;
 
 namespace OrderService.UseCases.Queries.Handlers
 {
-    public class GetAllOrdersQueryHandler : IQueryHandler<GetAllOrdersQuery, PagedResult<OrderModel>>
+    public class GetAllOrdersQueryHandler : IQueryHandler<GetAllOrdersQuery, OrderModel[]>
     {
         private readonly IOrderRepository _orderRepository;
 
@@ -13,7 +13,7 @@ namespace OrderService.UseCases.Queries.Handlers
             _orderRepository = orderRepository;
         }
 
-        public async Task<PagedResult<OrderModel>> HandleAsync(GetAllOrdersQuery query, CancellationToken cancellationToken)
+        public async Task<OrderModel[]> HandleAsync(GetAllOrdersQuery query, CancellationToken cancellationToken)
         {
             var orders = await _orderRepository.GetAllAsync(
                 query.CustomerId,
@@ -53,7 +53,7 @@ namespace OrderService.UseCases.Queries.Handlers
                 )).ToList()
             )).ToList();
 
-            return new PagedResult<OrderModel>(orderModels, totalCount, query.Page, query.PageSize);
+            return orderModels.ToArray();
         }
     }
 }

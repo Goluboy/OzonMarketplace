@@ -195,6 +195,17 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         ChangeStatus(OrderStatus.Cancelled, cancelledBy, reason); 
     }
 
+    public void ForceCancel(string reason)
+    {
+        if (Status == OrderStatus.Cancelled)
+        {
+            return;
+        }
+
+        // Принудительная отмена возможна из любого состояния
+        ChangeStatus(OrderStatus.Cancelled, null, reason);
+    }
+
     public OrderStatusHistory ChangeStatus(
         OrderStatus newStatus,
         Guid? changedBy = null,

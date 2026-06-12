@@ -1,5 +1,4 @@
 using FluentValidation;
-using OrderService.Http.Dtos.Shared;
 
 namespace OrderService.Http.Dtos.Validators;
 

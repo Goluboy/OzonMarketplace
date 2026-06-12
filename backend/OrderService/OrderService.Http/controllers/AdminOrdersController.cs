@@ -3,16 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using OrderService.Domain.ValueObjects;
 using OrderService.Http.Dtos;
 using OrderService.Http.Dtos.Requests;
-using OrderService.Http.Dtos.Shared;
 using OrderService.Http.Extensions;
 using OrderService.Http.Mappings;
 using OrderService.UseCases.Commands.Commands;
 using OrderService.UseCases.Commands.Interfaces;
 using OrderService.UseCases.Queries;
-using OrderService.UseCases.Queries.Handlers;
 using OrderService.UseCases.Queries.Interfaces;
 using OrderService.UseCases.Queries.Models;
-using OrderService.UseCases.Queries.Queries;
 
 namespace OrderService.Http.controllers;
 
@@ -25,6 +22,17 @@ public class AdminOrdersController(
     IQueryHandler<GetOrderByIdQuery, OrderModel?> getOrderByIdHandler,
     IQueryHandler<GetAllOrdersQuery, OrderModel[]> getAllOrdersQueryHandler) : ControllerBase
 {
+    /// <summary>
+    /// Получение всех заказов с фильтрацией
+    /// </summary>
+    /// <param name="page">Номер страницы (начинается с 1)</param>
+    /// <param name="pageSize">Количество элементов на странице</param>
+    /// <param name="status">Фильтр по статусу заказа</param>
+    /// <param name="customerId">Фильтр по ID покупателя</param>
+    /// <param name="dateFrom">Фильтр по дате создания (от)</param>
+    /// <param name="dateTo">Фильтр по дате создания (до)</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Список всех заказов</returns>
     [HttpGet]
     [ProducesResponseType(typeof(AdminOrderPagedResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -50,10 +58,16 @@ public class AdminOrdersController(
             dateTo);
 
         var ordersPaged = await getAllOrdersQueryHandler.HandleAsync(query, cancellationToken);
-        
+
         return Ok(ordersPaged);
     }
 
+    /// <summary>
+    /// Получение деталей любого заказа
+    /// </summary>
+    /// <param name="id">Идентификатор заказа</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Детали заказа</returns>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(AdminOrderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -73,6 +87,13 @@ public class AdminOrdersController(
         return Ok(order.ToAdminDto());
     }
 
+    /// <summary>
+    /// Обновление статуса заказа
+    /// </summary>
+    /// <param name="id">Идентификатор заказа</param>
+    /// <param name="request">Запрос на обновление статуса</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Статус обновлен</returns>
     [HttpPut("{id:guid}/status")]
     [ProducesResponseType(typeof(AdminOrderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -104,6 +125,13 @@ public class AdminOrdersController(
         }
     }
 
+    /// <summary>
+    /// Принудительная отмена заказа (администратор)
+    /// </summary>
+    /// <param name="id">Идентификатор заказа</param>
+    /// <param name="request">Запрос на принудительную отмену</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Заказ принудительно отменен</returns>
     [HttpPost("{id:guid}/force-cancel")]
     [ProducesResponseType(typeof(AdminOrderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]

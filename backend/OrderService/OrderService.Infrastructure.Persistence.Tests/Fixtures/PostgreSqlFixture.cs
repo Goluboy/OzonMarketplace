@@ -1,9 +1,9 @@
-using System.Data;
-using Npgsql;
-using Testcontainers.PostgreSql;
 using FluentMigrator.Runner;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using OrderService.Infrastructure.Persistence.Migrations;
+using System.Data;
+using Testcontainers.PostgreSql;
 
 namespace OrderService.Infrastructure.Persistence.Tests.Fixtures;
 

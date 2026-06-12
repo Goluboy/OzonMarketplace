@@ -3,6 +3,7 @@ using OrderService.UseCases.Queries.Interfaces;
 using OrderService.UseCases.Queries.Models;
 
 namespace OrderService.UseCases.Queries.Handlers;
+
 public class GetOrderByIdHandler(IOrderRepository orderRepository) : IQueryHandler<GetOrderByIdQuery, OrderModel?>
 {
     public async Task<OrderModel?> HandleAsync(GetOrderByIdQuery query, CancellationToken cancellationToken)

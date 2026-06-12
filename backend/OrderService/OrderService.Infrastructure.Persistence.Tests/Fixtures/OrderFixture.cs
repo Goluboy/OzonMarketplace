@@ -31,7 +31,7 @@ public class OrderFixture
             quantity,
             price);
     }
-    
+
     public List<OrderItem> CreateOrderItems(int count = 3)
     {
         var items = new List<OrderItem>();

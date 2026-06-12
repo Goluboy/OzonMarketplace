@@ -261,12 +261,12 @@ public class OrderRepositoryTests(PostgreSqlFixture dbFixture) : IAsyncLifetime,
         await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
         await _repository.SaveAsync(order);
         await _unitOfWorkFixture.UnitOfWork.CommitAsync();
-        
+
         await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
         await _repository.DeleteAsync(order.Id);
         await _unitOfWorkFixture.UnitOfWork.CommitAsync();
 
-        
+
         var retrievedOrder = await _repository.GetByIdAsync(order.Id);
         Assert.Null(retrievedOrder);
     }
@@ -274,7 +274,7 @@ public class OrderRepositoryTests(PostgreSqlFixture dbFixture) : IAsyncLifetime,
     [Fact]
     public async Task DeleteAsync_WithNonExistingOrder_ShouldNotThrow()
     {
-        
+
         await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
         await _repository.DeleteAsync(Guid.NewGuid());
         await _unitOfWorkFixture.UnitOfWork.CommitAsync();

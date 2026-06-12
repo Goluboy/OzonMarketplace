@@ -32,7 +32,7 @@ public static class KafkaDependencyInjection
                 });
             });
         });
-        
+
         services.AddMassTransit(x =>
         {
             x.AddPublishMessageScheduler();

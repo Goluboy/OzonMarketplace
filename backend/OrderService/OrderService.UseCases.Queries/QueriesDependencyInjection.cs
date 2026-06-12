@@ -8,7 +8,7 @@ public static class QueriesDependencyInjection
     public static IServiceCollection AddQueries(this IServiceCollection services)
     {
         var assembly = Assembly.GetExecutingAssembly();
-        
+
         var handlerTypes = assembly.GetTypes()
             .Where(t => t.Name.EndsWith("Handler") && !t.IsAbstract && !t.IsInterface);
 

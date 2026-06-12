@@ -93,7 +93,7 @@ public class OrderRepositoryTests(PostgreSqlFixture dbFixture) : IAsyncLifetime,
         var order = _orderFixture.CreateValidOrder();
         var expectedCustomerId = order.CustomerId;
         var expectedStatus = order.Status;
-        var expectedTotalAmount = order.TotalAmount.Value;
+        var expectedTotalAmount = order.TotalAmount.Amount;
 
         await _unitOfWorkFixture.UnitOfWork.BeginTransactionAsync();
         await _repository.SaveAsync(order);
@@ -103,7 +103,7 @@ public class OrderRepositoryTests(PostgreSqlFixture dbFixture) : IAsyncLifetime,
         Assert.NotNull(retrievedOrder);
         Assert.Equal(expectedCustomerId, retrievedOrder.CustomerId);
         Assert.Equal(expectedStatus, retrievedOrder.Status);
-        Assert.Equal(expectedTotalAmount, retrievedOrder.TotalAmount.Value);
+        Assert.Equal(expectedTotalAmount, retrievedOrder.TotalAmount.Amount);
         Assert.True((order.CreatedAt - retrievedOrder.CreatedAt).Duration() < TimeSpan.FromMilliseconds(1));
     }
 
@@ -177,7 +177,7 @@ public class OrderRepositoryTests(PostgreSqlFixture dbFixture) : IAsyncLifetime,
         Assert.Equal(order.CustomerName, retrievedOrder.CustomerName);
         Assert.Equal(order.CustomerEmail.Value, retrievedOrder.CustomerEmail.Value);
         Assert.Equal(order.Status, retrievedOrder.Status);
-        Assert.Equal(order.TotalAmount.Value, retrievedOrder.TotalAmount.Value);
+        Assert.Equal(order.TotalAmount.Amount, retrievedOrder.TotalAmount.Amount);
         Assert.Equal(order.Version, retrievedOrder.Version);
     }
 
@@ -231,7 +231,7 @@ public class OrderRepositoryTests(PostgreSqlFixture dbFixture) : IAsyncLifetime,
         Assert.Equal(productId, retrievedItem.ProductId);
         Assert.Equal(productName, retrievedItem.ProductName);
         Assert.Equal(quantity, retrievedItem.Quantity);
-        Assert.Equal(price, retrievedItem.PriceAtPurchase.Value);
+        Assert.Equal(price, retrievedItem.PriceAtPurchase.Amount);
     }
 
     #endregion

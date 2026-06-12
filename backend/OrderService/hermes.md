@@ -1,3 +1,59 @@
+# Marketplace Project Guidelines
+
+## Tech Stack
+- .NET .10
+- Dapper (НЕ Entity Framework)
+- PostgreSQL 18
+- CQRS паттерн (свои реализации ICommandHandler/IQueryHandler, НЕ MediatR)
+- FluentValidation для валидации
+- MassTransit + Kafka для событий
+- Keycloak для аутентификации
+- FluentMigrator для миграций
+
+## Architecture
+- ddd + cqrs
+- бизнес-логика в Domain, UseCases только оркестрирует
+- интерфейсы лежат в domain
+- Каждый микросервис изолирован (polyrepo подход)
+- integration events для кафки в отдельном NuGet пакеты
+- Избегать fat shared libraries
+
+## Code Style
+- Используй record types для DTO и Value Objects
+- Primary constructors для сервисов и контроллеров
+- Nullable reference types включены везде
+- CamelCase в JSON (через JsonNamingPolicy)
+- Async методы с суффиксом Async
+- XML-документация на публичных методах
+
+## Patterns
+- Value Objects для Money, Email, Address
+- Domain Events через IDomainEvent
+- Repository pattern с интерфейсами в Domain слое
+
+## Naming Conventions
+- Controllers: OrdersController, AdminOrdersController
+- Commands: CreateOrderCommand, CancelOrderCommand
+- Queries: GetOrderByIdQuery, GetOrdersByCustomerIdQuery
+- Handlers: CreateOrderCommandHandler
+- DTOs: OrderDto, CreateOrderRequest, OrderPagedResult
+
+## Anti-patterns (НЕ ДЕЛАЙ)
+- НЕ используй EF Core
+- НЕ используй MediatR
+- НЕ создавай God classes
+- НЕ используй статические методы для бизнес-логики
+- НЕ храни пароли/секреты в коде
+- НЕ смешивай customer и admin эндпоинты в одном контроллере
+
+## Testing
+- xUnit + FluentAssertions
+- Arrange-Act-Assert паттерн
+- Integration тесты через Testcontainers
+
+## OpenAPI Spec
+- Актуальная спецификация в /openapi.yml|
+
 ---
 name: ddd-cqrs-orchestration-with-saga
 description: Implementing command and query handlers in a DDD+CQRS architecture orchestrating domain logic, UoW persistence, and MassTransit saga events.

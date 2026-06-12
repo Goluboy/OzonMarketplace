@@ -134,7 +134,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
             CustomerEmail = order.CustomerEmail.Value,
             DeliveryAddress = order.DeliveryAddress?.AddressLine,
             Status = (int)order.Status,
-            TotalAmount = order.TotalAmount.Value,
+            TotalAmount = order.TotalAmount.Amount,
             order.CreatedAt,
             order.UpdatedAt,
             order.CancelledAt,
@@ -155,8 +155,8 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
             item.ProductId,
             item.ProductName,
             item.Quantity,
-            PriceAtPurchase = item.PriceAtPurchase.Value,
-            Subtotal = item.Subtotal.Value,
+            PriceAtPurchase = item.PriceAtPurchase.Amount,
+            Subtotal = item.Subtotal.Amount,
             item.CreatedAt,
             item.UpdatedAt
         });

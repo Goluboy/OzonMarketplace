@@ -133,7 +133,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
     
     private void RecalculateTotal()
     {
-        TotalAmount = new Money(Math.Round(_items.Sum(i => i.Subtotal.Value), 2, MidpointRounding.AwayFromZero));
+        TotalAmount = new Money(Math.Round(_items.Sum(i => i.Subtotal.Amount), 2, MidpointRounding.AwayFromZero));
     }
 
     public void AddItem(OrderItem item)

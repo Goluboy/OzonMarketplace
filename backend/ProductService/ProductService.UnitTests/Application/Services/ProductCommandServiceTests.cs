@@ -14,7 +14,6 @@ using ProductService.Application.Services.Products.Command;
 using ProductService.Domain.Entities;
 using ProductService.Domain.ValueObjects;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
-using ProductService.Infrastructure.Abstractions.Helpers.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;

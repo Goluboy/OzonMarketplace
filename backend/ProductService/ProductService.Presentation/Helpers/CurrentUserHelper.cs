@@ -1,8 +1,7 @@
 ﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
-using ProductService.Infrastructure.Abstractions.Helpers.Abstractions;
+using ProductService.Application.Helpers;
 
-namespace ProductService.Infrastructure.Helpers;
+namespace ProductService.Presentation.Helpers;
 
 public class CurrentUserHelper(IHttpContextAccessor httpContextAccessor) : ICurrentUserHelper
 {
@@ -19,5 +18,5 @@ public class CurrentUserHelper(IHttpContextAccessor httpContextAccessor) : ICurr
         }
     }
     
-    public bool IsAdmin => httpContextAccessor.HttpContext?.User?.IsInRole("admin") ?? false;
+    public bool IsAdmin => httpContextAccessor.HttpContext?.User.IsInRole("admin") ?? false;
 }

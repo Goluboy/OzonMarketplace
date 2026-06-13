@@ -1,4 +1,6 @@
 ﻿using System.Data;
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 using ProductService.Application.DTO.Category;
 using ProductService.Application.Exceptions;
 using ProductService.Application.Mappers;
@@ -10,7 +12,7 @@ using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 namespace ProductService.Application.Services.Categories;
 
 public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categoryRepository, 
-    ICategoryVersionProvider versionProvider) : ICategoryService
+    ICategoryVersionProvider versionProvider, ILogger<CategoryService> logger) : ICategoryService
 {
     public async Task<CategoriesResponse> GetAllAsync(string? eTag, CancellationToken ct)
     {
@@ -44,10 +46,13 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             
             await unitOfWork.CommitAsync();
             
+            logger.LogInformation("Category created successfully. CategoryId: {CategoryId}, Name: {CategoryName}", id, dto.Name);
+            
             return category.ToDto();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to create category. Name: {CategoryName}. Transaction rolled back.", dto.Name);
             await unitOfWork.RollbackAsync();
             throw;
         }
@@ -91,10 +96,13 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             
             category.ClearDomainEvents();
             
+            logger.LogInformation("Category updated successfully. CategoryId: {CategoryId}", category.Id);
+            
             return category.ToDto();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to update category. CategoryId: {CategoryId}. Transaction rolled back.", dto.Id);
             await unitOfWork.RollbackAsync();
             throw;
         }
@@ -115,9 +123,12 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             await unitOfWork.CommitAsync();
             
             // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag из Redis.
+            
+            logger.LogInformation("Category deleted successfully. CategoryId: {CategoryId}", id);
         }
-        catch 
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to delete category. CategoryId: {CategoryId}. Transaction rolled back.", id);
             await unitOfWork.RollbackAsync();
             throw;
         }

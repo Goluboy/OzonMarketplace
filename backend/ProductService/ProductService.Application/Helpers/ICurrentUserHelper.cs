@@ -1,4 +1,4 @@
-﻿namespace ProductService.Infrastructure.Abstractions.Helpers.Abstractions;
+﻿namespace ProductService.Application.Helpers;
 
 public interface ICurrentUserHelper
 {

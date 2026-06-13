@@ -1,6 +1,8 @@
 ﻿using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.OpenApi.Models;
+using ProductService.Application.Helpers;
+using ProductService.Presentation.Helpers;
 using ProductService.Presentation.Middleware;
 using ProductService.Presentation.Models;
 
@@ -16,6 +18,8 @@ public static class PresentationExtension
         services.AddFluentValidationAutoValidation();
         services.AddValidatorsFromAssemblyContaining<UpsertCategoryRequest>();
 
+        services.AddScoped<ICurrentUserHelper, CurrentUserHelper>();
+        
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {

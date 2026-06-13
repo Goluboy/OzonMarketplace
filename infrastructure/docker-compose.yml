@@ -149,7 +149,13 @@ services:
       Minio__SecretKey: minioadmin
       Minio__BucketName: marketplace-bucket
       Minio__UseHttp: true
+
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
+      Keycloak__Audience: marketplace-app
+      Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
     depends_on:
+      keycloak:
+        condition: service_healthy
       postgres:
         condition: service_started
       kafka:

@@ -6,7 +6,7 @@ namespace ProductService.Domain.Entities;
 public class Product : IEquatable<Product>
 {
     public Guid Id { get; private init; }
-    public long Sku { get; init; }
+    public long Sku { get; private init; }
     public string Name { get; private set; } = null!;
     public string Description { get; private set; } = null!;
     public Money Price { get; private set; } = null!;

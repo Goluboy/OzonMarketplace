@@ -9,6 +9,7 @@ namespace ProductService.Presentation.Controllers;
 
 [ApiController]
 [Route("api/categories")]
+[Authorize(Policy = "AdminOnly")]
 public class CategoriesController(ICategoryService categoryService) : ControllerBase
 {
     [HttpGet]

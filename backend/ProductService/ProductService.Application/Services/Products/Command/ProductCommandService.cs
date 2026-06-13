@@ -10,6 +10,7 @@ using ProductService.Domain.Entities;
 using ProductService.Domain.Events;
 using ProductService.Domain.ValueObjects;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
+using ProductService.Infrastructure.Abstractions.Helpers.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
@@ -18,13 +19,13 @@ namespace ProductService.Application.Services.Products.Command;
 
 public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository productRepository,
     ICategoryRepository categoryRepository, IProductImageUrlHelper urlHelper, IS3StorageService storageService,
-    ILogger<ProductCommandService> logger) : IProductCommandService
+    ICurrentUserHelper userHelper, ILogger<ProductCommandService> logger) : IProductCommandService
 {
     public async Task<ProductDetailsDto> CreateProductAsync(CreateProductDto dto, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        
-        var sellerId = Guid.NewGuid(); //TODO Авторизация на уровне ролей
+
+        var sellerId = userHelper.UserId;
         
         var categoryDto = await EnsureCategoryExistsAsync(dto.CategoryId, ct);
         
@@ -63,11 +64,10 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         
         var categoryDto = await EnsureCategoryExistsAsync(dto.CategoryId, ct);
         
-        //TODO Кеширование
         var product = await productRepository.GetAsync(dto.ProductId)
             ?? throw new NotFoundException(nameof(Product), dto.ProductId);
 
-        //TODO product.IsOwnedBy(userId);
+        EnsureProductOwnership(product);
         
         if (!string.Equals(product.Name, dto.Name, StringComparison.Ordinal) ||
             !string.Equals(product.Description, dto.Description, StringComparison.Ordinal) ||
@@ -129,11 +129,10 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
     {
         ct.ThrowIfCancellationRequested();
         
-        //TODO Кеширование
         var product = await productRepository.GetAsync(id)
                       ?? throw new NotFoundException(nameof(Product), id);
 
-        //TODO product.IsOwnedBy(userId);
+        EnsureProductOwnership(product);
         
         await unitOfWork.BeginTransactionAsync(ct);
         try
@@ -161,6 +160,19 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         }
     }
 
+    private void EnsureProductOwnership(Product product)
+    {
+        if (userHelper.IsAdmin)
+        {
+            return;
+        }
+        
+        if (!product.IsOwnedBy(userHelper.UserId))
+        {
+            throw new ForbiddenException();
+        }
+    }
+    
     private void DeleteImagesAsync(List<string> imageUrlsToRemove)
     {
         _ = Task.Run(async () =>

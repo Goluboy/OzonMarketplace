@@ -149,7 +149,13 @@ services:
       Minio__SecretKey: minioadmin
       Minio__BucketName: marketplace-bucket
       Minio__UseHttp: true
+
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
+      Keycloak__Audience: marketplace-app
+      Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
     depends_on:
+      keycloak:
+        condition: service_healthy
       postgres:
         condition: service_started
       kafka:
@@ -290,6 +296,62 @@ services:
     networks:
       - app-net
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app-net
+    restart: always
+
+  loki:
+    image: grafana/loki:3.7
+    container_name: loki
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+    ports:
+      - "3100:3100"
+    networks:
+      - app-net
+    restart: always
+
+  promtail:
+    image: grafana/promtail:3.6.11
+    container_name: promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+    networks:
+      - app-net
+    restart: always
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    networks:
+      - app-net
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3200:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - app-net
+    restart: always
+
 volumes:
   kafka-data:
   postgres-data:
@@ -297,8 +359,10 @@ volumes:
   minio-data:
   redis_data:
   redis_insight_data:
-  order_data: 
-
+  order_data:
+  prometheus-data:
+  grafana-data:  
+  
 networks:
   app-net:
     driver: bridge

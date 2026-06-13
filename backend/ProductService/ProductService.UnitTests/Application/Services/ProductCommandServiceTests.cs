@@ -29,13 +29,25 @@ public class ProductCommandServiceTests
     private readonly ICategoryRepository _categoryRepository = Substitute.For<ICategoryRepository>();
     private readonly IProductImageUrlHelper _productImageUrlHelper = Substitute.For<IProductImageUrlHelper>();
     private readonly IS3StorageService _s3Storage = Substitute.For<IS3StorageService>();
+    private readonly ICurrentUserHelper _currentUserHelper = Substitute.For<ICurrentUserHelper>();
     private readonly ILogger<ProductCommandService> _logger = Substitute.For<ILogger<ProductCommandService>>();
     private readonly ProductCommandService _service;
 
     public ProductCommandServiceTests()
     {
-        _service = new ProductCommandService(_unitOfWork, _productRepository, _categoryRepository, _productImageUrlHelper,
-            _s3Storage, _logger);
+        // Передаем параметры строго в том порядке, который объявлен в вашем первичном конструкторе сервиса
+        _service = new ProductCommandService(
+            _unitOfWork, 
+            _productRepository, 
+            _categoryRepository, 
+            _productImageUrlHelper,
+            _s3Storage, 
+            _currentUserHelper, 
+            _logger);
+
+        // Настройка безопасных дефолтных возвратов для хелпера картинок (защита от ArgumentNullException)
+        _productImageUrlHelper.ToStoredImages(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(new List<ProductImage>());
+        _productImageUrlHelper.ToAbsoluteImageDtos(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(new List<ProductImageDto>());
     }
 
     #region CreateProductAsync Tests
@@ -43,7 +55,9 @@ public class ProductCommandServiceTests
     [Fact]
     public async Task CreateProductAsync_WhenParametersAreValid_ShouldCreateProductAndCommitTransaction()
     {
+        // Arrange
         var ct = CancellationToken.None;
+        var sellerId = Guid.NewGuid();
         var dto = new CreateProductDto(
             Sku: 1001L,
             Name: "Игровой ноутбук",
@@ -52,6 +66,8 @@ public class ProductCommandServiceTests
             Price: new MoneyDto(120000m, "RUB"),
             ImagesUrl: [ new ProductImageDto("https://cdn.com/products/1.png") ] 
         );
+
+        _currentUserHelper.UserId.Returns(sellerId);
 
         var dbCategory = Category.Reconstruct(15, "Ноутбуки", "electronics.laptops");
         _categoryRepository.GetAsync(15).Returns(dbCategory);
@@ -62,8 +78,10 @@ public class ProductCommandServiceTests
         _productImageUrlHelper.ToStoredImages(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(relativeImages);
         _productImageUrlHelper.ToAbsoluteImageDtos(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(absoluteDtos);
         
+        // Act
         var result = await _service.CreateProductAsync(dto, ct);
 
+        // Assert
         result.Should().NotBeNull();
         result.Sku.Should().Be(dto.Sku);
         result.Name.Should().Be(dto.Name);
@@ -72,7 +90,7 @@ public class ProductCommandServiceTests
 
         await _categoryRepository.Received(1).GetAsync(15);
         await _unitOfWork.Received(1).BeginTransactionAsync(ct);
-        await _productRepository.Received(1).AddAsync(Arg.Is<Product>(p => p.Sku == dto.Sku));
+        await _productRepository.Received(1).AddAsync(Arg.Is<Product>(p => p.Sku == dto.Sku && p.SellerId == sellerId));
         await _unitOfWork.Received(1).CommitAsync();
         await _unitOfWork.DidNotReceive().RollbackAsync();
     }
@@ -80,13 +98,16 @@ public class ProductCommandServiceTests
     [Fact]
     public async Task CreateProductAsync_WhenCategoryDoesNotExist_ShouldThrowValidationExceptionAndNotStartTransaction()
     {
+        // Arrange
         var ct = CancellationToken.None;
         var dto = new CreateProductDto(1001L, "Product", "Desc", new MoneyDto(100m, "USD"), 99, []);
         
         _categoryRepository.GetAsync(99).Returns((Category?)null);
 
+        // Act
         var act = () => _service.CreateProductAsync(dto, ct);
 
+        // Assert
         await act.Should().ThrowAsync<ValidationException>()
             .WithMessage("*Category with id 99 does not exist.*");
 
@@ -97,17 +118,22 @@ public class ProductCommandServiceTests
     [Fact]
     public async Task CreateProductAsync_WhenDatabaseThrowsError_ShouldRollbackTransactionAndPropagateException()
     {
+        // Arrange
         var ct = CancellationToken.None;
+        var sellerId = Guid.NewGuid();
         var dto = new CreateProductDto(1001L, "Product", "Desc", new MoneyDto(100m, "USD"), 15, []);
+
+        _currentUserHelper.UserId.Returns(sellerId);
 
         var dbCategory = Category.Reconstruct(15, "Category", "path");
         _categoryRepository.GetAsync(15).Returns(dbCategory);
         
         _productRepository.AddAsync(Arg.Any<Product>()).Throws(new Exception("Database connection lost."));
-        _productImageUrlHelper.ToStoredImages(Arg.Any<IEnumerable<ProductImageDto>>()).Returns([]);
         
+        // Act
         var act = () => _service.CreateProductAsync(dto, ct);
 
+        // Assert
         await act.Should().ThrowAsync<Exception>().WithMessage("Database connection lost.");
 
         await _unitOfWork.Received(1).BeginTransactionAsync(ct);
@@ -119,12 +145,15 @@ public class ProductCommandServiceTests
     [Fact]
     public async Task CreateProductAsync_WhenCancellationIsRequested_ShouldThrowOperationCanceledException()
     {
+        // Arrange
         var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         var dto = new CreateProductDto(1001L, "Product", "Desc", new MoneyDto(100m, "USD"), 15, []);
 
+        // Act
         var act = () => _service.CreateProductAsync(dto, cts.Token);
 
+        // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
         await _productRepository.DidNotReceive().AddAsync(Arg.Any<Product>());
     }
@@ -136,6 +165,7 @@ public class ProductCommandServiceTests
     [Fact]
     public async Task UpdateProductAsync_WhenNoFieldsAreChanged_ShouldReturnDtoDirectlyWithoutDbUpdateOrTransaction()
     {
+        // Arrange
         var ct = CancellationToken.None;
         var productId = Guid.NewGuid();
         var sellerId = Guid.NewGuid();
@@ -148,6 +178,9 @@ public class ProductCommandServiceTests
             Price: new MoneyDto(500m, "USD"),
             ImagesUrl: [new ProductImageDto("products/img1.png")]
         );
+
+        _currentUserHelper.IsAdmin.Returns(false);
+        _currentUserHelper.UserId.Returns(sellerId);
 
         var dbCategory = Category.Reconstruct(15, "Category", "path");
         _categoryRepository.GetAsync(15).Returns(dbCategory);
@@ -173,8 +206,10 @@ public class ProductCommandServiceTests
         _productImageUrlHelper.ToStoredImages(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(relativeImages);
         _productImageUrlHelper.ToAbsoluteImageDtos(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(absoluteDtos);
 
+        // Act
         var result = await _service.UpdateProductAsync(dto, ct);
 
+        // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(productId);
         result.Images.Should().ContainSingle().Which.Should().Be(new ProductImageDto("products/img1.png"));
@@ -185,8 +220,9 @@ public class ProductCommandServiceTests
     }
 
     [Fact]
-    public async Task UpdateProductAsync_WhenFieldsAreChanged_ShouldApplyChangesAndUpdateInDbUnderTransaction()
+    public async Task UpdateProductAsync_WhenFieldsAreChangedAndUserIsOwner_ShouldApplyChangesAndUpdateInDb()
     {
+        // Arrange
         var ct = CancellationToken.None;
         var productId = Guid.NewGuid();
         var sellerId = Guid.NewGuid();
@@ -199,6 +235,9 @@ public class ProductCommandServiceTests
             Price: new MoneyDto(600m, "USD"),
             ImagesUrl: [ new ProductImageDto("http://img1.png") ]
         );
+
+        _currentUserHelper.IsAdmin.Returns(false);
+        _currentUserHelper.UserId.Returns(sellerId);
 
         var dbCategory = Category.Reconstruct(15, "Category", "path");
         _categoryRepository.GetAsync(15).Returns(dbCategory);
@@ -215,8 +254,10 @@ public class ProductCommandServiceTests
         _productImageUrlHelper.ToStoredImages(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(relativeImages);
         _productImageUrlHelper.ToAbsoluteImageDtos(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(absoluteDtos);
 
+        // Act
         var result = await _service.UpdateProductAsync(dto, ct);
 
+        // Assert
         result.Should().NotBeNull();
         result.Name.Should().Be("NEW Name");
         result.PriceAmount.Should().Be(600m);
@@ -224,12 +265,95 @@ public class ProductCommandServiceTests
 
         await _unitOfWork.Received(1).BeginTransactionAsync(ct);
         await _productRepository.Received(1).UpdateAsync(Arg.Is<Product>(p => p.Name == "NEW Name" && p.Price.Amount == 600m));
-        await _unitOfWork.Received(1).CommitAsync();
+        await _unitOfWork.CommitAsync();
+    }
+
+    [Fact]
+    public async Task UpdateProductAsync_WhenUserIsAdminButNotOwner_ShouldApplyChangesAndUpdateInDb()
+    {
+        // Arrange
+        var ct = CancellationToken.None;
+        var productId = Guid.NewGuid();
+        var sellerId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        
+        var dto = new UpdateProductDto(
+            ProductId: productId,
+            Name: "NEW Name",
+            Description: "Same Description",
+            CategoryId: 15,
+            Price: new MoneyDto(600m, "USD"),
+            ImagesUrl: [ new ProductImageDto("http://img1.png") ]
+        );
+
+        _currentUserHelper.IsAdmin.Returns(true);
+        _currentUserHelper.UserId.Returns(adminId);
+
+        var dbCategory = Category.Reconstruct(15, "Category", "path");
+        _categoryRepository.GetAsync(15).Returns(dbCategory);
+        
+        var existingProduct = Product.Reconstruct(
+            productId, sellerId, 1001L, "Old Name", "Same Description", new Money(500m, "USD"), 15,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1, [new ProductImage("products/img1.png")]
+        );
+        _productRepository.GetAsync(productId).Returns(existingProduct);
+
+        var relativeImages = new List<ProductImage> { new("products/img1.png") };
+        var absoluteDtos = new List<ProductImageDto> { new("http://img1.png") };
+
+        _productImageUrlHelper.ToStoredImages(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(relativeImages);
+        _productImageUrlHelper.ToAbsoluteImageDtos(Arg.Any<IEnumerable<ProductImageDto>>()).Returns(absoluteDtos);
+
+        // Act
+        var result = await _service.UpdateProductAsync(dto, ct);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Name.Should().Be("NEW Name");
+
+        await _unitOfWork.Received(1).BeginTransactionAsync(ct);
+        await _productRepository.Received(1).UpdateAsync(Arg.Any<Product>());
+        await _unitOfWork.CommitAsync();
+    }
+
+    [Fact]
+    public async Task UpdateProductAsync_WhenUserIsNeitherOwnerNorAdmin_ShouldThrowForbiddenException()
+    {
+        // Arrange
+        var ct = CancellationToken.None;
+        var productId = Guid.NewGuid();
+        var sellerId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        
+        var dto = new UpdateProductDto(productId, "New Name", "Desc", new MoneyDto(600m, "USD"), 15,  []);
+
+        _currentUserHelper.IsAdmin.Returns(false);
+        _currentUserHelper.UserId.Returns(otherUserId);
+
+        var dbCategory = Category.Reconstruct(15, "Category", "path");
+        _categoryRepository.GetAsync(15).Returns(dbCategory);
+        
+        var existingProduct = Product.Reconstruct(
+            productId, sellerId, 1001L, "Old Name", "Desc", new Money(500m, "USD"), 15,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1, []
+        );
+        _productRepository.GetAsync(productId).Returns(existingProduct);
+
+        // Act
+        var act = () => _service.UpdateProductAsync(dto, ct);
+
+        // Assert
+        await act.Should().ThrowAsync<ForbiddenException>()
+            .WithMessage("Access denied. You do not have permission to perform this action.");
+
+        await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
+        await _productRepository.DidNotReceive().UpdateAsync(Arg.Any<Product>());
     }
 
     [Fact]
     public async Task UpdateProductAsync_WhenProductDoesNotExist_ShouldThrowNotFoundException()
     {
+        // Arrange
         var ct = CancellationToken.None;
         var nonExistentId = Guid.NewGuid();
         var dto = new UpdateProductDto(nonExistentId, "Name", "Desc", new MoneyDto(100m, "USD"), 15, []);
@@ -238,8 +362,10 @@ public class ProductCommandServiceTests
         _categoryRepository.GetAsync(15).Returns(dbCategory);
         _productRepository.GetAsync(nonExistentId).Returns((Product?)null);
 
+        // Act
         var act = () => _service.UpdateProductAsync(dto, ct);
 
+        // Assert
         await act.Should().ThrowAsync<NotFoundException>();
         await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
     }
@@ -249,11 +375,15 @@ public class ProductCommandServiceTests
     #region DeleteProductAsync Tests
 
     [Fact]
-    public async Task DeleteProductAsync_WhenProductExists_ShouldDeleteProductAndCommitTransaction()
+    public async Task DeleteProductAsync_WhenProductExistsAndUserIsOwner_ShouldDeleteProductAndCommitTransaction()
     {
+        // Arrange
         var ct = CancellationToken.None;
         var productId = Guid.NewGuid();
         var sellerId = Guid.NewGuid();
+
+        _currentUserHelper.IsAdmin.Returns(false);
+        _currentUserHelper.UserId.Returns(sellerId);
 
         var existingProduct = Product.Reconstruct(
             productId, sellerId, 1011L, "Name", "Desc", new Money(100m, "USD"), 15,
@@ -261,8 +391,10 @@ public class ProductCommandServiceTests
         );
         _productRepository.GetAsync(productId).Returns(existingProduct);
 
+        // Act
         await _service.DeleteProductAsync(productId, ct);
 
+        // Assert
         await _productRepository.Received(1).GetAsync(productId);
         await _unitOfWork.Received(1).BeginTransactionAsync(ct);
         await _productRepository.Received(1).DeleteAsync(productId);
@@ -271,14 +403,73 @@ public class ProductCommandServiceTests
     }
 
     [Fact]
+    public async Task DeleteProductAsync_WhenUserIsAdminButNotOwner_ShouldDeleteProductAndCommitTransaction()
+    {
+        // Arrange
+        var ct = CancellationToken.None;
+        var productId = Guid.NewGuid();
+        var sellerId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+
+        _currentUserHelper.IsAdmin.Returns(true);
+        _currentUserHelper.UserId.Returns(adminId);
+
+        var existingProduct = Product.Reconstruct(
+            productId, sellerId, 1011L, "Name", "Desc", new Money(100m, "USD"), 15,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1, []
+        );
+        _productRepository.GetAsync(productId).Returns(existingProduct);
+
+        // Act
+        await _service.DeleteProductAsync(productId, ct);
+
+        // Assert
+        await _unitOfWork.Received(1).BeginTransactionAsync(ct);
+        await _productRepository.Received(1).DeleteAsync(productId);
+        await _unitOfWork.CommitAsync();
+    }
+
+    [Fact]
+    public async Task DeleteProductAsync_WhenUserIsNeitherOwnerNorAdmin_ShouldThrowForbiddenException()
+    {
+        // Arrange
+        var ct = CancellationToken.None;
+        var productId = Guid.NewGuid();
+        var sellerId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+
+        _currentUserHelper.IsAdmin.Returns(false);
+        _currentUserHelper.UserId.Returns(otherUserId);
+
+        var existingProduct = Product.Reconstruct(
+            productId, sellerId, 1011L, "Name", "Desc", new Money(100m, "USD"), 15,
+            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1, []
+        );
+        _productRepository.GetAsync(productId).Returns(existingProduct);
+
+        // Act
+        var act = () => _service.DeleteProductAsync(productId, ct);
+
+        // Assert
+        await act.Should().ThrowAsync<ForbiddenException>()
+            .WithMessage("Access denied. You do not have permission to perform this action.");
+
+        await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
+        await _productRepository.DidNotReceive().DeleteAsync(Arg.Any<Guid>());
+    }
+
+    [Fact]
     public async Task DeleteProductAsync_WhenProductDoesNotExist_ShouldThrowNotFoundExceptionAndNotStartTransaction()
     {
-        var ct = CancellationToken. None;
+        // Arrange
+        var ct = CancellationToken.None;
         var nonExistentId = Guid.NewGuid();
         _productRepository.GetAsync(nonExistentId).Returns((Product?)null);
 
+        // Act
         var act = () => _service.DeleteProductAsync(nonExistentId, ct);
 
+        // Assert
         await act.Should().ThrowAsync<NotFoundException>();
         await _unitOfWork.DidNotReceive().BeginTransactionAsync(Arg.Any<CancellationToken>());
         await _productRepository.DidNotReceive().DeleteAsync(Arg.Any<Guid>());
@@ -287,9 +478,12 @@ public class ProductCommandServiceTests
     [Fact]
     public async Task DeleteProductAsync_WhenDatabaseErrorOccurs_ShouldRollbackTransaction()
     {
+        // Arrange
         var ct = CancellationToken.None;
         var productId = Guid.NewGuid();
         var sellerId = Guid.NewGuid();
+
+        _currentUserHelper.IsAdmin.Returns(true);
 
         var existingProduct = Product.Reconstruct(
             productId, sellerId, 1011L, "Name", "Desc", new Money(100m, "USD"), 15,
@@ -299,8 +493,10 @@ public class ProductCommandServiceTests
         
         _productRepository.DeleteAsync(productId).Throws(new Exception("Database timeout."));
 
+        // Act
         var act = () => _service.DeleteProductAsync(productId, ct);
 
+        // Assert
         await act.Should().ThrowAsync<Exception>().WithMessage("Database timeout.");
         await _unitOfWork.Received(1).BeginTransactionAsync(ct);
         await _unitOfWork.DidNotReceive().CommitAsync();

@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using ProductService.Application.DTO.Category;
@@ -19,11 +20,12 @@ public class CategoryServiceTests
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICategoryRepository _repository = Substitute.For<ICategoryRepository>();
     private readonly ICategoryVersionProvider _versionProvider = Substitute.For<ICategoryVersionProvider>();
+    private readonly ILogger<CategoryService> _logger = Substitute.For<ILogger<CategoryService>>();
     private readonly CategoryService _service;
 
     public CategoryServiceTests()
     {
-        _service = new CategoryService(_uow, _repository, _versionProvider);
+        _service = new CategoryService(_uow, _repository, _versionProvider, _logger);
     }
 
     #region GetAllAsync Tests

@@ -3,12 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ProductService.Infrastructure.Abstractions.Caching.Abstractions;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
-using ProductService.Infrastructure.Abstractions.Helpers.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using ProductService.Infrastructure.Caching;
-using ProductService.Infrastructure.Helpers;
 using ProductService.Infrastructure.Helpers.JsonbSerialization;
 using ProductService.Infrastructure.Persistence.Provider;
 using ProductService.Infrastructure.Repository;
@@ -33,8 +31,6 @@ public static class InfrastructureExtensions
         
         services.AddScoped<IDbSession>(sp => sp.GetRequiredService<UnitOfWork.UnitOfWork>());
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork.UnitOfWork>());
-
-        services.AddScoped<ICurrentUserHelper, CurrentUserHelper>();
         
         services.AddSingleton<RedisCategoryVersionProvider>();
         services.AddSingleton<ICategoryVersionProvider>(sp => sp.GetRequiredService<RedisCategoryVersionProvider>());

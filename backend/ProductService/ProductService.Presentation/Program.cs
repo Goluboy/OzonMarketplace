@@ -3,9 +3,13 @@ using System.Text.Json;
 using Core.Minio;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using ProductService.Application;
 using ProductService.Infrastructure;
 using ProductService.Infrastructure.Persistence;
+using Prometheus;
 using Redis;
 using Serilog;
 
@@ -33,7 +37,9 @@ public static class Program
         app.ConfigureMiddleware();
             
         app.MapControllers();
-            
+        
+        app.MapMetrics(); 
+        
         app.Run();
     }
 
@@ -52,12 +58,15 @@ public static class Program
             .AddRedisCache(options =>
             {
                 configuration.GetSection("Redis").Bind(options);
-            });
+            })
+            .AddObservability(configuration);
     }
     
     private static void ConfigureMiddleware(this IApplicationBuilder builder)
     {
         builder.UseExceptionHandler();
+        
+        builder.UseHttpMetrics();
         
         builder.UseAuthentication();
         builder.UseAuthorization();
@@ -68,6 +77,30 @@ public static class Program
             options.SwaggerEndpoint("/swagger/v1/swagger.json", "Marketplace API v1");
             options.RoutePrefix = "swagger";
         });
+    }
+
+    private static IServiceCollection AddObservability(this IServiceCollection services, IConfiguration configuration)
+    {
+        var otlpEndpoint = configuration["OpenTelemetry:OtlpEndpoint"] 
+                           ?? throw new NullReferenceException("OpenTelemetry Otlp Endpoint not found.");
+
+        services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService("ProductService"))
+            .WithTracing(tracing => tracing
+                .AddAspNetCoreInstrumentation(options =>
+                {
+                    options.Filter = httpContext =>
+                        !httpContext.Request.Path.StartsWithSegments("/swagger") &&
+                        !httpContext.Request.Path.StartsWithSegments("/metrics");
+                })
+                .AddHttpClientInstrumentation()
+                .AddNpgsql()
+                .AddOtlpExporter(options =>
+                {
+                    options.Endpoint = new Uri(otlpEndpoint);
+                }));
+        
+        return services;
     }
     
     private static IServiceCollection AddKeycloakAuthentication(this IServiceCollection services, IConfiguration configuration)

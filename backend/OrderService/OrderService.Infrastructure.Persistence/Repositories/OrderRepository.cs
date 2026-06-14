@@ -26,6 +26,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
         var createdAt = (DateTime)firstRow.CreatedAt;
         var updatedAt = firstRow.UpdatedAt is not null ? (DateTime?)firstRow.UpdatedAt : null;
         var cancelledAt = firstRow.CancelledAt is not null ? (DateTime?)firstRow.CancelledAt : null;
+        var paidAt = firstRow.PaidAt is not null ? (DateTime?)firstRow.PaidAt : null;
         var version = (int)firstRow.Version;
 
         var items = new List<OrderItem>();
@@ -59,6 +60,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
             createdAt,
             updatedAt,
             cancelledAt,
+            paidAt,
             version,
             items);
     }
@@ -67,7 +69,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
     {
         const string sql = """
                            SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
-                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."PaidAt", o."Version",
                                   i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
                                   i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
                            FROM "Orders" o
@@ -88,7 +90,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
     {
         const string sql = """
                            SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
-                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."PaidAt", o."Version",
                                   i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
                                   i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
                            FROM "Orders" o
@@ -119,7 +121,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
 
         const string sql = """
                        SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
-                              o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                              o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."PaidAt", o."Version",
                               i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
                               i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
                        FROM "Orders" o
@@ -191,7 +193,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
 
         const string sql = """
                        SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
-                              o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                              o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."PaidAt", o."Version",
                               i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
                               i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
                        FROM "Orders" o
@@ -231,7 +233,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
     {
         const string sql = """
                            SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
-                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."PaidAt", o."Version",
                                   i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
                                   i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
                            FROM "Orders" o
@@ -251,8 +253,8 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
     public async Task SaveAsync(Order order, CancellationToken cancellationToken = default)
     {
         const string updateOrderSql = """
-            INSERT INTO "Orders" ("Id", "CustomerId", "CustomerName", "CustomerEmail", "DeliveryAddress", "Status", "TotalAmount", "CreatedAt", "UpdatedAt", "CancelledAt", "Version")
-            VALUES (@Id, @CustomerId, @CustomerName, @CustomerEmail, @DeliveryAddress, @Status, @TotalAmount, @CreatedAt, @UpdatedAt, @CancelledAt, @Version)
+            INSERT INTO "Orders" ("Id", "CustomerId", "CustomerName", "CustomerEmail", "DeliveryAddress", "Status", "TotalAmount", "CreatedAt", "UpdatedAt", "CancelledAt", "PaidAt", "Version")
+            VALUES (@Id, @CustomerId, @CustomerName, @CustomerEmail, @DeliveryAddress, @Status, @TotalAmount, @CreatedAt, @UpdatedAt, @CancelledAt, @PaidAt, @Version)
             ON CONFLICT ("Id") DO UPDATE SET
                 "CustomerName" = EXCLUDED."CustomerName",
                 "CustomerEmail" = EXCLUDED."CustomerEmail",
@@ -261,6 +263,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
                 "TotalAmount" = EXCLUDED."TotalAmount",
                 "UpdatedAt" = EXCLUDED."UpdatedAt",
                 "CancelledAt" = EXCLUDED."CancelledAt",
+                "PaidAt" = EXCLUDED."PaidAt",
                 "Version" = EXCLUDED."Version"
             """;
 
@@ -276,6 +279,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
             order.CreatedAt,
             order.UpdatedAt,
             order.CancelledAt,
+            order.PaidAt,
             order.Version
         }, transaction: dbSession.Transaction);
 

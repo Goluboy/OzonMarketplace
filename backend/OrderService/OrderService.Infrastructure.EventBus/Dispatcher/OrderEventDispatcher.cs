@@ -3,7 +3,7 @@ using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents;
 using OrderService.Infrastructure.EventBus.Consumers;
 
-namespace OrderService.Infrastructure.EventBus;
+namespace OrderService.Infrastructure.EventBus.Dispatcher;
 
 public class OrderEventDispatcher(
     OrderCreatedConsumer orderCreatedConsumer,

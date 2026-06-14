@@ -54,7 +54,7 @@ public class CreateOrderCommandHandler(
                 cancellationToken);
 
             await capPublisher.PublishDelayAsync(
-                TimeSpan.FromSeconds(61),
+                TimeSpan.FromMinutes(15),
                 Topics.Orders.OrdersTopic,
                 new OrderTimeoutEvent() { CorrelationId = order.Id },
                 sagaHeaders,

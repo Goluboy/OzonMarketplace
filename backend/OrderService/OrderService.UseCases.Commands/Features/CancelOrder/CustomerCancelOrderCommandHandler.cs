@@ -9,13 +9,13 @@ using OrderService.UseCases.Commands.Interfaces;
 
 namespace OrderService.UseCases.Commands.Features.CancelOrder;
 
-public class CancelOrderCommandHandler(
+public class CustomerCancelOrderCommandHandler(
     IOrderRepository orderRepository,
     IUnitOfWork unitOfWork,
     ICapPublisher capPublisher)
-    : ICommandHandler<CancelOrderCommand, bool>
+    : ICommandHandler<CustomerCancelOrderCommand, bool>
 {
-    public async Task<bool> HandleAsync(CancelOrderCommand command, CancellationToken cancellationToken = default)
+    public async Task<bool> HandleAsync(CustomerCancelOrderCommand command, CancellationToken cancellationToken = default)
     {
         var order = await orderRepository.GetByIdAsync(command.OrderId, cancellationToken);
         if (order is null)

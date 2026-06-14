@@ -21,14 +21,14 @@ public abstract class BaseConsumer(
         var messageId = header.GetValueOrDefault(Headers.MessageId)
             ?? throw new InvalidOperationException("MessageId is required");
 
-        await unitOfWork.BeginTransactionAsync(cancellationToken);
+        await unitOfWork.BeginOutboxTransactionAsync(cancellationToken);
         try
         {
             if (await processedEvents.IsProcessedAsync(messageId, cancellationToken))
             {
                 return;
             }
-
+                
             await action();
 
             await processedEvents.MarkAsProcessedAsync(messageId, eventName, cancellationToken);

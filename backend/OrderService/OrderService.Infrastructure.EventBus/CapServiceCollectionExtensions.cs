@@ -45,7 +45,7 @@ public static class CapServiceCollectionExtensions
 
         }).AddSubscribeFilter<SagaCorrelationFilter>();
 
-        services.AddTransient<OrderCreatedConsumer>();
+        services.AddTransient<OrderSagaTimeoutConsumer>();
 
         var capDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ICapPublisher));
         if (capDescriptor != null)

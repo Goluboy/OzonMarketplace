@@ -7,13 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DotNetCore.CAP" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Netu.IntegrationEvents" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OrderService.Domain\OrderService.Domain.csproj" />
-    <ProjectReference Include="..\OrderService.Infrastructure.EventBus\OrderService.Infrastructure.EventBus.csproj" />
-    <ProjectReference Include="..\OrderService.Infrastructure.Persistence\OrderService.Infrastructure.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

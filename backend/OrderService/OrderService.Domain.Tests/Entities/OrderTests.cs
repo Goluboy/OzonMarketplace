@@ -418,6 +418,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         var createdAt = DateTime.UtcNow;
         var updatedAt = DateTime.UtcNow.AddMinutes(10);
         var cancelledAt = (DateTime?)null;
+        var PaidAt = (DateTime?)null;
         var version = 2;
         var items = new List<OrderItem>
         {
@@ -436,6 +437,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
             totalAmount,
             createdAt,
             updatedAt,
+            PaidAt,
             cancelledAt,
             version,
             items);
@@ -480,6 +482,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
             status,
             totalAmount,
             createdAt,
+            null,
             null,
             null,
             1,

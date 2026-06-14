@@ -19,6 +19,7 @@ public class CreateInitialOrderSchema : Migration
             .WithColumn("CreatedAt").AsDateTime().NotNullable()
             .WithColumn("UpdatedAt").AsDateTime().Nullable()
             .WithColumn("CancelledAt").AsDateTime().Nullable()
+            .WithColumn("PaidAt").AsDateTime().Nullable()
             .WithColumn("Version").AsInt32().NotNullable();
 
         Create.Table("OrderItems")
@@ -30,6 +31,8 @@ public class CreateInitialOrderSchema : Migration
             .WithColumn("PriceAtPurchase").AsDecimal(18, 2).NotNullable()
             .WithColumn("Subtotal").AsDecimal(18, 2).NotNullable()
             .WithColumn("CreatedAt").AsDateTime().NotNullable()
+            .WithColumn("IsReserved").AsBoolean().NotNullable().WithDefaultValue(false)
+            .WithColumn("ReservedQuantity").AsInt32().NotNullable().WithDefaultValue(0)
             .WithColumn("UpdatedAt").AsDateTime().Nullable();
 
         Create.Table("OrderStatusHistories")
@@ -53,7 +56,11 @@ public class CreateInitialOrderSchema : Migration
 
         Create.Index("IX_Orders_CustomerId").OnTable("Orders").OnColumn("CustomerId");
         Create.Index("IX_OrderItems_OrderId").OnTable("OrderItems").OnColumn("OrderId");
+
         Create.Index("IX_OrderStatusHistories_OrderId").OnTable("OrderStatusHistories").OnColumn("OrderId");
+
+        Create.Index("IX_Orders_Status").OnTable("Orders").OnColumn("Status");
+        Create.Index("IX_Orders_PaidAt").OnTable("Orders").OnColumn("PaidAt").Ascending();
     }
 
     public override void Down()

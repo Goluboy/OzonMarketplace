@@ -133,6 +133,13 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         return order;
     }
 
+    private void TryChangeToAssembling()
+    {
+        if (Status == OrderStatus.Paid && AllItemsReserved())
+        {
+            ChangeStatus(OrderStatus.Assembling);
+        }
+    }
 
     private void RecalculateTotal()
     {
@@ -329,13 +336,15 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
             reservedProductIds.Add(productId);
         }
 
+        TryChangeToAssembling();
+
         UpdatedAt = DateTime.UtcNow;
         IncrementVersion();
     }
 
     public void MarkAsPaid()
     {
-        if (Status == OrderStatus.Paid)
+        if (Status == OrderStatus.Paid || Status == OrderStatus.Assembling)
             return;
 
         if (!AllItemsReserved())
@@ -345,6 +354,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
 
         ChangeStatus(OrderStatus.Paid, changedBy: null, comment: "All items reserved");
 
+        TryChangeToAssembling();
         PaidAt = UpdatedAt;
     }
 

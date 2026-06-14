@@ -44,7 +44,6 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             
             await unitOfWork.CommitAsync();
             
-            // TODO Invalidation (Redis) - Инвалидировать/удалить кэш каталога и списков, так как появился новый товар
             // TODO Kafka - Опубликовать событие ProductCreatedEvent в брокер сообщений
             
             product.ClearDomainEvents();
@@ -111,8 +110,6 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             await productRepository.UpdateAsync(product);
             await unitOfWork.CommitAsync();
             
-            // TODO BackgroundWorker для удаления файлов из S3, urls лежат в imagesUpdateEvent.RemovedUrls
-            // TODO Invalidation (Redis) - Инвалидировать/удалить кэш каталога и списков, так как появился новый товар
             // TODO Kafka - Опубликовать событие ProductUpdatedEvent в брокер сообщений
             
             if (imagesUpdateEvent != null && imagesUpdateEvent.RemovedUrls.Count != 0)
@@ -156,8 +153,6 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             await productRepository.DeleteAsync(id);
             await unitOfWork.CommitAsync();
             
-            // TODO: Invalidation (Redis) - Сбросить кэш детальной карточки "products:details:{id}",
-            // легкой карточки "products:card:{id}" и сбросить кэш каталога.
             // TODO Kafka - Опубликовать событие ProductDeletedEvent в брокер сообщений
 
             if (imageUrlsToRemove.Count != 0)

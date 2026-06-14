@@ -21,7 +21,7 @@ public class MediaService(IS3StorageService storageService, ICurrentUserHelper u
 
         foreach (var fileName in input.FileNames)
         {
-            var objectKey = $"sellers/{userId:N}/products/{_random.Next()}_{fileName}"; //TODO Добавить секцию в пути по SellerId
+            var objectKey = $"sellers/{userId:N}/products/{_random.Next()}_{fileName}";
             var (uploadUrl, publicUrl) = storageService.GenerateUploadUrls(objectKey);
             
             urlPairs.Add(new UploadFileMetadata(fileName, uploadUrl, publicUrl));

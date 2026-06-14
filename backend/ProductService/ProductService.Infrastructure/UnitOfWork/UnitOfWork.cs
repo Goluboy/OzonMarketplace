@@ -10,6 +10,7 @@ namespace ProductService.Infrastructure.UnitOfWork;
 public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublisher capPublisher)
     : IUnitOfWork, IDbSession
 {
+    private readonly List<Func<Task>> _postCommitActions = [];
     private DbConnection? _connection;
 
     public DbConnection Connection => _connection ??= connectionFactory.GetConnection();
@@ -52,6 +53,13 @@ public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublis
         
         await Transaction.CommitAsync(CancellationToken.None);
         
+        foreach (var action in _postCommitActions)
+        {
+            await action();
+        }
+        
+        _postCommitActions.Clear();
+        
         if (Transaction != null)
         {
             await Transaction.DisposeAsync();
@@ -67,6 +75,13 @@ public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublis
             await Transaction.DisposeAsync();
             Transaction = null;
         }
+        
+        _postCommitActions.Clear();
+    }
+
+    public void RegisterPostCommitAction(Func<Task> action)
+    {
+        _postCommitActions.Add(action ?? throw new ArgumentNullException(nameof(action)));
     }
 
     private async Task EnsureConnectionOpenAsync(CancellationToken cancellationToken)
@@ -79,6 +94,7 @@ public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublis
     
     public void Dispose()
     {
+        _postCommitActions.Clear();
         Transaction?.Dispose();
         _connection?.Dispose();
         GC.SuppressFinalize(this);
@@ -86,6 +102,8 @@ public class UnitOfWork(IPostgresConnectionFactory connectionFactory, ICapPublis
 
     public async ValueTask DisposeAsync()
     {
+        _postCommitActions.Clear();
+        
         if (Transaction != null)
         {
             await Transaction.DisposeAsync();

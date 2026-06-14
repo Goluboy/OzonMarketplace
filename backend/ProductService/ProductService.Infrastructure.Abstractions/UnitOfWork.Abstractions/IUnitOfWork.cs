@@ -9,4 +9,5 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     Task BeginOutboxTransactionAsync(CancellationToken cancellationToken = default);
     Task CommitAsync();
     Task RollbackAsync();
+    void RegisterPostCommitAction(Func<Task> action);
 }

@@ -1,6 +1,7 @@
-﻿using ProductService.Domain.Entities;
+﻿using Microsoft.Extensions.Logging;
+using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
-using ProductService.Infrastructure.Caching;
+using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Mappers;
 using Redis.Service;
@@ -9,7 +10,9 @@ namespace ProductService.Infrastructure.Repository.Decorators;
 
 public class CachedCategoryRepository(
     ICategoryRepository inner,
-    ICacheService cache)
+    ICacheService cache,
+    IUnitOfWork unitOfWork,
+    ILogger<CachedCategoryRepository> logger)
     : ICategoryRepository
 {
     private const string AllCategoriesKey = "categories:all";
@@ -54,7 +57,47 @@ public class CachedCategoryRepository(
         return category;
     }
 
-    public Task<int> AddAsync(Category category) => inner.AddAsync(category);
-    public Task<bool> UpdateAsync(Category category) => inner.UpdateAsync(category);
-    public Task DeleteAsync(int id) => inner.DeleteAsync(id);
+    public async Task<int> AddAsync(Category category)
+    {
+        var id = await inner.AddAsync(category);
+        
+        unitOfWork.RegisterPostCommitAction(() => InvalidateCacheAsync());
+        
+        return id;
+    }
+    
+    public async Task<bool> UpdateAsync(Category category)
+    { 
+        var result = await inner.UpdateAsync(category);
+        if (result)
+        {
+            unitOfWork.RegisterPostCommitAction(() => InvalidateCacheAsync(category.Id));
+        }
+        return result;
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        await inner.DeleteAsync(id);
+        
+        unitOfWork.RegisterPostCommitAction(() => InvalidateCacheAsync(id));
+    }
+    
+    private async Task InvalidateCacheAsync(int? id = null)
+    {
+        try
+        {
+            var keysToRemove = new List<string> { AllCategoriesKey };
+            if (id.HasValue)
+            {
+                keysToRemove.Add(GetCategoryKey(id.Value));
+            }
+            
+            await cache.RemoveManyAsync(keysToRemove);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occured while trying to invalidate cache for Category {id}.", id);
+        }
+    }
 }

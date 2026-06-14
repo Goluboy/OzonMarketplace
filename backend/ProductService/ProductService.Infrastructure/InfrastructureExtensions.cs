@@ -31,7 +31,7 @@ public static class InfrastructureExtensions
         
         services.AddScoped<IDbSession>(sp => sp.GetRequiredService<UnitOfWork.UnitOfWork>());
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<UnitOfWork.UnitOfWork>());
-
+        
         services.AddSingleton<RedisCategoryVersionProvider>();
         services.AddSingleton<ICategoryVersionProvider>(sp => sp.GetRequiredService<RedisCategoryVersionProvider>());
         services.AddSingleton<ICategoryVersionUpdater>(sp => sp.GetRequiredService<RedisCategoryVersionProvider>());

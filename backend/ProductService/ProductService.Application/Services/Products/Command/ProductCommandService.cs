@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using Core.Minio.Service;
 using Microsoft.Extensions.Logging;
 using ProductService.Application.DTO.Category;
@@ -18,13 +19,13 @@ namespace ProductService.Application.Services.Products.Command;
 
 public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository productRepository,
     ICategoryRepository categoryRepository, IProductImageUrlHelper urlHelper, IS3StorageService storageService,
-    ILogger<ProductCommandService> logger) : IProductCommandService
+    ICurrentUserHelper userHelper, ILogger<ProductCommandService> logger) : IProductCommandService
 {
     public async Task<ProductDetailsDto> CreateProductAsync(CreateProductDto dto, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        
-        var sellerId = Guid.NewGuid(); //TODO Авторизация на уровне ролей
+
+        var sellerId = userHelper.UserId;
         
         var categoryDto = await EnsureCategoryExistsAsync(dto.CategoryId, ct);
         
@@ -48,10 +49,16 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             
             product.ClearDomainEvents();
             
+            logger.LogInformation("Product created successfully. ProductId: {ProductId}, SKU: {Sku}, SellerId: {SellerId}", 
+                product.Id, product.Sku, sellerId);
+            
             return ToDtoWithAbsoluteUrls(product, categoryDto);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to create product. SKU: {Sku}, SellerId: {SellerId}. Transaction rolled back.", 
+                dto.Sku, sellerId);
+            
             await unitOfWork.RollbackAsync();
             throw;
         }
@@ -63,11 +70,10 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         
         var categoryDto = await EnsureCategoryExistsAsync(dto.CategoryId, ct);
         
-        //TODO Кеширование
         var product = await productRepository.GetAsync(dto.ProductId)
             ?? throw new NotFoundException(nameof(Product), dto.ProductId);
 
-        //TODO product.IsOwnedBy(userId);
+        EnsureProductOwnership(product);
         
         if (!string.Equals(product.Name, dto.Name, StringComparison.Ordinal) ||
             !string.Equals(product.Description, dto.Description, StringComparison.Ordinal) ||
@@ -116,10 +122,16 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             
             product.ClearDomainEvents();
 
+            logger.LogInformation("Product updated successfully in database. ProductId: {ProductId}, UserId: {UserId}",
+                product.Id, userHelper.UserId);
+            
             return ToDtoWithAbsoluteUrls(product, categoryDto);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to update product. ProductId: {ProductId}, UserId: {UserId}. Transaction rolled back.", 
+                dto.ProductId, userHelper.UserId);
+            
             await unitOfWork.RollbackAsync();
             throw;
         }
@@ -129,11 +141,10 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
     {
         ct.ThrowIfCancellationRequested();
         
-        //TODO Кеширование
         var product = await productRepository.GetAsync(id)
                       ?? throw new NotFoundException(nameof(Product), id);
 
-        //TODO product.IsOwnedBy(userId);
+        EnsureProductOwnership(product);
         
         await unitOfWork.BeginTransactionAsync(ct);
         try
@@ -161,6 +172,22 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
         }
     }
 
+    private void EnsureProductOwnership(Product product)
+    {
+        if (userHelper.IsAdmin)
+        {
+            logger.LogWarning("Admin {AdminId} bypassed ownership check for Product {ProductId}", userHelper.UserId, product.Id);
+            return;
+        }
+        
+        if (!product.IsOwnedBy(userHelper.UserId))
+        {
+            logger.LogWarning("Unauthorized access attempt. User {UserId} tried to modify Product {ProductId} owned by {OwnerId}", 
+                userHelper.UserId, product.Id, product.SellerId);
+            throw new ForbiddenException();
+        }
+    }
+    
     private void DeleteImagesAsync(List<string> imageUrlsToRemove)
     {
         _ = Task.Run(async () =>
@@ -168,6 +195,7 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
             try
             {
                 await storageService.DeleteFilesAsync(imageUrlsToRemove, CancellationToken.None);
+                logger.LogInformation("Background S3 file deletion completed successfully.");
             }
             catch (Exception ex)
             {
@@ -187,7 +215,6 @@ public class ProductCommandService(IUnitOfWork unitOfWork, IProductRepository pr
     
     private async Task<CategoryDto> EnsureCategoryExistsAsync(int categoryId, CancellationToken ct)
     {
-        //TODO Redis кеширование
         var category = await categoryRepository.GetAsync(categoryId);
 
         if (category == null)

@@ -343,7 +343,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
                 $"Cannot mark order '{Id}' as Paid: not all items are reserved. " +
                 $"Reserved: {_items.Count(i => i.IsReserved)}/{_items.Count}");
 
-        ChangeStatus(OrderStatus.Paid, changedBy: null, comment: "All items reserved, SAGA completed successfully");
+        ChangeStatus(OrderStatus.Paid, changedBy: null, comment: "All items reserved");
 
         PaidAt = UpdatedAt;
     }

@@ -8,7 +8,7 @@ using System.Text;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
-public class OrderCreatedConsumer(IProcessedEventsRepository processedEvents) : BaseConsumer(processedEvents)
+public class OrderCreatedConsumer : BaseConsumer
 {
     public async Task HandleAsync(
        OrderCreatedEvent orderSagaTimeout,

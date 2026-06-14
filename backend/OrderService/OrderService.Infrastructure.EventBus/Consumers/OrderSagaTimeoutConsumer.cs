@@ -7,10 +7,8 @@ using OrderService.UseCases.Commands.Interfaces;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
-public class OrderSagaTimeoutConsumer(
-    IProcessedEventsRepository processedEvents,
-    ICommandHandler<ForceCancelOrderCommand, bool> cancelOrderHandler)
-    : BaseConsumer(processedEvents)
+public class OrderSagaTimeoutConsumer(ICommandHandler<ForceCancelOrderCommand, bool> cancelOrderHandler)
+    : BaseConsumer
 {
     public async Task HandleAsync(
        OrderTimeoutEvent orderSagaTimeout,

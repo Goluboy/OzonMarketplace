@@ -7,7 +7,7 @@ using System.Text;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
-public class OrderCancelledConsumer(IProcessedEventsRepository processedEvents) : BaseConsumer(processedEvents)
+public class OrderCancelledConsumer : BaseConsumer
 {
     public async Task HandleAsync(
        OrderCancelledEvent orderCancelled,

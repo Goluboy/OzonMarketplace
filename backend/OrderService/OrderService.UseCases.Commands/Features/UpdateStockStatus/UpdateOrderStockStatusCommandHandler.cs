@@ -11,7 +11,6 @@ namespace OrderService.UseCases.Commands.Features.UpdateStockStatus;
 
 public class UpdateOrderStockStatusCommandHandler(
     IOrderRepository orderRepository,
-    IProcessedEventsRepository processedEvents,
     IUnitOfWork unitOfWork,
     ILogger<UpdateOrderStockStatusCommandHandler> logger)
     : ICommandHandler<UpdateOrderStockStatusCommand, bool>
@@ -44,14 +43,6 @@ public class UpdateOrderStockStatusCommandHandler(
             }
 
             await orderRepository.SaveAsync(order, ct);
-
-            if (!string.IsNullOrEmpty(command.MessageId))
-            {
-                await processedEvents.MarkAsProcessedAsync(
-                    command.MessageId,
-                    nameof(UpdateOrderStockStatusCommand),
-                    ct);
-            }
 
             await unitOfWork.CommitAsync(ct);
 

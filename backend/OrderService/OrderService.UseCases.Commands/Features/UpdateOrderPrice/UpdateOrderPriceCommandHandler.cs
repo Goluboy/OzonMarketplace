@@ -32,6 +32,7 @@ public class UpdateOrderPriceCommandHandler(
         try
         {
             order.SetTotalAmount(new Money(command.TotalAmount, command.Currency));
+            order.MarkAsPaid();
 
             await orderRepository.SaveAsync(order, ct);
 

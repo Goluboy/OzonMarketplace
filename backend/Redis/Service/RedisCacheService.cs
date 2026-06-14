@@ -12,6 +12,7 @@ internal class RedisCacheService : ICacheService
     private readonly IRedisConnectionFactory _connectionFactory;
     private readonly string _prefix;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly CacheCircuitBreaker _breaker = new();
 
     public RedisCacheService(IRedisConnectionFactory connectionFactory, IOptions<RedisOptions> options,
         JsonSerializerOptions? jsonOptions = null)
@@ -38,14 +39,35 @@ internal class RedisCacheService : ICacheService
             throw new ArgumentException("Key cannot be null or empty", nameof(key));
         }
         
-        var value = await Db.StringGetAsync(GetFullKey(key));
-        if (value.IsNullOrEmpty)
+        if (!_breaker.IsAllowed())
         {
             return default;
         }
-        
-        ReadOnlyMemory<byte> bytes = value;
-        return JsonSerializer.Deserialize<T>(bytes.Span, _jsonOptions);
+
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(200));
+
+            var value = await Db.StringGetAsync(GetFullKey(key)).WaitAsync(timeoutCts.Token);
+            
+            if (value.IsNullOrEmpty)
+            {
+                _breaker.RecordSuccess();
+                return default;
+            }
+            
+            _breaker.RecordSuccess();
+            
+            ReadOnlyMemory<byte> bytes = value;
+            return JsonSerializer.Deserialize<T>(bytes.Span, _jsonOptions);
+        }
+        catch (Exception ex) when (ex is RedisException or TimeoutException or OperationCanceledException)
+        {
+            _breaker.RecordFailure();
+            
+            return default;
+        }
     }
 
     public async Task<IReadOnlyList<T?>> GetManyAsync<T>(IReadOnlyList<string> keys, CancellationToken ct = default)
@@ -55,26 +77,43 @@ internal class RedisCacheService : ICacheService
             return [];
         }
 
-        var redisKeys = keys.Select(k => (RedisKey)GetFullKey(k)).ToArray();
-        var values = await Db.StringGetAsync(redisKeys);
-        
-        var results = new List<T?>(keys.Count);
-        
-        foreach (var value in values)
+        if (!_breaker.IsAllowed())
         {
-            if (value.IsNullOrEmpty)
-            {
-                results.Add(default);
-            }
-            else
-            {
-                ReadOnlyMemory<byte> bytes = value;
-                var deserialized = JsonSerializer.Deserialize<T>(bytes.Span, _jsonOptions);
-                results.Add(deserialized);
-            }
+            return new T?[keys.Count];
         }
+        
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(300));
 
-        return results;
+            var redisKeys = keys.Select(k => (RedisKey)GetFullKey(k)).ToArray();
+            var values = await Db.StringGetAsync(redisKeys).WaitAsync(timeoutCts.Token);
+            
+            _breaker.RecordSuccess();
+
+            var results = new List<T?>(keys.Count);
+            foreach (var value in values)
+            {
+                if (value.IsNullOrEmpty)
+                {
+                    results.Add(default);
+                }
+                else
+                {
+                    ReadOnlyMemory<byte> bytes = value;
+                    var deserialized = JsonSerializer.Deserialize<T>(bytes.Span, _jsonOptions);
+                    results.Add(deserialized);
+                }
+            }
+
+            return results;
+        }
+        catch (Exception ex) when (ex is RedisException or TimeoutException or OperationCanceledException)
+        {
+            _breaker.RecordFailure();
+            return new T?[keys.Count];
+        }
     }
 
     public async Task SetAsync<T>(string key, T value, TimeSpan? expiry = null, CancellationToken ct = default)
@@ -88,11 +127,27 @@ internal class RedisCacheService : ICacheService
             throw new ArgumentNullException( nameof(value), "Value cannot be null.");
         }
         
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(value, _jsonOptions);
-        var redisKey = GetFullKey(key);
-        var expiration = expiry ?? TimeSpan.Zero;
+        if (!_breaker.IsAllowed())
+        {
+            return;
+        }
         
-        await Db.StringSetAsync(redisKey, bytes, expiration);
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(300));
+
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(value, _jsonOptions);
+            var redisKey = GetFullKey(key);
+            var expiration = expiry ?? TimeSpan.Zero;
+            
+            await Db.StringSetAsync(redisKey, bytes, expiration).WaitAsync(timeoutCts.Token);
+            _breaker.RecordSuccess();
+        }
+        catch (Exception ex) when (ex is RedisException or TimeoutException or OperationCanceledException)
+        {
+            _breaker.RecordFailure();
+        }
     }
 
     public async Task SetManyAsync<T>(IReadOnlyDictionary<string, T> values, TimeSpan? expiry = null, CancellationToken ct = default)
@@ -102,30 +157,75 @@ internal class RedisCacheService : ICacheService
             return;
         }
 
-        var tasks = new List<Task>(values.Count);
-
-        var expiration = expiry ?? TimeSpan.Zero;
-        
-        foreach (var kvp in values)
+        if (!_breaker.IsAllowed())
         {
-            var redisKey = GetFullKey(kvp.Key);
-            
-            var bytes = JsonSerializer.SerializeToUtf8Bytes(kvp.Value, _jsonOptions);
-
-            tasks.Add(Db.StringSetAsync(redisKey, bytes, expiration));
+            return;
         }
+        
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(500));
 
-        await Task.WhenAll(tasks);
+            var tasks = new List<Task>(values.Count);
+            var expiration = expiry ?? TimeSpan.Zero;
+            
+            foreach (var kvp in values)
+            {
+                var redisKey = GetFullKey(kvp.Key);
+                var bytes = JsonSerializer.SerializeToUtf8Bytes(kvp.Value, _jsonOptions);
+                tasks.Add(Db.StringSetAsync(redisKey, bytes, expiration));
+            }
+
+            await Task.WhenAll(tasks).WaitAsync(timeoutCts.Token);
+            _breaker.RecordSuccess();
+        }
+        catch (Exception ex) when (ex is RedisException or TimeoutException or OperationCanceledException)
+        {
+            _breaker.RecordFailure();
+        }
     }
 
     public async Task RemoveAsync(string key, CancellationToken ct = default)
     {
-        await Db.KeyDeleteAsync(GetFullKey(key));
+        if (!_breaker.IsAllowed())
+        {
+            return;
+        }
+        
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(200));
+
+            await Db.KeyDeleteAsync(GetFullKey(key)).WaitAsync(timeoutCts.Token);
+            _breaker.RecordSuccess();
+        }
+        catch (Exception ex) when (ex is RedisException or TimeoutException or OperationCanceledException)
+        {
+            _breaker.RecordFailure();
+        }
     }
 
     public async Task RemoveManyAsync(IEnumerable<string> keys, CancellationToken ct = default)
     {
-        var redisKeys = keys.Select(k => (RedisKey)GetFullKey(k)).ToArray();
-        await Db.KeyDeleteAsync(redisKeys);
+        if (!_breaker.IsAllowed())
+        {
+            return;
+        }
+        
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(300));
+
+            var redisKeys = keys.Select(k => (RedisKey)GetFullKey(k)).ToArray();
+            await Db.KeyDeleteAsync(redisKeys).WaitAsync(timeoutCts.Token);
+            _breaker.RecordSuccess();
+        }
+        catch (Exception ex) when (ex is RedisException or TimeoutException or OperationCanceledException)
+        {
+            _breaker.RecordFailure();
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ProductService.Infrastructure.Abstractions.Caching.Abstractions;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
@@ -40,7 +41,9 @@ public static class InfrastructureExtensions
         services.AddScoped<CategoryRepository>();
         services.AddScoped<ICategoryRepository>(sp => new CachedCategoryRepository(
             sp.GetRequiredService<CategoryRepository>(),
-            sp.GetRequiredService<ICacheService>()));
+            sp.GetRequiredService<ICacheService>(),
+            sp.GetRequiredService<IUnitOfWork>(),
+            sp.GetRequiredService<ILogger<CachedCategoryRepository>>()));
         
         // Декоратор над ProductQueryService
         services.AddScoped<ProductQueryRepository>();
@@ -52,7 +55,9 @@ public static class InfrastructureExtensions
         services.AddScoped<ProductRepository>();
         services.AddScoped<IProductRepository>(sp => new CachedProductRepository(
             sp.GetRequiredService<ProductRepository>(),
-            sp.GetRequiredService<ICacheService>()));
+            sp.GetRequiredService<ICacheService>(),
+            sp.GetRequiredService<IUnitOfWork>(),
+            sp.GetRequiredService<ILogger<CachedProductRepository>>()));
         
         services.AddCap(x =>
         {

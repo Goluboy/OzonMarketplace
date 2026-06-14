@@ -23,6 +23,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public string ConnectionString => _container?.GetConnectionString() ?? string.Empty;
     
+    [Obsolete("Obsolete")]
     public async Task InitializeAsync()
     {
         if (_container != null)

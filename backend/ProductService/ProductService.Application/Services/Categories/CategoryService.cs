@@ -92,8 +92,6 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             
             await unitOfWork.CommitAsync();
             
-            // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag из Redis.
-            
             category.ClearDomainEvents();
             
             logger.LogInformation("Category updated successfully. CategoryId: {CategoryId}", category.Id);
@@ -121,8 +119,6 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             // TODO: События: Опубликовать события изменения категории в брокер (когда появится инфраструктура)
             
             await unitOfWork.CommitAsync();
-            
-            // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag из Redis.
             
             logger.LogInformation("Category deleted successfully. CategoryId: {CategoryId}", id);
         }

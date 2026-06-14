@@ -17,6 +17,8 @@ namespace ProductService.Presentation;
 
 public static class Program
 {
+    private const string ReactCorsPolicy = "ReactAppPolicy";
+    
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -47,6 +49,23 @@ public static class Program
     {
         services.AddHttpContextAccessor(); 
         
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy(ReactCorsPolicy, policy =>
+            {
+                if (allowedOrigins != null && allowedOrigins.Length != 0)
+                {
+                    policy.WithOrigins(allowedOrigins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                }
+            });
+        });
+
+        
         services.AddInfrastructure(configuration)
             .AddApplication()
             .AddPresentation()
@@ -67,6 +86,8 @@ public static class Program
         builder.UseExceptionHandler();
         
         builder.UseHttpMetrics();
+        
+        builder.UseCors(ReactCorsPolicy);
         
         builder.UseAuthentication();
         builder.UseAuthorization();

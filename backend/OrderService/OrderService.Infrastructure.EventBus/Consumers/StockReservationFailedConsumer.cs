@@ -11,10 +11,8 @@ using System.Text;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
-public class StockReservationFailedConsumer(
-    IProcessedEventsRepository processedEvents,
-    ICommandHandler<ForceCancelOrderCommand, bool> cancelOrderHandler)
-    : BaseConsumer(processedEvents)
+public class StockReservationFailedConsumer(ICommandHandler<ForceCancelOrderCommand, bool> cancelOrderHandler)
+    : BaseConsumer
 {
     public async Task HandleAsync(
         StockReservationFailedEvent @event,

@@ -8,8 +8,7 @@ using System.Text;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
-public abstract class BaseConsumer(
-    IProcessedEventsRepository processedEvents)
+public abstract class BaseConsumer
 {
     protected async Task ExecuteWithIdempotencyAsync(
         CapHeader header,
@@ -19,13 +18,7 @@ public abstract class BaseConsumer(
     {
         var messageId = header.GetValueOrDefault(Headers.MessageId)
             ?? throw new InvalidOperationException("MessageId is required");
-        if (await processedEvents.IsProcessedAsync(messageId, cancellationToken))
-        {
-            return;
-        }
 
         await action();
-
-        await processedEvents.MarkAsProcessedAsync(messageId, eventName, cancellationToken);
     }
 }

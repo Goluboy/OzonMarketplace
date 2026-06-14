@@ -11,7 +11,6 @@ namespace OrderService.UseCases.Commands.Features.UpdateOrderPrice;
 
 public class UpdateOrderPriceCommandHandler(
     IOrderRepository orderRepository,
-    IProcessedEventsRepository processedEvents,
     IUnitOfWork unitOfWork)
     : ICommandHandler<UpdateOrderPriceCommand, bool>
 {
@@ -35,14 +34,6 @@ public class UpdateOrderPriceCommandHandler(
             order.SetTotalAmount(new Money(command.TotalAmount, command.Currency));
 
             await orderRepository.SaveAsync(order, ct);
-
-            if (!string.IsNullOrEmpty(command.MessageId))
-            {
-                await processedEvents.MarkAsProcessedAsync(
-                    command.MessageId,
-                    nameof(UpdateOrderPriceCommand),
-                    ct);
-            }
 
             await unitOfWork.CommitAsync(ct);
 

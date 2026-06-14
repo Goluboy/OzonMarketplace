@@ -50,7 +50,7 @@ public class CustomerCancelOrderCommandHandler(
             await orderRepository.SaveAsync(order, cancellationToken);
 
             await capPublisher.PublishAsync(
-                Topics.Orders.Cancelled,
+                Topics.Orders.OrdersTopic,
                 new OrderCancelledEvent
                 {
                     CorrelationId = order.Id,

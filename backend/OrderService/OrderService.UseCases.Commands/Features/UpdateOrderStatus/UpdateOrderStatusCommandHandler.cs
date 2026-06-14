@@ -39,7 +39,7 @@ public class UpdateOrderStatusCommandHandler(
             await orderRepository.SaveAsync(order, cancellationToken);
 
             await capPublisher.PublishAsync(
-                Topics.Orders.Created,
+                Topics.Orders.OrdersTopic,
                 new OrderStatusChangedEvent(order.Id.Value, oldStatus, command.NewStatus, command.ChangedBy, command.Comment, DateTime.UtcNow), cancellationToken: cancellationToken);
 
             await unitOfWork.CommitAsync(cancellationToken);

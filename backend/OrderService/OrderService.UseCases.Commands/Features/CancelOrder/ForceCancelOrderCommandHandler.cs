@@ -11,6 +11,7 @@ namespace OrderService.UseCases.Commands.Features.CancelOrder;
 
 public class ForceCancelOrderCommandHandler(
     IOrderRepository orderRepository,
+    IUnitOfWork unitOfWork,
     ICapPublisher capPublisher)
     : ICommandHandler<ForceCancelOrderCommand, bool>
 {
@@ -28,25 +29,35 @@ public class ForceCancelOrderCommandHandler(
             return true;
         }
 
-        var itemsToRelease = order.Items
+        await unitOfWork.BeginOutboxTransactionAsync(cancellationToken);
+
+        try
+        {
+            var itemsToRelease = order.Items
             .Select(i => i.ProductId)
             .ToList();
 
-        order.ForceCancel(command.Reason);
+            order.ForceCancel(command.Reason);
 
-        await orderRepository.SaveAsync(order, cancellationToken);
+            await orderRepository.SaveAsync(order, cancellationToken);
 
-        await capPublisher.PublishAsync(
-            Topics.Orders.Cancelled,
-            new OrderCancelledEvent
-            {
-                CorrelationId = order.Id,
-                Reason = command.Reason,
-                ItemsToRelease = itemsToRelease
-            },
-            cancellationToken: cancellationToken);
+            await capPublisher.PublishAsync(
+                Topics.Orders.OrdersTopic,
+                new OrderCancelledEvent
+                {
+                    CorrelationId = order.Id,
+                    Reason = command.Reason,
+                    ItemsToRelease = itemsToRelease
+                },
+                cancellationToken: cancellationToken);
 
-        return true;
-
+            await unitOfWork.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await unitOfWork.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 }

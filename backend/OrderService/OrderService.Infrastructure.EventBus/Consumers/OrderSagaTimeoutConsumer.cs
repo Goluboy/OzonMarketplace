@@ -1,5 +1,5 @@
 ﻿using DotNetCore.CAP;
-using IntegrationEvents;
+using IntegrationEvents.IntegrationEvents;
 using IntegrationEvents.Shared;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.UseCases.Commands.Commands;
@@ -8,22 +8,18 @@ using OrderService.UseCases.Commands.Interfaces;
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
 public class OrderSagaTimeoutConsumer(
-    IOrderRepository orderRepository,
     IProcessedEventsRepository processedEvents,
-    IUnitOfWork unitOfWork,
-    ICapPublisher capPublisher,
     ICommandHandler<ForceCancelOrderCommand, bool> cancelOrderHandler)
-    : BaseConsumer(processedEvents, unitOfWork), ICapSubscribe
+    : BaseConsumer(processedEvents)
 {
-    [CapSubscribe(Topics.Orders.SagaTimeout)]
     public async Task HandleAsync(
-       OrderSagaTimeout orderSagaTimeout,
-       [FromCap] CapHeader header,
+       OrderTimeoutEvent orderSagaTimeout,
+       CapHeader header,
        CancellationToken cancellationToken)
     {
         await ExecuteWithIdempotencyAsync(
             header,
-            nameof(OrderSagaTimeout),
+            nameof(OrderTimeoutEvent),
             async () =>
             {
                 var command = new ForceCancelOrderCommand(orderSagaTimeout.CorrelationId, "TimeOut");

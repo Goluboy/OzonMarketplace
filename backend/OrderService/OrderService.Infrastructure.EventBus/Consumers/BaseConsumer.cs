@@ -9,8 +9,7 @@ using System.Text;
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
 public abstract class BaseConsumer(
-    IProcessedEventsRepository processedEvents,
-    IUnitOfWork unitOfWork)
+    IProcessedEventsRepository processedEvents)
 {
     protected async Task ExecuteWithIdempotencyAsync(
         CapHeader header,
@@ -20,25 +19,13 @@ public abstract class BaseConsumer(
     {
         var messageId = header.GetValueOrDefault(Headers.MessageId)
             ?? throw new InvalidOperationException("MessageId is required");
-
-        await unitOfWork.BeginOutboxTransactionAsync(cancellationToken);
-        try
+        if (await processedEvents.IsProcessedAsync(messageId, cancellationToken))
         {
-            if (await processedEvents.IsProcessedAsync(messageId, cancellationToken))
-            {
-                return;
-            }
-                
-            await action();
-
-            await processedEvents.MarkAsProcessedAsync(messageId, eventName, cancellationToken);
-
-            await unitOfWork.CommitAsync(cancellationToken);
+            return;
         }
-        catch
-        {
-            await unitOfWork.RollbackAsync(cancellationToken);
-            throw;
-        }
+
+        await action();
+
+        await processedEvents.MarkAsProcessedAsync(messageId, eventName, cancellationToken);
     }
 }

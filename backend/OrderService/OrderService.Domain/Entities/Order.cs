@@ -18,6 +18,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
     public DateTime CreatedAt { get; private set; } = default!;
     public DateTime? UpdatedAt { get; private set; } = default!;
     public DateTime? CancelledAt { get; private set; } = default!;
+    public DateTime? PaidAt { get; private set; } = default!;
 
     public int Version { get; private set; }
 
@@ -54,6 +55,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         DateTime createdAt,
         DateTime? updatedAt,
         DateTime? cancelledAt,
+        DateTime? paidAt,
         int version,
         IEnumerable<OrderItem> items)
     {
@@ -69,6 +71,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
             CancelledAt = cancelledAt,
+            PaidAt = paidAt,
             Version = version
         };
 
@@ -300,6 +303,86 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         }
 
         return Id == other.Id;
+    }
+
+    public void MarkItemsAsReserved(IEnumerable<(Guid ProductId, int Quantity)> reservedItems)
+    {
+        if (Status == OrderStatus.Cancelled)
+            throw new InvalidOperationException("Cannot reserve items for cancelled order");
+
+        if (Status != OrderStatus.Created)
+            throw new InvalidOperationException(
+                $"Cannot reserve items for order with status '{Status}'. Expected: 'Created'.");
+
+        var reservedList = reservedItems.ToList();
+        var reservedProductIds = new List<Guid>();
+
+        foreach (var (productId, quantity) in reservedList)
+        {
+            var item = _items.FirstOrDefault(i => i.ProductId == productId);
+
+            if (item == null)
+                throw new InvalidOperationException(
+                    $"Product '{productId}' not found in order '{Id}'");
+
+            item.MarkAsReserved(quantity);
+            reservedProductIds.Add(productId);
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+        IncrementVersion();
+    }
+
+    public void MarkAsPaid()
+    {
+        if (Status == OrderStatus.Paid)
+            return;
+
+        if (!AllItemsReserved())
+            throw new InvalidOperationException(
+                $"Cannot mark order '{Id}' as Paid: not all items are reserved. " +
+                $"Reserved: {_items.Count(i => i.IsReserved)}/{_items.Count}");
+
+        ChangeStatus(OrderStatus.Paid, changedBy: null, comment: "All items reserved, SAGA completed successfully");
+
+        PaidAt = UpdatedAt;
+    }
+
+    public void SetTotalAmount(Money newTotalAmount)
+    {
+        if (Status == OrderStatus.Cancelled)
+            throw new InvalidOperationException("Cannot update total amount for cancelled order");
+
+        if (Status != OrderStatus.Created)
+            throw new InvalidOperationException(
+                $"Cannot update total amount for order with status '{Status}'. " +
+                $"Price updates are only allowed in 'Created' status.");
+
+        if (newTotalAmount.Amount < 0)
+            throw new ArgumentException("Total amount cannot be negative");
+
+        var oldTotalAmount = TotalAmount;
+        TotalAmount = newTotalAmount;
+
+        UpdatedAt = DateTime.UtcNow;
+        IncrementVersion();
+    }
+
+    public bool AllItemsReserved()
+    {
+        if (_items.Count == 0) return false;
+        return _items.All(i => i.IsReserved);
+    }
+
+    public void ReleaseAllReservations()
+    {
+        foreach (var item in _items)
+        {
+            item.ReleaseReservation();
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+        IncrementVersion();
     }
 
     public override bool Equals(object? obj) => Equals(obj as Order);

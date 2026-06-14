@@ -7,17 +7,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="MassTransit.Kafka" Version="[8.5.9]" />
-		<PackageReference Include="MassTransit.Quartz" Version="[8.5.9]" />
+		<PackageReference Include="DotNetCore.CAP" Version="10.0.1" />
+		<PackageReference Include="DotNetCore.CAP.Dashboard" Version="10.0.1" />
+		<PackageReference Include="DotNetCore.CAP.Kafka" Version="10.0.1" />
+		<PackageReference Include="DotNetCore.CAP.PostgreSql" Version="10.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
-		<PackageReference Include="Netu.IntegrationEvents" Version="1.1.0" />
-		<PackageReference Include="Quartz" Version="3.18.1" />
-		<PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.18.1" />
-		<PackageReference Include="Quartz.Serialization.SystemTextJson" Version="3.18.1" />
+		<PackageReference Include="Netu.IntegrationEvents" Version="2.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\OrderService.Domain\OrderService.Domain.csproj" />
+		<ProjectReference Include="..\OrderService.UseCases.Commands\OrderService.UseCases.Commands.csproj" />
 	</ItemGroup>
 
 </Project>

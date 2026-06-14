@@ -7,14 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MassTransit.Kafka" Version="8.5.9" />
-    <PackageReference Include="Netu.IntegrationEvents" Version="1.1.0" />
+    <PackageReference Include="DotNetCore.CAP" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Netu.IntegrationEvents" Version="2.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OrderService.Domain\OrderService.Domain.csproj" />
-    <ProjectReference Include="..\OrderService.Infrastructure.EventBus\OrderService.Infrastructure.EventBus.csproj" />
-    <ProjectReference Include="..\OrderService.Infrastructure.Persistence\OrderService.Infrastructure.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,48 +2,56 @@ using DotNetCore.CAP;
 using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents;
 using Microsoft.Extensions.Logging;
-using OrderService.Domain.Events;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.Domain.ValueObjects;
 using OrderService.UseCases.Commands.Commands;
 using OrderService.UseCases.Commands.Interfaces;
 
-namespace OrderService.UseCases.Commands.Features.UpdateOrderStatus;
+namespace OrderService.UseCases.Commands.Features.CancelOrder;
 
-public class UpdateOrderStatusCommandHandler(
+public class ForceCancelOrderCommandHandler(
     IOrderRepository orderRepository,
     IUnitOfWork unitOfWork,
     ICapPublisher capPublisher)
-    : ICommandHandler<UpdateOrderStatusCommand, bool>
+    : ICommandHandler<ForceCancelOrderCommand, bool>
 {
-    public async Task<bool> HandleAsync(UpdateOrderStatusCommand command, CancellationToken cancellationToken = default)
+    public async Task<bool> HandleAsync(ForceCancelOrderCommand command, CancellationToken cancellationToken)
     {
         var order = await orderRepository.GetByIdAsync(command.OrderId, cancellationToken);
+
         if (order is null)
         {
             return false;
         }
 
-        if (order.Status == command.NewStatus)
+        if (order.Status == OrderStatus.Cancelled)
         {
             return true;
         }
 
-        var oldStatus = order.Status;
-
-        await unitOfWork.BeginTransactionAsync(cancellationToken);
+        await unitOfWork.BeginOutboxTransactionAsync(cancellationToken);
 
         try
         {
-            order.ChangeStatus(command.NewStatus, command.ChangedBy, command.Comment);
+            var itemsToRelease = order.Items
+            .Select(i => i.ProductId)
+            .ToList();
+
+            order.ForceCancel(command.Reason);
+
             await orderRepository.SaveAsync(order, cancellationToken);
 
             await capPublisher.PublishAsync(
                 Topics.Orders.OrdersTopic,
-                new OrderStatusChangedEvent(order.Id.Value, oldStatus, command.NewStatus, command.ChangedBy, command.Comment, DateTime.UtcNow), cancellationToken: cancellationToken);
+                new OrderCancelledEvent
+                {
+                    CorrelationId = order.Id,
+                    Reason = command.Reason,
+                    ItemsToRelease = itemsToRelease
+                },
+                cancellationToken: cancellationToken);
 
             await unitOfWork.CommitAsync(cancellationToken);
-
             return true;
         }
         catch

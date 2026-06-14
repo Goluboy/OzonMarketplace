@@ -21,7 +21,7 @@ namespace OrderService.Http.controllers;
 [Route("api/orders")]
 public class OrdersController(
     ICommandHandler<CreateOrderCommand, Guid> createOrderHandler,
-    ICommandHandler<CancelOrderCommand, bool> cancelOrderHandler,
+    ICommandHandler<CustomerCancelOrderCommand, bool> cancelOrderHandler,
     IQueryHandler<GetOrderByIdQuery, OrderModel?> getOrderByIdHandler,
     IQueryHandler<GetOrdersByCustomerIdQuery, List<OrderModel>> getOrdersByCustomerIdHandler) : ControllerBase
 {
@@ -199,7 +199,7 @@ public class OrdersController(
         // Assuming CancelOrderCommand handles the business logic for cancellation rules
         try
         {
-            await cancelOrderHandler.HandleAsync(new CancelOrderCommand(id, customerId), cancellationToken);
+            await cancelOrderHandler.HandleAsync(new CustomerCancelOrderCommand(id, customerId), cancellationToken);
             return NoContent();
         }
         catch (InvalidOperationException ex)

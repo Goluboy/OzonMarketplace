@@ -1,3 +1,7 @@
+using DotNetCore.CAP;
+using IntegrationEvents;
+using IntegrationEvents.IntegrationEvents;
+using Microsoft.Extensions.Logging;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.Domain.ValueObjects;
 using OrderService.UseCases.Commands.Commands;
@@ -5,11 +9,13 @@ using OrderService.UseCases.Commands.Interfaces;
 
 namespace OrderService.UseCases.Commands.Features.CancelOrder;
 
-public class CancelOrderCommandHandler(
+public class CustomerCancelOrderCommandHandler(
     IOrderRepository orderRepository,
-    IUnitOfWork unitOfWork) : ICommandHandler<CancelOrderCommand, bool>
+    IUnitOfWork unitOfWork,
+    ICapPublisher capPublisher)
+    : ICommandHandler<CustomerCancelOrderCommand, bool>
 {
-    public async Task<bool> HandleAsync(CancelOrderCommand command, CancellationToken cancellationToken = default)
+    public async Task<bool> HandleAsync(CustomerCancelOrderCommand command, CancellationToken cancellationToken = default)
     {
         var order = await orderRepository.GetByIdAsync(command.OrderId, cancellationToken);
         if (order is null)
@@ -36,9 +42,25 @@ public class CancelOrderCommandHandler(
 
         try
         {
+            var itemsToRelease = order.Items
+                .Select(i => i.ProductId)
+                .ToList();
+
             order.Cancel(command.CustomerId);
             await orderRepository.SaveAsync(order, cancellationToken);
+
+            await capPublisher.PublishAsync(
+                Topics.Orders.OrdersTopic,
+                new OrderCancelledEvent
+                {
+                    CorrelationId = order.Id,
+                    Reason = $"Cancelled by customer {command.CustomerId}",
+                    ItemsToRelease = itemsToRelease
+                },
+                cancellationToken: cancellationToken);
+
             await unitOfWork.CommitAsync(cancellationToken);
+
             return true;
         }
         catch

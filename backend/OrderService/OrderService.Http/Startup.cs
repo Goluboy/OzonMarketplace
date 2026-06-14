@@ -114,6 +114,8 @@ namespace OrderService.Http
             services.AddPersistenceServices(configuration);
             services.AddCommands();
             services.AddQueries();
+            
+            services.AddCapServices(configuration);
 
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();
@@ -156,8 +158,6 @@ namespace OrderService.Http
                     );
                 }
             );
-
-            services.AddKafkaIntegration(configuration);
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

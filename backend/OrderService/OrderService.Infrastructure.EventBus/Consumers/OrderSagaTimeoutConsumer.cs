@@ -1,35 +1,30 @@
-﻿using IntegrationEvents.IntegrationEvents;
+﻿using DotNetCore.CAP;
+using IntegrationEvents.IntegrationEvents;
 using IntegrationEvents.Shared;
-using MassTransit;
-using Microsoft.Extensions.Logging;
+using OrderService.Domain.Interfaces.Persistence;
+using OrderService.UseCases.Commands.Commands;
+using OrderService.UseCases.Commands.Interfaces;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
-public class OrderSagaTimeoutConsumer : IConsumer<OrderSagaTimeout>
+public class OrderSagaTimeoutConsumer(
+    IProcessedEventsRepository processedEvents,
+    ICommandHandler<ForceCancelOrderCommand, bool> cancelOrderHandler)
+    : BaseConsumer(processedEvents)
 {
-    private readonly IPublishEndpoint _publishEndpoint;
-    private readonly ILogger<OrderSagaTimeoutConsumer> _logger;
-
-    public OrderSagaTimeoutConsumer(IPublishEndpoint publishEndpoint, ILogger<OrderSagaTimeoutConsumer> logger)
+    public async Task HandleAsync(
+       OrderTimeoutEvent orderSagaTimeout,
+       CapHeader header,
+       CancellationToken cancellationToken)
     {
-        _publishEndpoint = publishEndpoint;
-        _logger = logger;
-    }
-
-    public async Task Consume(ConsumeContext<OrderSagaTimeout> context)
-    {
-        var correlationId = context.Message.CorrelationId;
-        _logger.LogInformation("Order saga timeout received for {CorrelationId}", correlationId);
-
-        var cancelEvent = new OrderCancelledEvent
-        {
-            CorrelationId = correlationId,
-            Reason = "TIMEOUT",
-            ItemsToRelease = new List<Guid>()
-        };
-
-        await _publishEndpoint.Publish(cancelEvent, context.CancellationToken);
-
-        _logger.LogInformation("Published OrderCancelledEvent for {CorrelationId} due to timeout", correlationId);
+        await ExecuteWithIdempotencyAsync(
+            header,
+            nameof(OrderTimeoutEvent),
+            async () =>
+            {
+                var command = new ForceCancelOrderCommand(orderSagaTimeout.CorrelationId, "TimeOut");
+                await cancelOrderHandler.HandleAsync(command, cancellationToken);
+            },
+            cancellationToken);
     }
 }

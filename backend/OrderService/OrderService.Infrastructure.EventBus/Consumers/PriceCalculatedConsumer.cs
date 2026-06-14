@@ -11,10 +11,8 @@ using System.Text;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
-public class PriceCalculatedConsumer(
-    IProcessedEventsRepository processedEvents,
-    ICommandHandler<UpdateOrderPriceCommand, bool> updatePriceHandler)
-    : BaseConsumer(processedEvents)
+public class PriceCalculatedConsumer(ICommandHandler<UpdateOrderPriceCommand, bool> updatePriceHandler)
+    : BaseConsumer
 {
     public async Task HandleAsync(
         PriceCalculatedEvent @event,

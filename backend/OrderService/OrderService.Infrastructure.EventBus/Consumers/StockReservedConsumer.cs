@@ -11,10 +11,8 @@ using System.Text;
 
 namespace OrderService.Infrastructure.EventBus.Consumers;
 
-public class StockReservedConsumer(
-    IProcessedEventsRepository processedEvents,
-    ICommandHandler<UpdateOrderStockStatusCommand, bool> updateStockHandler)
-    : BaseConsumer(processedEvents)
+public class StockReservedConsumer(ICommandHandler<UpdateOrderStockStatusCommand, bool> updateStockHandler)
+    : BaseConsumer
 {
     public async Task HandleAsync(
         StockReservedEvent @event,

@@ -42,7 +42,6 @@ public static class PersistenceDependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
         services.AddScoped<IDbSession, UnitOfWork.UnitOfWork>();
         services.AddScoped<IPostgresConnectionFactory, PostgresConnectionFactory>();
-        services.AddScoped<IProcessedEventsRepository, ProcessedEventsRepository>();
 
         return services;
     }

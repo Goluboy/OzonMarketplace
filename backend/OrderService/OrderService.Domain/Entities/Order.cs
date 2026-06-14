@@ -26,7 +26,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
 
     private readonly List<IDomainEvent> _domainEvents = new();
     public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
-    public void ClearDomainEvents() => _domainEvents.Clear(); 
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     public bool CanBeModified() =>
         Status is OrderStatus.Created or OrderStatus.Paid;
@@ -88,7 +88,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         IEnumerable<OrderItem> items)
     {
         ArgumentNullException.ThrowIfNull(customerName);
-        
+
         var itemsList = items.ToList();
         if (itemsList.Count == 0)
         {
@@ -122,7 +122,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
             order.CustomerEmail,
             order.TotalAmount,
             order.DeliveryAddress,
-            order.Items.Select(i => i.ToSnapshot()).ToList(), 
+            order.Items.Select(i => i.ToSnapshot()).ToList(),
             order.CreatedAt));
 
 
@@ -130,10 +130,10 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         return order;
     }
 
-    
+
     private void RecalculateTotal()
     {
-        TotalAmount = new Money(Math.Round(_items.Sum(i => i.Subtotal.Value), 2, MidpointRounding.AwayFromZero));
+        TotalAmount = new Money(Math.Round(_items.Sum(i => i.Subtotal.Amount), 2, MidpointRounding.AwayFromZero));
     }
 
     public void AddItem(OrderItem item)
@@ -192,7 +192,18 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
             return;
         }
 
-        ChangeStatus(OrderStatus.Cancelled, cancelledBy, reason); 
+        ChangeStatus(OrderStatus.Cancelled, cancelledBy, reason);
+    }
+
+    public void ForceCancel(string reason)
+    {
+        if (Status == OrderStatus.Cancelled)
+        {
+            return;
+        }
+
+        // Принудительная отмена возможна из любого состояния
+        ChangeStatus(OrderStatus.Cancelled, null, reason);
     }
 
     public OrderStatusHistory ChangeStatus(

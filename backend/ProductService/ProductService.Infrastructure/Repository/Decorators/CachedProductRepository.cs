@@ -1,5 +1,7 @@
 ﻿using ProductService.Domain.Entities;
+using ProductService.Domain.ValueObjects;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
+using ProductService.Infrastructure.DAO;
 using ProductService.Infrastructure.Mappers;
 using Redis.Service;
 
@@ -14,10 +16,21 @@ public class CachedProductRepository(IProductRepository inner,  ICacheService ca
     {
         var key = GetProductKey(id);
         
-        var cachedProduct = await cache.GetAsync<Product>(key);
+        var cachedProduct = await cache.GetAsync<ProductDao>(key);
         if (cachedProduct != null)
         {
-            return cachedProduct;
+            return Product.Reconstruct(
+                id: cachedProduct.Id,
+                sellerId: cachedProduct.SellerId,
+                sku: cachedProduct.Sku,
+                name: cachedProduct.Name,
+                description: cachedProduct.Description,
+                price: new Money(cachedProduct.PriceAmount, cachedProduct.PriceCurrency),
+                categoryId: cachedProduct.CategoryId,
+                createdAt: cachedProduct.CreatedAt,
+                updatedAt: cachedProduct.UpdatedAt,
+                version: cachedProduct.Version,
+                images: cachedProduct.Images.Select(url => new ProductImage(url.Url)).ToList());
         }
         
         var product = await inner.GetAsync(id);

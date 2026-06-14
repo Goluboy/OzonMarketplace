@@ -10,6 +10,7 @@ public record OrderModel(
     string? DeliveryAddress,
     OrderStatus Status,
     decimal TotalAmount,
+    string Currency,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     List<OrderItemModel> Items);

@@ -5,7 +5,7 @@ public record CreateOrderCommand(
     string CustomerName,
     string CustomerEmail,
     string? DeliveryAddress,
-    List<CreateOrderCommand.CreateOrderItemCommand> Items)
+    List<CreateOrderCommand.CreateOrderItemCommand> Items) : ICommand<Guid>
 {
     public record CreateOrderItemCommand(
         Guid ProductId,

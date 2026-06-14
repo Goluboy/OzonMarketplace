@@ -7,11 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\Scripts\CreateQuartzTablePostgres.sql" />
-    <EmbeddedResource Include="Migrations\Scripts\DownQuartzTablesPostgres.sql" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="DotNetCore.CAP" Version="10.0.1" />
     <PackageReference Include="DotNetCore.CAP.Kafka" Version="10.0.1" />

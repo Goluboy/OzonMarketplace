@@ -1,5 +1,4 @@
-﻿using OrderService.Domain.Interfaces;
-using OrderService.Domain.ValueObjects;
+﻿using OrderService.Domain.ValueObjects;
 
 namespace OrderService.Domain.Entities;
 

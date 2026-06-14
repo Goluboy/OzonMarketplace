@@ -6,4 +6,5 @@ public record OrderItemModel(
     string ProductName,
     int Quantity,
     decimal Price,
+    string Currency,
     decimal Subtotal);

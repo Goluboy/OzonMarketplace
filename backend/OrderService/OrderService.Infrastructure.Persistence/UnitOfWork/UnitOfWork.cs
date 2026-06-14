@@ -1,9 +1,9 @@
-using System.Data;
-using System.Data.Common;
 using DotNetCore.CAP;
 using Npgsql;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.Infrastructure.Persistence.Provider;
+using System.Data;
+using System.Data.Common;
 
 namespace OrderService.Infrastructure.Persistence.UnitOfWork;
 

@@ -1,6 +1,6 @@
-﻿using OrderService.Domain.Entities;
+﻿using FluentAssertions;
+using OrderService.Domain.Entities;
 using OrderService.Domain.Tests.Fixtures;
-using FluentAssertions;
 using OrderService.Domain.ValueObjects;
 
 namespace OrderService.Domain.Tests.Entities;
@@ -22,9 +22,9 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         orderItem.ProductId.Should().Be(productId);
         orderItem.ProductName.Should().Be(productName);
         orderItem.Quantity.Should().Be(quantity);
-        orderItem.PriceAtPurchase.Value.Should().Be(price);
+        orderItem.PriceAtPurchase.Amount.Should().Be(price);
         orderItem.PriceAtPurchase.Currency.Should().Be("RUB");
-        orderItem.Subtotal.Value.Should().Be(52.50m);
+        orderItem.Subtotal.Amount.Should().Be(52.50m);
         orderItem.Subtotal.Currency.Should().Be("RUB");
         orderItem.OrderId.Should().Be(null);
         orderItem.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
@@ -71,10 +71,10 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         var orderItem = OrderItem.Create(productId, productName, quantity, price);
 
         orderItem.Should().NotBeNull();
-        orderItem.PriceAtPurchase.Value.Should().Be(0m);
+        orderItem.PriceAtPurchase.Amount.Should().Be(0m);
         orderItem.PriceAtPurchase.Currency.Should().Be("RUB");
         orderItem.Subtotal.Currency.Should().Be("RUB");
-        orderItem.Subtotal.Value.Should().Be(0m);
+        orderItem.Subtotal.Amount.Should().Be(0m);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         orderItem.UpdateQuantity(newQuantity);
 
         orderItem.Quantity.Should().Be(newQuantity);
-        orderItem.Subtotal.Value.Should().Be(100.00m);
+        orderItem.Subtotal.Amount.Should().Be(100.00m);
         orderItem.Subtotal.Currency.Should().Be("RUB");
         orderItem.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }

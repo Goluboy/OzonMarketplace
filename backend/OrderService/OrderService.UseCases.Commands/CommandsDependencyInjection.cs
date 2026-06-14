@@ -8,7 +8,7 @@ public static class CommandsDependencyInjection
     public static IServiceCollection AddCommands(this IServiceCollection services)
     {
         var assembly = Assembly.GetExecutingAssembly();
-        
+
         var handlerTypes = assembly.GetTypes()
             .Where(t => t.Name.EndsWith("CommandHandler") && !t.IsAbstract && !t.IsInterface);
 

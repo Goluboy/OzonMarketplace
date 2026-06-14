@@ -13,6 +13,11 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["OrderService.Http/OrderService.Http.csproj", "OrderService.Http/"]
+COPY ["OrderService.Infrastructure.EventBus/OrderService.Infrastructure.EventBus.csproj", "OrderService.Infrastructure.EventBus/"]
+COPY ["OrderService.Domain/OrderService.Domain.csproj", "OrderService.Domain/"]
+COPY ["OrderService.Infrastructure.Persistence/OrderService.Infrastructure.Persistence.csproj", "OrderService.Infrastructure.Persistence/"]
+COPY ["OrderService.UseCases.Commands/OrderService.UseCases.Commands.csproj", "OrderService.UseCases.Commands/"]
+COPY ["OrderService.UseCases.Queries/OrderService.UseCases.Queries.csproj", "OrderService.UseCases.Queries/"]
 RUN dotnet restore "./OrderService.Http/OrderService.Http.csproj"
 COPY . .
 WORKDIR "/src/OrderService.Http"

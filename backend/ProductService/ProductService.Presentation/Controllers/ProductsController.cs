@@ -10,6 +10,7 @@ namespace ProductService.Presentation.Controllers;
 
 [ApiController]
 [Route("api/products")]
+[Authorize(Policy = "SellerOrAdmin")]
 public class ProductsController(IProductCommandService commandService, IProductQueryService queryService, IMediaService mediaService) : ControllerBase
 {
     [HttpGet]

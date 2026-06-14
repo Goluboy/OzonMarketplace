@@ -149,7 +149,13 @@ services:
       Minio__SecretKey: minioadmin
       Minio__BucketName: marketplace-bucket
       Minio__UseHttp: true
+
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
+      Keycloak__Audience: marketplace-app
+      Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
     depends_on:
+      keycloak:
+        condition: service_healthy
       postgres:
         condition: service_started
       kafka:
@@ -240,6 +246,112 @@ services:
     networks:
       - app-net
 
+  order-db:
+    image: postgres:18-alpine
+    container_name: order-db
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_password
+    ports:
+      - "5433:5432"  
+    volumes:
+      - order_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d orders"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-net
+
+
+  order-service:
+    restart: always
+    build:
+      context: ../backend/OrderService
+      dockerfile: OrderService.Http/Dockerfile
+    container_name: order-service
+    ports:
+      - "5002:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: Host=order-db;Port=5432;Database=orders;Username=order_user;Password=order_password;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      
+      KafkaSettings__Servers: kafka:9092
+      
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
+      Keycloak__Audience: marketplace-app
+      Keycloak__RequireHttpsMetadata: "false"
+      
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      
+    depends_on:
+      order-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+    networks:
+      - app-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app-net
+    restart: always
+
+  loki:
+    image: grafana/loki:3.7
+    container_name: loki
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+    ports:
+      - "3100:3100"
+    networks:
+      - app-net
+    restart: always
+
+  promtail:
+    image: grafana/promtail:3.6.11
+    container_name: promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+    networks:
+      - app-net
+    restart: always
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    networks:
+      - app-net
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3200:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - app-net
+    restart: always
+
 volumes:
   kafka-data:
   postgres-data:
@@ -247,7 +359,10 @@ volumes:
   minio-data:
   redis_data:
   redis_insight_data:
-
+  order_data:
+  prometheus-data:
+  grafana-data:  
+  
 networks:
   app-net:
     driver: bridge

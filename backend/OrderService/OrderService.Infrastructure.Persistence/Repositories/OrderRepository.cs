@@ -110,6 +110,144 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
         return orders;
     }
 
+    public async Task<(IEnumerable<Order> Orders, int TotalCount)> GetAllAsync(
+    int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        const string countSql = "SELECT COUNT(*) FROM \"Orders\"";
+        var totalCount = await dbSession.Connection.QuerySingleAsync<int>(
+            countSql, transaction: dbSession.Transaction);
+
+        const string sql = """
+                       SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
+                              o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                              i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
+                              i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
+                       FROM "Orders" o
+                       INNER JOIN (
+                           SELECT "Id" 
+                           FROM "Orders"
+                           ORDER BY "CreatedAt" DESC
+                           OFFSET @Offset ROWS
+                           FETCH NEXT @PageSize ROWS ONLY
+                       ) paged ON o."Id" = paged."Id"
+                       LEFT JOIN "OrderItems" i ON o."Id" = i."OrderId"
+                       ORDER BY o."CreatedAt" DESC
+                       """;
+
+        var rows = await dbSession.Connection.QueryAsync(
+            sql,
+            new { Offset = (page - 1) * pageSize, PageSize = pageSize },
+            transaction: dbSession.Transaction);
+
+        var groupedRows = rows.GroupBy(r => (Guid)r.Id);
+        var orders = new List<Order>();
+
+        foreach (var group in groupedRows)
+        {
+            orders.Add(RehydrateOrderAggregate(group));
+        }
+
+        return (orders, totalCount);
+    }
+
+    public async Task<IEnumerable<Order>> GetAllAsync(
+    Guid? customerId,
+    OrderStatus? status,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    int page,
+    int pageSize,
+    CancellationToken cancellationToken = default)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (customerId.HasValue)
+        {
+            conditions.Add("\"CustomerId\" = @CustomerId");
+            parameters.Add("@CustomerId", customerId.Value);
+        }
+
+        if (status.HasValue)
+        {
+            conditions.Add("\"Status\" = @Status");
+            parameters.Add("@Status", (int)status.Value);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            conditions.Add("\"CreatedAt\" >= @DateFrom");
+            parameters.Add("@DateFrom", dateFrom.Value);
+        }
+
+        if (dateTo.HasValue)
+        {
+            conditions.Add("\"CreatedAt\" <= @DateTo"); 
+            parameters.Add("@DateTo", dateTo.Value);
+        }
+
+        var whereClause = conditions.Any() ? "WHERE " + string.Join(" AND ", conditions) : "";
+        var orderByClause = "ORDER BY \"CreatedAt\" DESC";
+
+        const string sql = """
+                       SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
+                              o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                              i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
+                              i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
+                       FROM "Orders" o
+                       INNER JOIN (
+                           SELECT "Id", "CreatedAt"
+                           FROM "Orders"
+                           {WhereClause}
+                           {OrderByClause}
+                           OFFSET @Offset ROWS
+                           FETCH NEXT @PageSize ROWS ONLY
+                       ) paged ON o."Id" = paged."Id"
+                       LEFT JOIN "OrderItems" i ON o."Id" = i."OrderId"
+                       ORDER BY o."CreatedAt" DESC
+                       """;
+
+        var fullSql = sql
+            .Replace("{WhereClause}", whereClause)
+            .Replace("{OrderByClause}", orderByClause);
+
+        parameters.Add("@Offset", (page - 1) * pageSize);
+        parameters.Add("@PageSize", pageSize);
+
+        var rows = await dbSession.Connection.QueryAsync(fullSql, parameters, transaction: dbSession.Transaction);
+
+        var groupedRows = rows.GroupBy(r => (Guid)r.Id);
+        var orders = new List<Order>();
+
+        foreach (var group in groupedRows)
+        {
+            orders.Add(RehydrateOrderAggregate(group));
+        }
+
+        return orders;
+    }
+
+    public async Task<Order?> GetByIdForAdminAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+                           SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
+                                  o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."Version",
+                                  i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
+                                  i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
+                           FROM "Orders" o
+                           LEFT JOIN "OrderItems" i ON o."Id" = i."OrderId"
+                           WHERE o."Id" = @Id
+                           ORDER BY o."Id", i."CreatedAt"
+                           """;
+
+        var rows = await dbSession.Connection.QueryAsync(sql, new { Id = id }, transaction: dbSession.Transaction);
+
+        if (!rows.Any())
+            return null;
+
+        return RehydrateOrderAggregate(rows);
+    }
+
     public async Task SaveAsync(Order order, CancellationToken cancellationToken = default)
     {
         const string updateOrderSql = """
@@ -134,7 +272,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
             CustomerEmail = order.CustomerEmail.Value,
             DeliveryAddress = order.DeliveryAddress?.AddressLine,
             Status = (int)order.Status,
-            TotalAmount = order.TotalAmount.Value,
+            TotalAmount = order.TotalAmount.Amount,
             order.CreatedAt,
             order.UpdatedAt,
             order.CancelledAt,
@@ -155,8 +293,8 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
             item.ProductId,
             item.ProductName,
             item.Quantity,
-            PriceAtPurchase = item.PriceAtPurchase.Value,
-            Subtotal = item.Subtotal.Value,
+            PriceAtPurchase = item.PriceAtPurchase.Amount,
+            Subtotal = item.Subtotal.Amount,
             item.CreatedAt,
             item.UpdatedAt
         });
@@ -167,5 +305,43 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await dbSession.Connection.ExecuteAsync("DELETE FROM \"Orders\" WHERE \"Id\" = @Id", new { Id = id }, transaction: dbSession.Transaction);
+    }
+
+    public async Task<int> GetTotalCountAsync(Guid? customerId, OrderStatus? status, DateTime? dateFrom, DateTime? dateTo, CancellationToken cancellationToken = default)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (customerId.HasValue)
+        {
+            conditions.Add("o.\"CustomerId\" = @CustomerId");
+            parameters.Add("@CustomerId", customerId.Value);
+        }
+
+        if (status.HasValue)
+        {
+            conditions.Add("o.\"Status\" = @Status");
+            parameters.Add("@Status", (int)status.Value);
+        }
+
+        if (dateFrom.HasValue)
+        {
+            conditions.Add("o.\"CreatedAt\" >= @DateFrom");
+            parameters.Add("@DateFrom", dateFrom.Value);
+        }
+
+        if (dateTo.HasValue)
+        {
+            conditions.Add("o.\"CreatedAt\" <= @DateTo");
+            parameters.Add("@DateTo", dateTo.Value);
+        }
+
+        var whereClause = conditions.Any() ? "WHERE " + string.Join(" AND ", conditions) : "";
+
+        const string sql = "SELECT COUNT(*) FROM \"Orders\" o {WhereClause}";
+
+        var fullSql = sql.Replace("{WhereClause}", whereClause);
+
+        return await dbSession.Connection.QuerySingleAsync<int>(fullSql, parameters, transaction: dbSession.Transaction);
     }
 }

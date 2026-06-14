@@ -6,4 +6,4 @@ public record UpdateOrderStatusCommand(
     Guid OrderId,
     OrderStatus NewStatus,
     Guid ChangedBy,
-    string? Comment = null);
+    string? Comment = null) : ICommand<bool>;

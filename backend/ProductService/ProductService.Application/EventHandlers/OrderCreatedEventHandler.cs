@@ -52,16 +52,7 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     ReservedItems = reservedItems
                 };
 
-                var priceCalculatedEvent = new PriceCalculatedEvent
-                {
-                    CorrelationId = @event.CorrelationId,
-                    OccurredOn = DateTime.UtcNow,
-                    TotalAmount = totalAmount,
-                    Currency = "RUB"
-                };
-
-                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockReservedEvent, headers);
-                await eventPublisher.PublishAsync(Topics.Prices.PricesTopic, priceCalculatedEvent, headers);
+                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockReservedEvent, new Dictionary<string, string>());
             }
             else
             {
@@ -74,7 +65,7 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     FailedProductIds = failedProductIds
                 };
                 
-                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockFailedEvent, headers);
+                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockFailedEvent, new Dictionary<string, string>());
             }
 
             await unitOfWork.CommitAsync();

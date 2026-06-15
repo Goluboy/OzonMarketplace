@@ -1,9 +1,11 @@
-﻿using Dapper;
+﻿using System.Text.Json;
+using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProductService.Infrastructure.Abstractions.Caching.Abstractions;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
+using ProductService.Infrastructure.Abstractions.EventPublisher.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
@@ -58,6 +60,8 @@ public static class InfrastructureExtensions
             sp.GetRequiredService<ICacheService>(),
             sp.GetRequiredService<IUnitOfWork>(),
             sp.GetRequiredService<ILogger<CachedProductRepository>>()));
+
+        services.AddScoped<IEventPublisher, EventPublisher.EventPublisher>();
         
         services.AddCap(x =>
         {
@@ -74,7 +78,18 @@ public static class InfrastructureExtensions
                                 ?? throw new NullReferenceException("Connection string 'KafkaSettings' not found."); 
             });
 
-            x.UseDashboard();
+            x.FailedRetryCount = 5;
+            x.FailedRetryInterval = 60;
+            
+            x.SucceedMessageExpiredAfter = 24 * 3600; 
+            
+            x.UseDashboard(opt =>
+            {
+                opt.PathMatch = "/cap";
+            });
+            
+            x.DefaultGroupName = "product-service-group";
+            x.GroupNamePrefix = "product-service";
         });
         
         return services;

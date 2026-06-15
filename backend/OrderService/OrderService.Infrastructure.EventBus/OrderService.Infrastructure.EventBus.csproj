@@ -12,7 +12,7 @@
 		<PackageReference Include="DotNetCore.CAP.Kafka" Version="10.0.1" />
 		<PackageReference Include="DotNetCore.CAP.PostgreSql" Version="10.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
-		<PackageReference Include="Netu.IntegrationEvents" Version="2.0.1" />
+		<PackageReference Include="Netu.IntegrationEvents" Version="3.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

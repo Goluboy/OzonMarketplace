@@ -1,6 +1,7 @@
 ﻿using DotNetCore.CAP;
 using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.IntegrationEvents.Order;
 using OrderService.Infrastructure.EventBus.Consumers;
 
 namespace OrderService.Infrastructure.EventBus;

@@ -2,6 +2,7 @@
 using DotNetCore.CAP.Messages;
 using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.IntegrationEvents.Order;
 using IntegrationEvents.Shared;
 using Microsoft.Extensions.Logging;
 using OrderService.Domain.Entities;

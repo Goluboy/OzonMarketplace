@@ -11,7 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Netu.IntegrationEvents" Version="2.0.1" />
+      <PackageReference Include="Netu.IntegrationEvents" Version="3.0.0" />
     </ItemGroup>
 
 </Project>

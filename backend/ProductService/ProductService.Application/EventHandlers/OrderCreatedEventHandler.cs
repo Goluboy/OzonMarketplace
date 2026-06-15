@@ -1,5 +1,6 @@
 ﻿using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.IntegrationEvents.Order;
 using IntegrationEvents.Shared;
 using ProductService.Infrastructure.Abstractions.EventHandlers.Abstractions;
 using ProductService.Infrastructure.Abstractions.EventPublisher.Abstractions;

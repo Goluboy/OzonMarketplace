@@ -3,13 +3,16 @@ using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ProductService.Application.EventHandlers;
 using ProductService.Infrastructure.Abstractions.Caching.Abstractions;
 using ProductService.Infrastructure.Abstractions.DTO.Product.Query;
+using ProductService.Infrastructure.Abstractions.EventHandlers.Abstractions;
 using ProductService.Infrastructure.Abstractions.EventPublisher.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using ProductService.Infrastructure.Caching;
+using ProductService.Infrastructure.Dispatchers;
 using ProductService.Infrastructure.Helpers.JsonbSerialization;
 using ProductService.Infrastructure.Persistence.Provider;
 using ProductService.Infrastructure.Repository;
@@ -62,6 +65,8 @@ public static class InfrastructureExtensions
             sp.GetRequiredService<ILogger<CachedProductRepository>>()));
 
         services.AddScoped<IEventPublisher, EventPublisher.EventPublisher>();
+        services.AddScoped<IOrderCreatedEventHandler, OrderCreatedEventHandler>();
+        services.AddScoped<OrderEventDispatcher>();        
         
         services.AddCap(x =>
         {

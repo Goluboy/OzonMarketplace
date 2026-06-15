@@ -1,7 +1,7 @@
 ﻿using DotNetCore.CAP;
 using ProductService.Infrastructure.Abstractions.EventPublisher.Abstractions;
 
-namespace ProductService.Infrastructure.EventPublisher;
+namespace ProductService.Infrastructure.Saga.EventPublisher;
 
 public class EventPublisher(ICapPublisher capPublisher) : IEventPublisher
 {

@@ -59,11 +59,9 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     TotalAmount = totalAmount,
                     Currency = "RUB"
                 };
-                
-                await Task.WhenAll(
-                    eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockReservedEvent, headers),
-                    eventPublisher.PublishAsync(Topics.Prices.PricesTopic, priceCalculatedEvent, headers)
-                );
+
+                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockReservedEvent, headers);
+                await eventPublisher.PublishAsync(Topics.Prices.PricesTopic, priceCalculatedEvent, headers);
             }
             else
             {

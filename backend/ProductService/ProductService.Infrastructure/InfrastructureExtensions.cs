@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using Dapper;
+﻿using Dapper;
+using DotNetCore.CAP;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,14 +12,18 @@ using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 using ProductService.Infrastructure.Caching;
-using ProductService.Infrastructure.Dispatchers;
 using ProductService.Infrastructure.Helpers.JsonbSerialization;
 using ProductService.Infrastructure.Persistence.Provider;
 using ProductService.Infrastructure.Repository;
 using ProductService.Infrastructure.Repository.Decorators;
 using ProductService.Infrastructure.Repository.Products;
+using ProductService.Infrastructure.Saga.Dispatchers;
+using ProductService.Infrastructure.Saga.EventPublisher;
+using ProductService.Infrastructure.Saga.Filters;
+using ProductService.Infrastructure.Saga.Tracing;
 using ProductService.Infrastructure.UnitOfWork;
 using Redis.Service;
+using System.Text.Json;
 
 namespace ProductService.Infrastructure;
 
@@ -64,7 +68,7 @@ public static class InfrastructureExtensions
             sp.GetRequiredService<IUnitOfWork>(),
             sp.GetRequiredService<ILogger<CachedProductRepository>>()));
 
-        services.AddScoped<IEventPublisher, EventPublisher.EventPublisher>();
+        services.AddScoped<IEventPublisher, EventPublisher>();
         services.AddScoped<IOrderCreatedEventHandler, OrderCreatedEventHandler>();
         services.AddScoped<OrderEventDispatcher>();        
         
@@ -95,8 +99,22 @@ public static class InfrastructureExtensions
             
             x.DefaultGroupName = "product-service-group";
             x.GroupNamePrefix = "product-service";
-        });
-        
+        }).AddSubscribeFilter<SagaCorrelationFilter>();
+
+        var capDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ICapPublisher));
+        if (capDescriptor != null)
+        {
+            var innerType = capDescriptor.ImplementationType!;
+            var lifetime = capDescriptor.Lifetime;
+
+            services.Remove(capDescriptor);
+
+            services.Add(new ServiceDescriptor(innerType, innerType, lifetime));
+
+            services.AddTransient<ICapPublisher>(sp =>
+                new CorrelatedCapPublisher((ICapPublisher)sp.GetRequiredService(innerType)));
+        }
+
         return services;
     }
 }

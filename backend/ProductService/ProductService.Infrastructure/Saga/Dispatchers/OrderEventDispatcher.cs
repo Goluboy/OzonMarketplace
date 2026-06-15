@@ -5,7 +5,7 @@ using IntegrationEvents.IntegrationEvents.Order;
 using Microsoft.Extensions.Logging;
 using ProductService.Infrastructure.Abstractions.EventHandlers.Abstractions;
 
-namespace ProductService.Infrastructure.Dispatchers;
+namespace ProductService.Infrastructure.Saga.Dispatchers;
 
 public class OrderEventDispatcher(IOrderCreatedEventHandler eventHandler, ILogger<OrderEventDispatcher> logger) : ICapSubscribe
 {

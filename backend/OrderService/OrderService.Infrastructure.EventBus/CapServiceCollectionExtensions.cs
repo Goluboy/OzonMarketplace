@@ -4,6 +4,7 @@ using DotNetCore.CAP.Messages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OrderService.Infrastructure.EventBus.Consumers;
+using OrderService.Infrastructure.EventBus.Dispatcher;
 using OrderService.Infrastructure.EventBus.Filters;
 using OrderService.Infrastructure.EventBus.Tracing;
 
@@ -45,7 +46,16 @@ public static class CapServiceCollectionExtensions
 
         }).AddSubscribeFilter<SagaCorrelationFilter>();
 
-        services.AddTransient<OrderSagaTimeoutConsumer>();
+        services.AddScoped<OrderEventDispatcher>();
+        services.AddScoped<ProductsEventDispatcher>();
+        services.AddScoped<PricesEventDispatcher>();
+
+        services.AddScoped<OrderCreatedConsumer>();
+        services.AddScoped<OrderSagaTimeoutConsumer>();
+        services.AddScoped<OrderCancelledConsumer>();
+        services.AddScoped<StockReservedConsumer>();
+        services.AddScoped<StockReservationFailedConsumer>();
+        services.AddScoped<PriceCalculatedConsumer>();
 
         var capDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ICapPublisher));
         if (capDescriptor != null)

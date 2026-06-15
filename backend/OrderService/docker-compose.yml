@@ -1,119 +1,279 @@
+name: infrastructure
 services:
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "3200"
+        protocol: tcp
+    restart: always
+    volumes:
+      - type: volume
+        source: grafana-data
+        target: /var/lib/grafana
+        volume: {}
+      - type: bind
+        source: C:\Users\Administrator\source\repos\OzonMarketplace\infrastructure\monitoring\grafana
+        target: /etc/grafana/provisioning/datasources
+        read_only: true
+        bind: {}
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/all-in-one:latest
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 16686
+        published: "16686"
+        protocol: tcp
+      - mode: ingress
+        target: 4317
+        published: "4317"
+        protocol: tcp
+    restart: always
   kafka:
-    image: apache/kafka:3.7.0
     container_name: kafka
-    ports:
-      - "9092:9092"
-      - "29092:29092" # Порт для подключения с хост-машины (Rider/localhost)
     environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
-      
-      # Настраиваем два listener'а: один для docker-сети, второй для хоста
-      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      
-      # ВКЛЮЧАЕМ АВТО-СОЗДАНИЕ ТОПИКОВ (решает проблему отсутствия топиков)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      
-    volumes:
-      - kafka-data:/var/lib/kafka/data
-    networks:
-      - order-net
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
-    ports:
-      - "8082:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local-dev
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    networks:
-      - order-net
-    depends_on:
-      - kafka
-
-  keycloak-db:
-    image: postgres:18-alpine
-    container_name: keycloak-db
-    environment:
-      POSTGRES_DB: ${KEYCLOAK_DB_NAME}
-      POSTGRES_USER: ${KEYCLOAK_DB_USER}
-      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-    volumes:
-      - keycloak_data:/var/lib/postgresql
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_NODE_ID: "1"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      test:
+        - CMD-SHELL
+        - /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 | grep -q 'ApiVersion'
+      timeout: 10s
+      interval: 15s
+      retries: 8
+      start_period: 45s
+    image: apache/kafka:3.7.0
     networks:
-      - order-net
-
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 9092
+        published: "9092"
+        protocol: tcp
+      - mode: ingress
+        target: 29092
+        published: "29092"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: kafka-data
+        target: /var/lib/kafka/data
+        volume: {}
+  kafka-init:
+    command:
+      - "echo \"ΓÅ│ Waiting for Kafka to be ready...\"\n\n# ╨û╨┤╨╡╨╝, ╨┐╨╛╨║╨░ Kafka ╨╛╤é╨▓╨╡╤é╨╕╤é ╨╜╨░ ╨╖╨░╨┐╤Ç╨╛╤ü API versions\nuntil /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 > /dev/null 2>&1; do\n  echo \"ΓÅ│ Kafka is not ready yet, retrying in 2s...\"\n  sleep 2\ndone\n\necho \"Γ£à Kafka is ready! Creating topics...\"\n\n# ╨ñ╤â╨╜╨║╤å╨╕╤Å ╨┤╨╗╤Å ╤ü╨╛╨╖╨┤╨░╨╜╨╕╤Å ╤é╨╛╨┐╨╕╨║╨░ ╤ü ╨┐╤Ç╨╛╨▓╨╡╤Ç╨║╨╛╨╣ ╤ü╤â╤ë╨╡╤ü╤é╨▓╨╛╨▓╨░╨╜╨╕╤Å\ncreate_topic() {\n  local topic=$$1\n  local partitions=$$2\n  local retention=$$3\n  \n  echo \"\U0001F50D Checking if topic '$$topic' exists...\"\n  \n  if /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list | grep -q \"^$$topic$$\"; then\n    echo \"Γä╣∩╕Å  Topic '$$topic' already exists, skipping\"\n  else\n    echo \"\U0001F680 Creating topic '$$topic' with $$partitions partitions...\"\n    /opt/kafka/bin/kafka-topics.sh \\\n      --bootstrap-server kafka:9092 \\\n      --create \\\n      --topic \"$$topic\" \\\n      --partitions \"$$partitions\" \\\n      --replication-factor 1 \\\n      --config retention.ms=\"$$retention\" \\\n      --config cleanup.policy=delete\n    \n    if [ $$? -eq 0 ]; then\n      echo \"Γ£à Topic '$$topic' created successfully\"\n    else\n      echo \"Γ¥î Failed to create topic '$$topic'\"\n      exit 1\n    fi\n  fi\n}\n\n# ╨í╨╛╨╖╨┤╨░╨╡╨╝ ╤é╨╛╨┐╨╕╨║╨╕ ╨┤╨╗╤Å marketplace\n# orders: 6 ╨┐╨░╤Ç╤é╨╕╤å╨╕╨╣ (╨┤╨╗╤Å ╨▓╤ï╤ü╨╛╨║╨╛╨╣ ╨┐╤Ç╨╛╨┐╤â╤ü╨║╨╜╨╛╨╣ ╤ü╨┐╨╛╤ü╨╛╨▒╨╜╨╛╤ü╤é╨╕)\ncreate_topic \"orders\" 6 604800000      # 7 ╨┤╨╜╨╡╨╣ retention\n\n# products: 6 ╨┐╨░╤Ç╤é╨╕╤å╨╕╨╣\ncreate_topic \"products\" 6 604800000    # 7 ╨┤╨╜╨╡╨╣ retention\n\n# prices: 3 ╨┐╨░╤Ç╤é╨╕╤å╨╕╨╕ (╨╝╨╡╨╜╤î╤ê╨╡ ╤ü╨╛╨▒╤ï╤é╨╕╨╣)\ncreate_topic \"prices\" 3 604800000      # 7 ╨┤╨╜╨╡╨╣ retention\n\necho \"\"\necho \"\U0001F389 All topics initialized successfully!\"\necho \"\"\n\n# ╨ƒ╨╛╨║╨░╨╖╤ï╨▓╨░╨╡╨╝ ╨▓╤ü╨╡ ╤ü╨╛╨╖╨┤╨░╨╜╨╜╤ï╨╡ ╤é╨╛╨┐╨╕╨║╨╕\necho \"\U0001F4CB Current topics in Kafka:\"\n/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list\n"
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+        required: true
+    entrypoint:
+      - /bin/bash
+      - -c
+    image: apache/kafka:3.7.0
+    networks:
+      app-net: null
+    restart: "no"
+  kafka-ui:
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_started
+        required: true
+    environment:
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_NAME: local-dev
+    image: provectuslabs/kafka-ui:latest
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "8082"
+        protocol: tcp
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
-    container_name: keycloak
-    command: 
+    command:
       - start-dev
       - --import-realm
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keycloak-db:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_NAME}
-      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
-      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-      KC_HOSTNAME_STRICT: ${KEYCLOAK_HOSTNAME_STRICT}
-      KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED}
-      KC_HEALTH_ENABLED: "true"
-    volumes:
-      - ../../infrastructure/keycloak/realm-export.json:/opt/keycloak/data/import/marketplace-realm.json:ro
-    ports:
-      - "${KEYCLOAK_HTTP_PORT}:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
-      interval: 10s
-      timeout: 10s
-      retries: 30
-      start_period: 90s
+    container_name: keycloak
     depends_on:
       keycloak-db:
         condition: service_healthy
-    networks:
-      - order-net
-
-  keycloak-init:
+        required: true
+    environment:
+      KC_BOOTSTRAP_ADMIN_PASSWORD: change_me_in_production
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_DB: postgres
+      KC_DB_PASSWORD: change_me_in_production
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bash -c 'echo > /dev/tcp/127.0.0.1/8080'
+      timeout: 10s
+      interval: 10s
+      retries: 30
+      start_period: 1m30s
     image: quay.io/keycloak/keycloak:26.0
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "8080"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\Users\Administrator\source\repos\OzonMarketplace\infrastructure\keycloak\realm-export.json
+        target: /opt/keycloak/data/import/marketplace-realm.json
+        read_only: true
+        bind: {}
+  keycloak-db:
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_PASSWORD: change_me_in_production
+      POSTGRES_USER: keycloak
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U keycloak
+      timeout: 5s
+      interval: 5s
+      retries: 5
+    image: postgres:18-alpine
+    networks:
+      app-net: null
+    volumes:
+      - type: volume
+        source: keycloak_data
+        target: /var/lib/postgresql
+        volume: {}
+  keycloak-init:
     container_name: keycloak-init
     depends_on:
       keycloak:
         condition: service_healthy
-    volumes:
-      - ../../infrastructure/keycloak/init-users.sh:/tmp/init-users.sh:ro
-    entrypoint: ["/bin/bash", "/tmp/init-users.sh"]
+        required: true
+    entrypoint:
+      - /bin/bash
+      - /tmp/init-users.sh
     environment:
-      KC_ADMIN: ${KEYCLOAK_ADMIN_USERNAME:-admin}
-      KC_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KC_SERVER_URL: http://keycloak:8080
+      ADMIN_USER_EMAIL: admin@example.com
+      ADMIN_USER_PASSWORD: admin123
+      KC_ADMIN: admin
+      KC_ADMIN_PASSWORD: change_me_in_production
       KC_REALM: marketplace
-      TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test@example.com}
-      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-password}
-      ADMIN_USER_EMAIL: ${ADMIN_USER_EMAIL:-admin@example.com}
-      ADMIN_USER_PASSWORD: ${ADMIN_USER_PASSWORD:-admin123}
+      KC_SERVER_URL: http://keycloak:8080
+      TEST_USER_EMAIL: test@example.com
+      TEST_USER_PASSWORD: password
+    image: quay.io/keycloak/keycloak:26.0
     networks:
-      - order-net
+      app-net: null
     restart: "no"
+    volumes:
+      - type: bind
+        source: C:\Users\Administrator\source\repos\OzonMarketplace\infrastructure\keycloak\init-users.sh
+        target: /tmp/init-users.sh
+        read_only: true
+        bind: {}
+  loki:
+    container_name: loki
+    image: grafana/loki:3.7
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 3100
+        published: "3100"
+        protocol: tcp
+    restart: always
+    volumes:
+      - type: bind
+        source: C:\Users\Administrator\source\repos\OzonMarketplace\infrastructure\monitoring\loki-config.yml
+        target: /etc/loki/local-config.yaml
+        read_only: true
+        bind: {}
+  minio:
+    command:
+      - server
+      - /data
+      - --console-address
+      - :9001
+    container_name: minio
+    environment:
+      MINIO_API_CORS_ALLOW_ORIGIN: '*'
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: minioadmin
+    image: minio/minio:latest
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 9000
+        published: "9000"
+        protocol: tcp
+      - mode: ingress
+        target: 9001
+        published: "9001"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: minio-data
+        target: /var/lib/minio/data
+        volume: {}
+  minio-init:
+    container_name: minio_init
+    depends_on:
+      minio:
+        condition: service_started
+        required: true
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |2
 
+        echo '╨₧╨╢╨╕╨┤╨░╨╜╨╕╨╡ ╨╖╨░╨┐╤â╤ü╨║╨░ MinIO...';
+        until /usr/bin/mc alias set localminio http://minio:9000 minioadmin minioadmin > /dev/null 2>&1; do
+          echo 'MinIO ╨╡╤ë╨╡ ╨╜╨╡ ╨│╨╛╤é╨╛╨▓, ╨┐╨╛╨▓╤é╨╛╤Ç╨╜╨░╤Å ╨┐╨╛╨┐╤ï╤é╨║╨░ ╤ç╨╡╤Ç╨╡╨╖ 2 ╤ü╨╡╨║╤â╨╜╨┤╤ï...';
+          sleep 2;
+        done;
+        echo '╨í╨╛╨╡╨┤╨╕╨╜╨╡╨╜╨╕╨╡ ╤â╤ü╤é╨░╨╜╨╛╨▓╨╗╨╡╨╜╨╛. ╨¥╨░╤ü╤é╤Ç╨╛╨╣╨║╨░ ╨▒╨░╨║╨╡╤é╨░...';
+        if ! /usr/bin/mc ls localminio/marketplace-bucket > /dev/null 2>&1; then
+          /usr/bin/mc mb localminio/marketplace-bucket;
+          /usr/bin/mc anonymous set download localminio/marketplace-bucket;
+          echo '╨æ╨░╨║╨╡╤é marketplace-bucket ╤â╤ü╨┐╨╡╤ê╨╜╨╛ ╤ü╨╛╨╖╨┤╨░╨╜.';
+        else
+          echo '╨æ╨░╨║╨╡╤é ╤â╨╢╨╡ ╤ü╤â╤ë╨╡╤ü╤é╨▓╤â╨╡╤é.';
+        fi;
+        /usr/bin/mc anonymous set download localminio/marketplace-bucket;
+        echo '╨ƒ╤â╨▒╨╗╨╕╤ç╨╜╤ï╨╣ ╨┤╨╛╤ü╤é╤â╨┐ (download) ╤â╤ü╨┐╨╡╤ê╨╜╨╛ ╨┐╤Ç╨╕╨╝╨╡╨╜╨╡╨╜ ╨║ ╨▒╨░╨║╨╡╤é╤â.';
+        exit 0;
+    image: minio/mc:latest
+    networks:
+      app-net: null
   order-db:
     image: postgres:18-alpine
     container_name: order-db
@@ -131,7 +291,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - order-net
+      app-net: null
 
   orderservice.http:
     image: ${DOCKER_REGISTRY-}orderservicehttp
@@ -158,14 +318,188 @@ services:
       keycloak:
         condition: service_healthy
     networks:
-      - order-net
+      app-net: null
 
-
-volumes:
-  kafka-data:
-  keycloak_data:
-  order_data: 
-
+  postgres:
+    container_name: postgres
+    environment:
+      POSTGRES_DB: marketplace
+      POSTGRES_PASSWORD: dev
+      POSTGRES_USER: dev
+    image: postgres:18-alpine
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5432"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres-data
+        target: /var/lib/postgresql
+        volume: {}
+  product-service:
+    build:
+      context: C:\Users\Administrator\source\repos\OzonMarketplace\backend
+      dockerfile: ProductService/Dockerfile
+    container_name: product-service
+    depends_on:
+      kafka:
+        condition: service_started
+        required: true
+      keycloak:
+        condition: service_healthy
+        required: true
+      minio:
+        condition: service_started
+        required: true
+      postgres:
+        condition: service_started
+        required: true
+      redis:
+        condition: service_healthy
+        required: true
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__PostgresConnectionString: Host=postgres;Port=5432;Database=marketplace;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      KafkaSettings__Servers: kafka:9092
+      Keycloak__Audience: marketplace-app
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
+      Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
+      Minio__AccessKey: minioadmin
+      Minio__BucketName: marketplace-bucket
+      Minio__Endpoint: http://minio:9000
+      Minio__ExternalEndpoint: http://localhost:9000
+      Minio__SecretKey: minioadmin
+      Minio__UseHttp: "true"
+      Redis__ConnectionString: redis:6379,password=redispassword,abortConnect=false
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "5001"
+        protocol: tcp
+    restart: always
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 9090
+        published: "9090"
+        protocol: tcp
+    restart: always
+    volumes:
+      - type: bind
+        source: C:\Users\Administrator\source\repos\OzonMarketplace\infrastructure\monitoring\prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+        bind: {}
+      - type: volume
+        source: prometheus-data
+        target: /prometheus
+        volume: {}
+  promtail:
+    container_name: promtail
+    image: grafana/promtail:3.6.11
+    networks:
+      app-net: null
+    restart: always
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+        bind: {}
+      - type: bind
+        source: /var/log
+        target: /var/log
+        read_only: true
+        bind: {}
+      - type: bind
+        source: C:\Users\Administrator\source\repos\OzonMarketplace\infrastructure\monitoring\promtail-config.yml
+        target: /etc/promtail/config.yml
+        read_only: true
+        bind: {}
+  redis:
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+    container_name: redis
+    environment:
+      REDIS_RENAME_COMMANDS: FLUSHALL "" FLUSHDB ""
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli -a redispassword ping
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    image: redis:8-alpine
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 6379
+        published: "6379"
+        protocol: tcp
+    restart: always
+    sysctls:
+      net.core.somaxconn: "1024"
+    volumes:
+      - type: volume
+        source: redis_data
+        target: /data
+        volume: {}
+      - type: bind
+        source: C:\Users\Administrator\source\repos\OzonMarketplace\infrastructure\Redis\redis.conf
+        target: /usr/local/etc/redis/redis.conf
+        read_only: true
+        bind: {}
+  redis-insight:
+    container_name: redis-insight
+    depends_on:
+      redis:
+        condition: service_healthy
+        required: true
+    image: redis/redisinsight:latest
+    networks:
+      app-net: null
+    ports:
+      - mode: ingress
+        target: 5540
+        published: "5540"
+        protocol: tcp
+    restart: always
+    volumes:
+      - type: volume
+        source: redis_insight_data
+        target: /data
+        volume: {}
 networks:
-  order-net:
+  app-net:
+    name: infrastructure_app-net
     driver: bridge
+volumes:
+  grafana-data:
+    name: infrastructure_grafana-data
+  kafka-data:
+    name: infrastructure_kafka-data
+  keycloak_data:
+    name: infrastructure_keycloak_data
+  minio-data:
+    name: infrastructure_minio-data
+  order_data:
+    name: infrastructure_order_data
+  postgres-data:
+    name: infrastructure_postgres-data
+  prometheus-data:
+    name: infrastructure_prometheus-data
+  redis_data:
+    name: infrastructure_redis_data
+  redis_insight_data:
+    name: infrastructure_redis_insight_data

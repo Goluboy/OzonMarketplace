@@ -336,8 +336,6 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
             reservedProductIds.Add(productId);
         }
 
-        TryChangeToAssembling();
-
         UpdatedAt = DateTime.UtcNow;
         IncrementVersion();
     }

@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 using Core.Minio.Service;
 using Microsoft.Extensions.Logging;
 using ProductService.Application.DTO.Category;

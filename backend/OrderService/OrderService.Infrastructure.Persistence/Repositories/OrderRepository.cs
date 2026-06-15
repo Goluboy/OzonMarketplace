@@ -44,6 +44,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
                 priceAtPurchase: new Money((decimal)row.PriceAtPurchase),
                 subtotal: new Money((decimal)row.Subtotal),
                 createdAt: (DateTime)row.ItemCreatedAt,
+                isReserved: (bool)row.IsReserved,
                 updatedAt: row.ItemUpdatedAt is not null ? (DateTime?)row.ItemUpdatedAt : null);
 
             items.Add(item);
@@ -70,7 +71,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
         const string sql = """
                            SELECT o."Id", o."CustomerId", o."CustomerName", o."CustomerEmail", o."DeliveryAddress",
                                   o."Status", o."TotalAmount", o."CreatedAt", o."UpdatedAt", o."CancelledAt", o."PaidAt", o."Version",
-                                  i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase",
+                                  i."Id" AS "ItemId", i."ProductId", i."ProductName", i."Quantity", i."PriceAtPurchase", i."IsReserved",
                                   i."Subtotal", i."CreatedAt" AS "ItemCreatedAt", i."UpdatedAt" AS "ItemUpdatedAt"
                            FROM "Orders" o
                            LEFT JOIN "OrderItems" i ON o."Id" = i."OrderId"
@@ -286,8 +287,8 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
         await dbSession.Connection.ExecuteAsync("DELETE FROM \"OrderItems\" WHERE \"OrderId\" = @Id", new { Id = order.Id.Value }, transaction: dbSession.Transaction);
 
         const string insertItemSql = """
-            INSERT INTO "OrderItems" ("Id", "OrderId", "ProductId", "ProductName", "Quantity", "PriceAtPurchase", "Subtotal", "CreatedAt", "UpdatedAt")
-            VALUES (@Id, @OrderId, @ProductId, @ProductName, @Quantity, @PriceAtPurchase, @Subtotal, @CreatedAt, @UpdatedAt)
+            INSERT INTO "OrderItems" ("Id", "OrderId", "ProductId", "ProductName", "Quantity", "PriceAtPurchase", "Subtotal", "CreatedAt", "IsReserved", "UpdatedAt")
+            VALUES (@Id, @OrderId, @ProductId, @ProductName, @Quantity, @PriceAtPurchase, @Subtotal, @CreatedAt, @IsReserved, @UpdatedAt)
             """;
 
         var itemsParams = order.Items.Select(item => new
@@ -300,6 +301,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
             PriceAtPurchase = item.PriceAtPurchase.Amount,
             Subtotal = item.Subtotal.Amount,
             item.CreatedAt,
+            item.IsReserved,
             item.UpdatedAt
         });
 

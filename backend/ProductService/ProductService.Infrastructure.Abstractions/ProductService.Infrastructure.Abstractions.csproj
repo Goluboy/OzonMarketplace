@@ -10,4 +10,8 @@
       <ProjectReference Include="..\ProductService.Domain\ProductService.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Netu.IntegrationEvents" Version="3.0.0" />
+    </ItemGroup>
+
 </Project>

@@ -422,8 +422,8 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         var version = 2;
         var items = new List<OrderItem>
         {
-            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 1", 1, new Money(50m), new Money(50m), createdAt, null),
-            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 2", 1, new Money(50m), new Money(50m), createdAt, null)
+            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 1", 1, new Money(50m), new Money(50m), createdAt, null, false),
+            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 2", 1, new Money(50m), new Money(50m), createdAt, null, false)
         };
 
         // Act

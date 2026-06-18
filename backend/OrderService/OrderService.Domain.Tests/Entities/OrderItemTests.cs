@@ -197,7 +197,7 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         var updatedAt = DateTime.UtcNow.AddMinutes(5);
 
         var item = OrderItem.Rehydrate(id, orderId, productId, productName, quantity, price, subtotal, createdAt,
-            updatedAt);
+            updatedAt, false);
 
         item.Should().NotBeNull();
         item.Id.Should().Be(id);
@@ -220,7 +220,7 @@ public class OrderItemTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         var subtotal = new Money(100m);
         var createdAt = DateTime.UtcNow;
 
-        var item = OrderItem.Rehydrate(id, null, productId, "Product", 1, price, subtotal, createdAt, null);
+        var item = OrderItem.Rehydrate(id, null, productId, "Product", 1, price, subtotal, createdAt, null, false);
 
         item.OrderId.Should().BeNull();
         item.UpdatedAt.Should().BeNull();

@@ -31,6 +31,17 @@ namespace OrderService.Http
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy
+                        .AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader();
+                });
+            });
+
             var keycloakAuthority = configuration["Keycloak:Authority"];
             var audience = configuration["Keycloak:Audience"];
 

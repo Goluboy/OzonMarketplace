@@ -29,8 +29,7 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
         Money subtotal,
         DateTime createdAt,
         DateTime? updatedAt,
-        bool isReserved = false,
-        int reservedQuantity = 0)
+        bool isReserved)
     {
         return new OrderItem
         {
@@ -42,7 +41,7 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
             PriceAtPurchase = priceAtPurchase,
             Subtotal = subtotal,
             IsReserved = isReserved,
-            ReservedQuantity = reservedQuantity,
+            ReservedQuantity = quantity,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt
         };

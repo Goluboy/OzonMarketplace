@@ -22,9 +22,13 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       
-      # ВКЛЮЧАЕМ АВТО-СОЗДАНИЕ ТОПИКОВ (решает проблему отсутствия топиков)
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 | grep -q 'ApiVersion'"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 45s
     volumes:
       - kafka-data:/var/lib/kafka/data
     networks:
@@ -42,6 +46,76 @@ services:
       - app-net
     depends_on:
       - kafka
+
+  kafka-init:
+    image: apache/kafka:3.7.0
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-net
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "⏳ Waiting for Kafka to be ready..."
+        
+        # Ждем, пока Kafka ответит на запрос API versions
+        until /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 > /dev/null 2>&1; do
+          echo "⏳ Kafka is not ready yet, retrying in 2s..."
+          sleep 2
+        done
+        
+        echo "✅ Kafka is ready! Creating topics..."
+        
+        # Функция для создания топика с проверкой существования
+        create_topic() {
+          local topic=$$1
+          local partitions=$$2
+          local retention=$$3
+          
+          echo "🔍 Checking if topic '$$topic' exists..."
+          
+          if /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list | grep -q "^$$topic$$"; then
+            echo "ℹ️  Topic '$$topic' already exists, skipping"
+          else
+            echo "🚀 Creating topic '$$topic' with $$partitions partitions..."
+            /opt/kafka/bin/kafka-topics.sh \
+              --bootstrap-server kafka:9092 \
+              --create \
+              --topic "$$topic" \
+              --partitions "$$partitions" \
+              --replication-factor 1 \
+              --config retention.ms="$$retention" \
+              --config cleanup.policy=delete
+            
+            if [ $$? -eq 0 ]; then
+              echo "✅ Topic '$$topic' created successfully"
+            else
+              echo "❌ Failed to create topic '$$topic'"
+              exit 1
+            fi
+          fi
+        }
+        
+        # Создаем топики для marketplace
+        # orders: 6 партиций (для высокой пропускной способности)
+        create_topic "orders" 6 604800000      # 7 дней retention
+        
+        # products: 6 партиций
+        create_topic "products" 6 604800000    # 7 дней retention
+        
+        # prices: 3 партиции (меньше событий)
+        create_topic "prices" 3 604800000      # 7 дней retention
+        
+        echo ""
+        echo "🎉 All topics initialized successfully!"
+        echo ""
+        
+        # Показываем все созданные топики
+        echo "📋 Current topics in Kafka:"
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
 
   postgres:
     image: postgres:18-alpine

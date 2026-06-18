@@ -1,6 +1,8 @@
 ﻿using DotNetCore.CAP;
 using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.IntegrationEvents.Order;
+using Microsoft.Extensions.Logging;
 using OrderService.Infrastructure.EventBus.Consumers;
 
 namespace OrderService.Infrastructure.EventBus.Dispatcher;
@@ -8,7 +10,8 @@ namespace OrderService.Infrastructure.EventBus.Dispatcher;
 public class OrderEventDispatcher(
     OrderCreatedConsumer orderCreatedConsumer,
     OrderSagaTimeoutConsumer orderSagaTimeoutConsumer,
-    OrderCancelledConsumer orderCancelledConsumer)
+    OrderCancelledConsumer orderCancelledConsumer,
+    ILogger<OrderEventDispatcher> logger)
     : ICapSubscribe
 {
     [CapSubscribe(Topics.Orders.OrdersTopic)]
@@ -17,6 +20,7 @@ public class OrderEventDispatcher(
         [FromCap] CapHeader header,
         CancellationToken cancellationToken)
     {
+        logger.LogInformation("Received event: {EventType} with CorrelationId: {CorrelationId}", @event.GetType().Name, @event.CorrelationId);
         switch (@event)
         {
             case OrderCreatedEvent orderCreated:

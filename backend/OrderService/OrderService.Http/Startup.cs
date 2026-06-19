@@ -20,6 +20,8 @@ namespace OrderService.Http
 {
     public class Startup(IConfiguration configuration)
     {
+        private const string ReactCorsPolicy = "ReactAppPolicy";
+        
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers()
@@ -31,14 +33,19 @@ namespace OrderService.Http
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
+            var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll", policy =>
+                options.AddPolicy(ReactCorsPolicy, policy =>
                 {
-                    policy
-                        .AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader();
+                    if (allowedOrigins != null && allowedOrigins.Length != 0)
+                    {
+                        policy.WithOrigins(allowedOrigins)
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials();
+                    }
                 });
             });
 
@@ -186,6 +193,8 @@ namespace OrderService.Http
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Marketplace API v1"));
             }
 
+            app.UseCors(ReactCorsPolicy);
+            
             app.UseHttpsRedirection();
             app.UseRouting();
 

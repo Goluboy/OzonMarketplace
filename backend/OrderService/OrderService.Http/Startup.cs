@@ -51,6 +51,7 @@ namespace OrderService.Http
 
             var keycloakAuthority = configuration["Keycloak:Authority"];
             var audience = configuration["Keycloak:Audience"];
+            var issuer = configuration["Keycloak:ValidIssuer"];
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -63,7 +64,7 @@ namespace OrderService.Http
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
-                        ValidIssuer = "http://localhost:8080/realms/marketplace",
+                        ValidIssuer = issuer,
 
                         ValidateAudience = true,
                         ValidAudience = audience,

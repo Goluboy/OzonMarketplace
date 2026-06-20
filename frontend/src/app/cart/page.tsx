@@ -68,7 +68,6 @@ export default function CartPage() {
           <CartItem
             key={item.id}
             item={item}
-            isLast={index === items.length - 1}
             onIncrease={handleIncrease}
             onDecrease={handleDecrease}
             onRemove={handleRemove}

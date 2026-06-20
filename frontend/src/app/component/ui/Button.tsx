@@ -1,16 +1,40 @@
 import Link from "next/link"
+import type { ComponentPropsWithoutRef, ReactNode } from "react"
 
-interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+// Обычная кнопка
+interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
+  children: ReactNode
+  className?: string
+}
 
-export function Button({
-  className,
-  children,
-  ...props
-}: ButtonProps) {
+export function Button({ className, children, ...props }: ButtonProps) {
+  return (
+    <button
+      className={`
+        inline-flex
+        items-center
+        justify-center
+        rounded-xl
+        font-medium
+        transition-colors
+        ${className ?? ""}
+      `}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+}
+
+// Кнопка-ссылка
+interface ButtonLinkProps extends ComponentPropsWithoutRef<typeof Link> {
+  children: ReactNode
+  className?: string
+}
+
+export function ButtonLink({ className, children, ...props }: ButtonLinkProps) {
   return (
     <Link
-    href='/checkout'
       className={`
         inline-flex
         items-center
@@ -24,5 +48,5 @@ export function Button({
     >
       {children}
     </Link>
-  );
+  )
 }

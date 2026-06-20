@@ -7,7 +7,7 @@ export function convertToItemCard(product: PublicProductCard): Item {
   const hasDiscount = discountPrice !== null && discountPrice < regularPrice;
   
   return {
-    id: product.id,
+    id: parseInt(product.id, 10),
     title: product.name,
     price: hasDiscount ? discountPrice : regularPrice,
     oldPrice: hasDiscount ? regularPrice : undefined,

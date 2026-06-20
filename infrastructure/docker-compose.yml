@@ -341,6 +341,7 @@ services:
 
 
   order-service:
+    image: ${DOCKER_REGISTRY-}orderservicehttp
     restart: always
     build:
       context: ../backend/OrderService
@@ -357,7 +358,7 @@ services:
       Keycloak__Audience: marketplace-app
       Keycloak__RequireHttpsMetadata: "false"
       
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       
     depends_on:

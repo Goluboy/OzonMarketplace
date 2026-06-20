@@ -42,11 +42,9 @@ COPY . .
 WORKDIR "/src/OrderService.Http"
 
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    --mount=type=cache,id=obj,target=/src/OrderService.Http/obj \
     dotnet build "./OrderService.Http.csproj" \
         -c $BUILD_CONFIGURATION \
-        -o /app/build \
-        --no-restore
+        -o /app/build
 
 # ============================================================
 # Stage 3: Dev (для разработки с hot reload)
@@ -64,11 +62,9 @@ CMD ["dotnet", "watch", "run", "--no-launch-profile", "--urls", "http://+:8080"]
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    --mount=type=cache,id=obj,target=/src/OrderService.Http/obj \
     dotnet publish "./OrderService.Http.csproj" \
         -c $BUILD_CONFIGURATION \
         -o /app/publish \
-        --no-restore \
         /p:UseAppHost=false
 
 # ============================================================

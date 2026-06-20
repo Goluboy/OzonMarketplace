@@ -28,14 +28,14 @@ public class CorrelatedCapPublisher : ICapPublisher
 
         var correlationId = SagaCorrelationContext.CorrelationId;
 
-        if (!string.IsNullOrEmpty(correlationId) && !dict.ContainsKey(Headers.CorrelationId))
+        if (!string.IsNullOrEmpty(correlationId))
         {
-            dict[Headers.CorrelationId] = correlationId;
+            dict.TryAdd(Headers.CorrelationId, correlationId);
         }
 
-        if (!string.IsNullOrEmpty(callbackName) && !dict.ContainsKey(Headers.CallbackName))
+        if (!string.IsNullOrEmpty(callbackName))
         {
-            dict[Headers.CallbackName] = callbackName;
+            dict.TryAdd(Headers.CallbackName, callbackName);
         }
 
         return dict;

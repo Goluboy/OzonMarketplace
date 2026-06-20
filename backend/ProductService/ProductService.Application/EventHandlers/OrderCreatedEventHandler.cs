@@ -1,5 +1,4 @@
 ﻿using IntegrationEvents;
-using IntegrationEvents.IntegrationEvents;
 using IntegrationEvents.IntegrationEvents.Order;
 using IntegrationEvents.Shared;
 using ProductService.Infrastructure.Abstractions.EventHandlers.Abstractions;
@@ -21,11 +20,11 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
             var failedProductIds = new List<Guid>();
             var reservedItems = new List<ReservedItemDto>();
             decimal totalAmount = 0;
-
+            var currency = "RUB";
+            
             foreach (var item in @event.Items)
             {
                 var product = await productRepository.GetAsync(item.ProductId);
-                
                 if (product == null)
                 {
                     isReservationSuccessful = false;
@@ -33,6 +32,7 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     continue;
                 }
 
+                currency = product.Price.Currency;
                 reservedItems.Add(new ReservedItemDto(item.ProductId, item.Quantity));
                 totalAmount += product.Price.Amount * item.Quantity;
             }
@@ -43,6 +43,15 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                 { "correlation-id", @event.CorrelationId.ToString() }
             };
 
+            var priceCalculatedEvent = new PriceCalculatedEvent
+            {
+                CorrelationId = @event.CorrelationId,
+                Currency = currency,
+                TotalAmount = totalAmount,
+            };
+            
+            await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, priceCalculatedEvent, headers);
+            
             if (isReservationSuccessful)
             {
                 var stockReservedEvent = new StockReservedEvent
@@ -52,7 +61,7 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     ReservedItems = reservedItems
                 };
 
-                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockReservedEvent, new Dictionary<string, string>());
+                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockReservedEvent, headers);
             }
             else
             {
@@ -65,7 +74,7 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     FailedProductIds = failedProductIds
                 };
                 
-                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockFailedEvent, new Dictionary<string, string>());
+                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockFailedEvent, headers);
             }
 
             await unitOfWork.CommitAsync();

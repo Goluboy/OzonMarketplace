@@ -12,7 +12,7 @@ export interface Item {
   oldPrice?: number;
   rating?: number;
   reviewCount?: number;
-  imageUrl: string;
+  imageUrl: string | null;
   badge?: string;
 }
 

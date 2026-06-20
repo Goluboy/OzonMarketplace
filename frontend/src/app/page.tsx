@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/app/component/layout/header/Header";
 import { ItemGrid } from "@/app/component/home/itemCard/ItemGrid";
@@ -115,10 +115,30 @@ function HomeContent() {
   );
 }
 
+// 🆕 Fallback компонент для Suspense
+function HomeLoading() {
+  return (
+    <>
+      <Header />
+      <main className="w-full px-4 py-6">
+        <div className="flex items-center justify-center h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Загрузка товаров...</p>
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}
+
 export default function Home() {
   return (
     <SearchProvider>
-      <HomeContent />
+      {/* 🆕 Suspense boundary оборачивает компонент с useSearchParams */}
+      <Suspense fallback={<HomeLoading />}>
+        <HomeContent />
+      </Suspense>
     </SearchProvider>
   );
 }

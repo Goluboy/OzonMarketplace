@@ -192,8 +192,7 @@ services:
     networks:
       - app-net
     healthcheck:
-      test: [ "CMD-SHELL", "PGPASSWORD=dev psql -U dev -d marketplace -c 'SELECT 1;' 
-      && PGPASSWORD=dev psql -U dev -d products -c 'SELECT 1;' 
+      test: [ "CMD-SHELL", "PGPASSWORD=dev psql -U dev -d products -c 'SELECT 1;' 
       && PGPASSWORD=dev psql -U dev -d orders -c 'SELECT 1;' 
       && PGPASSWORD=dev psql -U dev -d keycloak -c 'SELECT 1;'" ]
       interval: 5s
@@ -236,6 +235,14 @@ services:
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
+      
+      KC_FEATURES: "opentelemetry"
+      
+      KC_METRICS_ENABLED: "true"
+      KC_TRACING_ENABLED: "true"
+      KC_TRACING_ENDPOINT: "http://jaeger:4317"
+      KC_LOG: "console"
+      KC_LOG_CONSOLE_INCLUDE_TRACE: "true"
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/marketplace-realm.json:ro
     healthcheck:

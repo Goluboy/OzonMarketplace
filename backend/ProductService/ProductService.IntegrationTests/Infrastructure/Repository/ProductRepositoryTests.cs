@@ -90,20 +90,20 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
 
         var productId = Guid.NewGuid();
         var dao = new ProductDao
-        {
-            Id = productId,
-            Sku = 123456,
-            SellerId = Guid.NewGuid(),
-            Name = "Smartphone",
-            Description = "Latest smartphone",
-            PriceAmount = 999.99m,
-            PriceCurrency = "USD",
-            CategoryId = categoryId,
-            CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            Version = 1,
-            Images = [new ProductImageDto("http://image.png")]
-        };
+        (
+            Id: productId,
+            Sku: 123456,
+            SellerId: Guid.NewGuid(),
+            Name: "Smartphone",
+            Description: "Latest smartphone",
+            PriceAmount: 999.99m,
+            PriceCurrency: "USD",
+            CategoryId: categoryId,
+            CreatedAt: DateTimeOffset.UtcNow.ToUniversalTime(),
+            UpdatedAt: DateTimeOffset.UtcNow.ToUniversalTime(),
+            Version: 1,
+            Images: [new ProductImageDto("http://image.png")]
+        );
 
         await SeedProductDirectlyAsync(dao);
 
@@ -185,23 +185,23 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
         // Arrange
         var categoryId = await InsertCategoryDirectlyAsync("Electronics", "electronics");
         
-        var product = CreateTestProduct(categoryId, version: 2); 
-        
+        var product = CreateTestProduct(categoryId, version: 2);
+
         var initialDao = new ProductDao
-        {
-            Id = product.Id,
-            Sku = 123456,
-            SellerId = Guid.NewGuid(),
-            Name = "Old Name",
-            Description = "Old Desc",
-            PriceAmount = 100m,
-            PriceCurrency = "RUB",
-            CategoryId = categoryId,
-            CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            Version = 1,
-            Images = []
-        };
+        (
+            Id: product.Id,
+            Sku: 123456,
+            SellerId: Guid.NewGuid(),
+            Name: "Old Name",
+            Description: "Old Desc",
+            PriceAmount: 100m,
+            PriceCurrency: "RUB",
+            CategoryId: categoryId,
+            CreatedAt: DateTimeOffset.UtcNow.ToUniversalTime(),
+            UpdatedAt: DateTimeOffset.UtcNow.ToUniversalTime(),
+            Version: 1,
+            Images: []
+        );
         await SeedProductDirectlyAsync(initialDao);
         
         typeof(Product).GetProperty(nameof(Product.Name))?.SetValue(product, "New Name");
@@ -234,20 +234,20 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
         var product = CreateTestProduct(categoryId, version: 2); 
         
         var initialDao = new ProductDao
-        {
-            Id = product.Id,
-            Sku = 123456,
-            SellerId = Guid.NewGuid(),
-            Name = "Initial Name",
-            Description = "Desc",
-            PriceAmount = 100m,
-            PriceCurrency = "RUB",
-            CategoryId = categoryId,
-            CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            Version = 2,
-            Images = []
-        };
+        (
+            Id: product.Id,
+            Sku: 123456,
+            SellerId: Guid.NewGuid(),
+            Name: "Initial Name",
+            Description: "Desc",
+            PriceAmount: 100m,
+            PriceCurrency: "RUB",
+            CategoryId: categoryId,
+            CreatedAt: DateTimeOffset.UtcNow.ToUniversalTime(),
+            UpdatedAt: DateTimeOffset.UtcNow.ToUniversalTime(),
+            Version: 2,
+            Images: []
+        );
         await SeedProductDirectlyAsync(initialDao);
 
         var (uow, _) = _fixture.CreateUnitOfWorkContext();
@@ -275,20 +275,20 @@ public class ProductRepositoryTests : IClassFixture<PostgresFixture>, IAsyncLife
         
         var productId = Guid.NewGuid();
         var dao = new ProductDao
-        {
-            Id = productId,
-            Sku = 123456,
-            SellerId = Guid.NewGuid(),
-            Name = "To Be Deleted",
-            Description = "Desc",
-            PriceAmount = 100m,
-            PriceCurrency = "RUB",
-            CategoryId = categoryId,
-            CreatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            UpdatedAt = DateTimeOffset.UtcNow.ToUniversalTime(),
-            Version = 1,
-            Images = []
-        };
+        (
+            Id: productId,
+            Sku: 123456,
+            SellerId: Guid.NewGuid(),
+            Name: "To Be Deleted",
+            Description: "Desc",
+            PriceAmount: 100m,
+            PriceCurrency: "RUB",
+            CategoryId: categoryId,
+            CreatedAt: DateTimeOffset.UtcNow.ToUniversalTime(),
+            UpdatedAt: DateTimeOffset.UtcNow.ToUniversalTime(),
+            Version: 1,
+            Images: []
+        );
         await SeedProductDirectlyAsync(dao);
 
         var (uow, _) = _fixture.CreateUnitOfWorkContext();

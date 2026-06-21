@@ -2,27 +2,27 @@
 
 namespace ProductService.Infrastructure.DAO;
 
-public record CategoryDao
-{
-    public CategoryDao() {}
-    public int Id { get; init; }
-    public required string Name { get; init; }
-    public required string Path { get; init; }
-}
+public record CategoryDao(
+    int Id,
+    string Name,
+    string Path);
 
-public record ProductDao
+public record ProductDao(
+    Guid Id,
+    Guid SellerId,
+    long Sku,
+    string Name,
+    string Description,
+    decimal PriceAmount,
+    string PriceCurrency,
+    int CategoryId,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    int Version,
+    List<ProductImageDto> Images)
 {
-    public ProductDao() {}
-    public Guid Id { get; init; }
-    public Guid SellerId { get; init; }
-    public long Sku { get; init; }
-    public required string Name { get; init; }
-    public required string Description { get; init; }
-    public decimal PriceAmount { get; init; }
-    public required string PriceCurrency { get; init; }
-    public int CategoryId { get; init; }
-    public DateTimeOffset CreatedAt { get; init; }
-    public DateTimeOffset UpdatedAt { get; init; }
-    public int Version { get; init; }
-    public List<ProductImageDto> Images { get; init; } = [];
+    public ProductDao() : this(
+        Guid.Empty, Guid.Empty, 0, null!, null!, 0,
+        null!, 0, default, default, 0, []
+    ) {}
 }

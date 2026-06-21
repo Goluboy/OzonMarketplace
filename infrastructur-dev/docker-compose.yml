@@ -1,0 +1,435 @@
+services:
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092" # Порт для подключения с хост-машины (Rider/localhost)
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      
+      # Настраиваем два listener'а: один для docker-сети, второй для хоста
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 | grep -q 'ApiVersion'"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 45s
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - app-net
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8082:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-dev
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    networks:
+      - app-net
+    depends_on:
+      - kafka
+
+  kafka-init:
+    image: apache/kafka:3.7.0
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-net
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "⏳ Waiting for Kafka to be ready..."
+        
+        # Ждем, пока Kafka ответит на запрос API versions
+        until /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 > /dev/null 2>&1; do
+          echo "⏳ Kafka is not ready yet, retrying in 2s..."
+          sleep 2
+        done
+        
+        echo "✅ Kafka is ready! Creating topics..."
+        
+        # Функция для создания топика с проверкой существования
+        create_topic() {
+          local topic=$$1
+          local partitions=$$2
+          local retention=$$3
+          
+          echo "🔍 Checking if topic '$$topic' exists..."
+          
+          if /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list | grep -q "^$$topic$$"; then
+            echo "ℹ️  Topic '$$topic' already exists, skipping"
+          else
+            echo "🚀 Creating topic '$$topic' with $$partitions partitions..."
+            /opt/kafka/bin/kafka-topics.sh \
+              --bootstrap-server kafka:9092 \
+              --create \
+              --topic "$$topic" \
+              --partitions "$$partitions" \
+              --replication-factor 1 \
+              --config retention.ms="$$retention" \
+              --config cleanup.policy=delete
+            
+            if [ $$? -eq 0 ]; then
+              echo "✅ Topic '$$topic' created successfully"
+            else
+              echo "❌ Failed to create topic '$$topic'"
+              exit 1
+            fi
+          fi
+        }
+        
+        # Создаем топики для marketplace
+        # orders: 6 партиций (для высокой пропускной способности)
+        create_topic "orders" 1 604800000      # 7 дней retention
+        
+        # products: 6 партиций
+        create_topic "products" 1 604800000    # 7 дней retention
+        
+        # prices: 3 партиции (меньше событий)
+        create_topic "prices" 1 604800000      # 7 дней retention
+        
+        echo ""
+        echo "🎉 All topics initialized successfully!"
+        echo ""
+        
+        # Показываем все созданные топики
+        echo "📋 Current topics in Kafka:"
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+
+  postgres:
+    image: postgres:18-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-net
+    healthcheck:
+      test: [ "CMD-SHELL", "PGPASSWORD=dev psql -U dev -d products -c 'SELECT 1;' 
+      && PGPASSWORD=dev psql -U dev -d orders -c 'SELECT 1;' 
+      && PGPASSWORD=dev psql -U dev -d keycloak -c 'SELECT 1;'" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+  
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - app-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    command: 
+      - start-dev
+      - --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HOSTNAME_STRICT: ${KEYCLOAK_HOSTNAME_STRICT}
+      KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED}
+      KC_HEALTH_ENABLED: "true"
+      
+      KC_FEATURES: "opentelemetry"
+      
+      KC_METRICS_ENABLED: "true"
+      KC_TRACING_ENABLED: "true"
+      KC_TRACING_ENDPOINT: "http://jaeger:4317"
+      KC_LOG: "console"
+      KC_LOG_CONSOLE_INCLUDE_TRACE: "true"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/marketplace-realm.json:ro
+    ports:
+      - "${KEYCLOAK_HTTP_PORT}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 90s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-net
+
+  keycloak-init:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak-init
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - ./keycloak/init-users.sh:/tmp/init-users.sh:ro
+    entrypoint: ["/bin/bash", "/tmp/init-users.sh"]
+    environment:
+      KC_ADMIN: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_SERVER_URL: http://keycloak:8080
+      KC_REALM: marketplace
+      TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test@example.com}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-password}
+      ADMIN_USER_EMAIL: ${ADMIN_USER_EMAIL:-admin@example.com}
+      ADMIN_USER_PASSWORD: ${ADMIN_USER_PASSWORD:-admin123}
+    networks:
+      - app-net
+    restart: "no"
+
+  product-service:
+    restart:
+      always
+    build:
+      context: ../backend
+      dockerfile: ProductService/Dockerfile
+    container_name: product-service
+    ports:
+      - "5001:8080"
+    environment:
+      ConnectionStrings__PostgresConnectionString: Host=postgres;Port=5432;Database=products;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      KafkaSettings__Servers: kafka:9092
+      ASPNETCORE_ENVIRONMENT: Development
+      Redis__ConnectionString: redis:6379,password=redispassword,abortConnect=false
+      
+      Minio__Endpoint: http://minio:9000
+      Minio__ExternalEndpoint: http://localhost:9000
+      Minio__AccessKey: minioadmin
+      Minio__SecretKey: minioadmin
+      Minio__BucketName: marketplace-bucket
+      Minio__UseHttp: true
+
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
+      Keycloak__Audience: marketplace-app
+      Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
+      
+      OpenTelemetry__OtlpEndpoint: http://jaeger:4317
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      minio:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - app-net
+
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./Redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    environment:
+      - REDIS_RENAME_COMMANDS=FLUSHALL "" FLUSHDB ""
+    sysctls:
+      net.core.somaxconn: 1024
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli -a redispassword ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-net
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis_insight_data:/data
+    restart: always
+    networks:
+      - app-net
+    depends_on:
+      redis:
+        condition: service_healthy
+  
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/var/lib/minio/data
+    networks:
+      - app-net
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio_init
+    depends_on:
+      - minio
+    entrypoint: |
+      /bin/sh -c "
+      echo 'Ожидание запуска MinIO...';
+      until /usr/bin/mc alias set localminio http://minio:9000 minioadmin minioadmin > /dev/null 2>&1; do
+        echo 'MinIO еще не готов, повторная попытка через 2 секунды...';
+        sleep 2;
+      done;
+      echo 'Соединение установлено. Настройка бакета...';
+      if ! /usr/bin/mc ls localminio/marketplace-bucket > /dev/null 2>&1; then
+        /usr/bin/mc mb localminio/marketplace-bucket;
+        /usr/bin/mc anonymous set download localminio/marketplace-bucket;
+        echo 'Бакет marketplace-bucket успешно создан.';
+      else
+        echo 'Бакет уже существует.';
+      fi;
+      /usr/bin/mc anonymous set download localminio/marketplace-bucket;
+      echo 'Публичный доступ (download) успешно применен к бакету.';
+      exit 0;
+      "
+    networks:
+      - app-net
+
+  order-service:
+    restart: always
+    build:
+      context: ../backend/OrderService
+      dockerfile: OrderService.Http/Dockerfile
+    container_name: order-service
+    ports:
+      - "5002:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=orders;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      
+      KafkaSettings__Servers: kafka:9092
+      
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
+      Keycloak__Audience: marketplace-app
+      Keycloak__RequireHttpsMetadata: "false"
+      
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      
+      OpenTelemetry__OtlpEndpoint: http://jaeger:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+    networks:
+      - app-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app-net
+    restart: always
+
+  loki:
+    image: grafana/loki:3.7
+    container_name: loki
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+    ports:
+      - "3100:3100"
+    networks:
+      - app-net
+    restart: always
+
+  promtail:
+    image: grafana/promtail:3.6.11
+    container_name: promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+    networks:
+      - app-net
+    restart: always
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    networks:
+      - app-net
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3200:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - app-net
+    restart: always
+
+volumes:
+  kafka-data:
+  postgres-data:
+  minio-data:
+  redis_data:
+  redis_insight_data:
+  prometheus-data:
+  grafana-data:  
+  
+networks:
+  app-net:
+    driver: bridge

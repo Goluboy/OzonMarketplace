@@ -15,6 +15,9 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Prometheus;
 
 namespace OrderService.Http
 {
@@ -136,6 +139,8 @@ namespace OrderService.Http
             
             services.AddCapServices(configuration);
 
+            AddObservability(services, configuration);
+            
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();
 
@@ -178,7 +183,7 @@ namespace OrderService.Http
                 }
             );
         }
-
+        
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             using (var scope = app.ApplicationServices.CreateScope())
@@ -194,6 +199,8 @@ namespace OrderService.Http
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Marketplace API v1"));
             }
 
+            app.UseHttpMetrics();
+            
             app.UseCors(ReactCorsPolicy);
             
             app.UseHttpsRedirection();
@@ -206,7 +213,34 @@ namespace OrderService.Http
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                
+                endpoints.MapMetrics();
             });
+        }
+        
+        private static IServiceCollection AddObservability(IServiceCollection services, IConfiguration configuration)
+        {
+            var otlpEndpoint = configuration["OpenTelemetry:OtlpEndpoint"] 
+                               ?? throw new NullReferenceException("OpenTelemetry Otlp Endpoint not found.");
+
+            services.AddOpenTelemetry()
+                .ConfigureResource(resource => resource.AddService("OrderService"))
+                .WithTracing(tracing => tracing
+                    .AddCapInstrumentation()
+                    .AddAspNetCoreInstrumentation(options =>
+                    {
+                        options.Filter = httpContext =>
+                            !httpContext.Request.Path.StartsWithSegments("/swagger") &&
+                            !httpContext.Request.Path.StartsWithSegments("/metrics");
+                    })
+                    .AddHttpClientInstrumentation()
+                    .AddNpgsql()
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri(otlpEndpoint);
+                    }));
+        
+            return services;
         }
     }
 }

@@ -37,11 +37,6 @@ public class CreateOrderCommandHandler(
 
             await orderRepository.SaveAsync(order, cancellationToken);
 
-            var sagaHeaders = new Dictionary<string, string?>
-            {
-                [Headers.CorrelationId] = order.Id.Value.ToString()
-            };
-
             await capPublisher.PublishAsync(
                 Topics.Orders.OrdersTopic,
                 new OrderCreatedEvent
@@ -51,14 +46,14 @@ public class CreateOrderCommandHandler(
                     DeliveryAddress = order.DeliveryAddress?.AddressLine ?? string.Empty,
                     Items = order.Items.Select(i => new OrderItemDto(i.ProductId, i.Quantity)).ToList()
                 },
-                sagaHeaders,
+                new Dictionary<string, string?> { { "sharding-key", order.Id.Value.ToString() } },
                 cancellationToken);
 
             await capPublisher.PublishDelayAsync(
                 TimeSpan.FromMinutes(15),
                 Topics.Orders.OrdersTopic,
                 new OrderTimeoutEvent() { CorrelationId = order.Id },
-                sagaHeaders,
+                new Dictionary<string, string?> { { "sharding-key", order.Id.Value.ToString() } },
                 cancellationToken);
 
             await unitOfWork.CommitAsync(cancellationToken);

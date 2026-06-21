@@ -24,8 +24,6 @@ public class ProductEventDispatcher(IStockReservedEventHandler stockReservedEven
             case StockReservedEvent stockReserved:
                 await stockReservedEventHandler.HandleAsync(stockReserved);
                 break;
-            default:
-                break;
         }
     }
 }

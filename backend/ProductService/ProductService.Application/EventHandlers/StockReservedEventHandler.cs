@@ -1,17 +1,9 @@
-﻿using Amazon.Runtime.Internal.Util;
-using DotNetCore.CAP.Messages;
-using IntegrationEvents;
+﻿using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents.Order;
-using Microsoft.Extensions.Logging;
-using ProductService.Application.Services.Products.Command;
 using ProductService.Application.Services.Products.Query;
 using ProductService.Infrastructure.Abstractions.EventHandlers.Abstractions;
 using ProductService.Infrastructure.Abstractions.EventPublisher.Abstractions;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Reflection.PortableExecutable;
-using System.Text;
 
 namespace ProductService.Application.EventHandlers;
 
@@ -57,7 +49,7 @@ public class StockReservedEventHandler(
 
             await unitOfWork.CommitAsync();
         }
-        catch (Exception ex)
+        catch
         {
             await unitOfWork.RollbackAsync();
             throw;
@@ -68,7 +60,6 @@ public class StockReservedEventHandler(
     {
         return new Dictionary<string, string?>
         {
-            [Headers.CorrelationId] = correlationId.ToString(),
             ["sharding-key"] = correlationId.ToString()
         };
     }

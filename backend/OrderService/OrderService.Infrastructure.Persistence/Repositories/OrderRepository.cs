@@ -44,7 +44,7 @@ public class OrderRepository(IDbSession dbSession) : IOrderRepository
                 priceAtPurchase: new Money((decimal)row.PriceAtPurchase),
                 subtotal: new Money((decimal)row.Subtotal),
                 createdAt: (DateTime)row.ItemCreatedAt,
-                isReserved: (bool)row.IsReserved,
+                isReserved: row.IsReserved is true,
                 updatedAt: row.ItemUpdatedAt is not null ? (DateTime?)row.ItemUpdatedAt : null);
 
             items.Add(item);

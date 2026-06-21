@@ -102,7 +102,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         }
         else
         {
-            builder.Select($"{sortColumn} as SortValue");
+            builder.Select($"{sortColumn}::text as SortValue");
         }
 
         if (filter.CategoryId.HasValue)
@@ -181,15 +181,7 @@ public class ProductQueryRepository(IPostgresConnectionFactory connectionFactory
         {
             var lastRow = response.Last();
             
-            var sortValueStr = lastRow.SortValue switch
-            {
-                decimal dec => dec.ToString(CultureInfo.InvariantCulture),
-                double dbl => dbl.ToString(CultureInfo.InvariantCulture),
-                float flt => flt.ToString(CultureInfo.InvariantCulture),
-                _ => lastRow.SortValue.ToString() ?? string.Empty
-            };
-            
-            nextCursor = CursorHelper.Encode(sortValueStr, lastRow.Id);
+            nextCursor = CursorHelper.Encode(lastRow.SortValue, lastRow.Id);
         }
         
         return new ProductPagedIdsDto(productIds, nextCursor);

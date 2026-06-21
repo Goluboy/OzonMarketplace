@@ -2,10 +2,8 @@
 using ProductService.Application.Helpers;
 using ProductService.Application.Services.Categories;
 using ProductService.Application.Services.Media;
-using ProductService.Application.Services.Products;
 using ProductService.Application.Services.Products.Command;
 using ProductService.Application.Services.Products.Query;
-using ProductService.Infrastructure.Abstractions.Repository.Abstractions.Products;
 
 namespace ProductService.Application;
 

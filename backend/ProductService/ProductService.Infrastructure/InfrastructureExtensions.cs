@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using DotNetCore.CAP;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,11 +18,8 @@ using ProductService.Infrastructure.Repository.Decorators;
 using ProductService.Infrastructure.Repository.Products;
 using ProductService.Infrastructure.Saga.Dispatchers;
 using ProductService.Infrastructure.Saga.EventPublisher;
-using ProductService.Infrastructure.Saga.Filters;
-using ProductService.Infrastructure.Saga.Tracing;
 using ProductService.Infrastructure.UnitOfWork;
 using Redis.Service;
-using System.Text.Json;
 
 namespace ProductService.Infrastructure;
 
@@ -79,7 +75,8 @@ public static class InfrastructureExtensions
             x.UsePostgreSql(opt =>
             {
                 opt.ConnectionString = configuration.GetConnectionString("PostgresConnectionString")
-                                       ?? throw new NullReferenceException("Connection string 'PostgresConnectionString' not found.");
+                                       ?? throw new NullReferenceException(
+                                           "Connection string 'PostgresConnectionString' not found.");
                 opt.Schema = "cap";
             });
 
@@ -93,7 +90,7 @@ public static class InfrastructureExtensions
             x.FailedRetryInterval = 60;
 
             x.SucceedMessageExpiredAfter = 24 * 3600;
-
+            
             x.UseDashboard(opt =>
             {
                 opt.PathMatch = "/cap";
@@ -101,22 +98,8 @@ public static class InfrastructureExtensions
 
             x.DefaultGroupName = "product-service-group";
             x.GroupNamePrefix = "product-service";
-        }).AddSubscribeFilter<SagaCorrelationFilter>();
-
-        var capDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(ICapPublisher));
-        if (capDescriptor != null)
-        {
-            var innerType = capDescriptor.ImplementationType!;
-            var lifetime = capDescriptor.Lifetime;
-
-            services.Remove(capDescriptor);
-
-            services.Add(new ServiceDescriptor(innerType, innerType, lifetime));
-
-            services.AddTransient<ICapPublisher>(sp =>
-                new CorrelatedCapPublisher((ICapPublisher)sp.GetRequiredService(innerType)));
-        }
-
+        });
+        
         return services;
     }
 }

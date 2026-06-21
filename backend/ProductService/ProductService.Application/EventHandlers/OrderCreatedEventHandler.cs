@@ -36,7 +36,6 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
             var headers = new Dictionary<string, string?>
             {
                 { "sharding-key", @event.OrderId.ToString() },
-                { "correlation-id", @event.CorrelationId.ToString() }
             };
             
             if (isReservationSuccessful)

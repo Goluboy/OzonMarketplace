@@ -141,6 +141,7 @@ services:
       - "5050:80"
     depends_on:
       - postgres
+      - order-db
     networks:
       - app-net
 
@@ -240,6 +241,8 @@ services:
       Keycloak__Authority: http://keycloak:8080/realms/marketplace
       Keycloak__Audience: marketplace-app
       Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
+      
+      OpenTelemetry__OtlpEndpoint: http://jaeger:4317
     depends_on:
       keycloak:
         condition: service_healthy
@@ -373,6 +376,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       
+      OpenTelemetry__OtlpEndpoint: http://jaeger:4317
     depends_on:
       order-db:
         condition: service_healthy

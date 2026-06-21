@@ -1,6 +1,4 @@
-﻿using Amazon.Runtime.Internal.Util;
-using DotNetCore.CAP.Messages;
-using IntegrationEvents;
+﻿using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents.Order;
 using Microsoft.Extensions.Logging;
 using ProductService.Application.Services.Products.Command;
@@ -68,7 +66,6 @@ public class StockReservedEventHandler(
     {
         return new Dictionary<string, string?>
         {
-            [Headers.CorrelationId] = correlationId.ToString(),
             ["sharding-key"] = correlationId.ToString()
         };
     }

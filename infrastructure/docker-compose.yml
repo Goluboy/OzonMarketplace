@@ -192,9 +192,12 @@ services:
     networks:
       - app-net
     healthcheck:
-      test: [ "CMD-SHELL", "PGPASSWORD=dev psql -U dev -d products -c 'SELECT 1;' 
-      && PGPASSWORD=dev psql -U dev -d orders -c 'SELECT 1;' 
-      && PGPASSWORD=dev psql -U dev -d keycloak -c 'SELECT 1;'" ]
+      test:
+        - CMD-SHELL
+        - >-
+          PGPASSWORD=dev psql -U dev -d products -c 'SELECT 1;' &&
+          PGPASSWORD=dev psql -U dev -d orders -c 'SELECT 1;' &&
+          PGPASSWORD=dev psql -U dev -d keycloak -c 'SELECT 1;'
       interval: 5s
       timeout: 5s
       retries: 10

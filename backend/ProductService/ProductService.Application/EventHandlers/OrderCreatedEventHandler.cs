@@ -19,8 +19,6 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
             var isReservationSuccessful = true;
             var failedProductIds = new List<Guid>();
             var reservedItems = new List<ReservedItemDto>();
-            decimal totalAmount = 0;
-            var currency = "RUB";
             
             foreach (var item in @event.Items)
             {
@@ -31,10 +29,8 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     failedProductIds.Add(item.ProductId);
                     continue;
                 }
-
-                currency = product.Price.Currency;
+                
                 reservedItems.Add(new ReservedItemDto(item.ProductId, item.Quantity));
-                totalAmount += product.Price.Amount * item.Quantity;
             }
 
             var headers = new Dictionary<string, string?>
@@ -42,15 +38,6 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                 { "sharding-key", @event.OrderId.ToString() },
                 { "correlation-id", @event.CorrelationId.ToString() }
             };
-
-            var priceCalculatedEvent = new PriceCalculatedEvent
-            {
-                CorrelationId = @event.CorrelationId,
-                Currency = currency,
-                TotalAmount = totalAmount,
-            };
-            
-            await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, priceCalculatedEvent, headers);
             
             if (isReservationSuccessful)
             {

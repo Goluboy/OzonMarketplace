@@ -101,13 +101,13 @@ services:
         
         # Создаем топики для marketplace
         # orders: 6 партиций (для высокой пропускной способности)
-        create_topic "orders" 6 604800000      # 7 дней retention
+        create_topic "orders" 1 604800000      # 7 дней retention
         
         # products: 6 партиций
-        create_topic "products" 6 604800000    # 7 дней retention
+        create_topic "products" 1 604800000    # 7 дней retention
         
         # prices: 3 партиции (меньше событий)
-        create_topic "prices" 3 604800000      # 7 дней retention
+        create_topic "prices" 1 604800000      # 7 дней retention
         
         echo ""
         echo "🎉 All topics initialized successfully!"
@@ -128,6 +128,19 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
+    networks:
+      - app-net
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
     networks:
       - app-net
 

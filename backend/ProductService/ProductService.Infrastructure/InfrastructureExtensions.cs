@@ -23,7 +23,6 @@ using ProductService.Infrastructure.Saga.Filters;
 using ProductService.Infrastructure.Saga.Tracing;
 using ProductService.Infrastructure.UnitOfWork;
 using Redis.Service;
-using System.Text.Json;
 
 namespace ProductService.Infrastructure;
 
@@ -73,7 +72,7 @@ public static class InfrastructureExtensions
         services.AddScoped<IStockReservedEventHandler, StockReservedEventHandler>();
         services.AddScoped<OrderEventDispatcher>();
         services.AddScoped<ProductEventDispatcher>();
-
+        
         services.AddCap(x =>
         {
             x.UsePostgreSql(opt =>

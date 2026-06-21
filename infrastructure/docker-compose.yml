@@ -162,13 +162,13 @@ services:
         
         # Создаем топики для marketplace
         # orders: 6 партиций (для высокой пропускной способности)
-        create_topic "orders" 1 604800000      # 7 дней retention
+        create_topic "orders" 6 604800000      # 7 дней retention
         
         # products: 6 партиций
-        create_topic "products" 1 604800000    # 7 дней retention
+        create_topic "products" 6 604800000    # 7 дней retention
         
         # prices: 3 партиции (меньше событий)
-        create_topic "prices" 1 604800000      # 7 дней retention
+        create_topic "prices" 3 604800000      # 7 дней retention
         
         echo ""
         echo "🎉 All topics initialized successfully!"
@@ -178,41 +178,20 @@ services:
         echo "📋 Current topics in Kafka:"
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
 
-  postgres:
+  keycloak-db:
     image: postgres:18-alpine
-    container_name: postgres
+    container_name: keycloak-db
     environment:
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: dev
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
     volumes:
-      - postgres-data:/var/lib/postgresql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - app-net
+      - keycloak_data:/var/lib/postgresql
     healthcheck:
-      test:
-        - CMD-SHELL
-        - >-
-          PGPASSWORD=dev psql -U dev -d products -c 'SELECT 1;' &&
-          PGPASSWORD=dev psql -U dev -d orders -c 'SELECT 1;' &&
-          PGPASSWORD=dev psql -U dev -d keycloak -c 'SELECT 1;'
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER}"]
       interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 10s
-  
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    depends_on:
-      - postgres
+      retries: 5
     networks:
       - app-net
 
@@ -226,7 +205,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_NAME}
+      KC_DB_URL: jdbc:postgresql://keycloak-db:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_NAME}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
 
@@ -238,14 +217,6 @@ services:
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
-      
-      KC_FEATURES: "opentelemetry"
-      
-      KC_METRICS_ENABLED: "true"
-      KC_TRACING_ENABLED: "true"
-      KC_TRACING_ENDPOINT: "http://jaeger:4317"
-      KC_LOG: "console"
-      KC_LOG_CONSOLE_INCLUDE_TRACE: "true"
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/marketplace-realm.json:ro
     healthcheck:
@@ -255,7 +226,7 @@ services:
       retries: 30
       start_period: 90s
     depends_on:
-      postgres:
+      keycloak-db:
         condition: service_healthy
     networks:
       - app-net
@@ -292,7 +263,7 @@ services:
     ports:
       - "5001:8080"
     environment:
-      ConnectionStrings__PostgresConnectionString: Host=postgres;Port=5432;Database=products;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      ConnectionStrings__PostgresConnectionString: Host=postgres;Port=5432;Database=marketplace;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
       KafkaSettings__Servers: kafka:9092
       ASPNETCORE_ENVIRONMENT: Development
       Redis__ConnectionString: redis:6379,password=redispassword,abortConnect=false
@@ -307,13 +278,11 @@ services:
       Keycloak__Authority: http://keycloak:8080/realms/marketplace
       Keycloak__Audience: marketplace-app
       Keycloak__ValidIssuer: http://localhost/auth/realms/marketplace
-      
-      OpenTelemetry__OtlpEndpoint: http://jaeger:4317
     depends_on:
       keycloak:
         condition: service_healthy
       postgres:
-        condition: service_healthy
+        condition: service_started
       kafka:
         condition: service_started
       minio:
@@ -430,7 +399,7 @@ services:
     ports:
       - "5002:8080"
     environment:
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=orders;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      ConnectionStrings__DefaultConnection: Host=order-db;Port=5432;Database=orders;Username=order_user;Password=order_password;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
       
       KafkaSettings__Servers: kafka:9092
       
@@ -442,9 +411,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       
-      OpenTelemetry__OtlpEndpoint: http://jaeger:4317
     depends_on:
-      postgres:
+      order-db:
         condition: service_healthy
       kafka:
         condition: service_started
@@ -515,9 +483,11 @@ services:
 volumes:
   kafka-data:
   postgres-data:
+  keycloak_data:
   minio-data:
   redis_data:
   redis_insight_data:
+  order_data:
   prometheus-data:
   grafana-data:  
   nginx-logs: 

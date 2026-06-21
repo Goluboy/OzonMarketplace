@@ -1,4 +1,40 @@
 services:
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    environment:
+      NEXT_PUBLIC_KEYCLOAK_URL: http://localhost/auth
+      NEXT_PUBLIC_KEYCLOAK_REALM: marketplace
+      NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: marketplace-app
+      
+      NEXT_PUBLIC_API_BASE_URL: ""
+      NEXT_PUBLIC_PRODUCTS_API: /api/products
+      NEXT_PUBLIC_ORDERS_API: /api/orders
+      NEXT_PUBLIC_CATEGORIES_API: /api/categories
+      
+      NEXT_PUBLIC_MINIO_URL: http://localhost:9000
+      NEXT_PUBLIC_MINIO_BUCKET: marketplace-bucket
+      
+      API_INTERNAL_URL: http://product-service:8080
+      ORDER_API_INTERNAL_URL: http://order-service:8080
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      
+      NODE_ENV: production
+    depends_on:
+      - product-service
+      - order-service
+    networks:
+      - app-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   nginx:
     image: nginx:alpine
     container_name: nginx-gateway
@@ -187,8 +223,7 @@ services:
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
 
-      KC_HOSTNAME_URL: http://localhost/auth
-      KC_HOSTNAME_ADMIN_URL: http://localhost/auth
+      KC_HOSTNAME: localhost
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HOSTNAME_STRICT: "false"
       KC_PROXY_HEADERS: xforwarded
@@ -252,7 +287,7 @@ services:
       Minio__BucketName: marketplace-bucket
       Minio__UseHttp: true
 
-      Keycloak__Authority: http://keycloak:8080/auth/realms/marketplace
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
       Keycloak__Audience: marketplace-app
       Keycloak__ValidIssuer: http://localhost/auth/realms/marketplace
     depends_on:
@@ -380,7 +415,7 @@ services:
       
       KafkaSettings__Servers: kafka:9092
       
-      Keycloak__Authority: http://keycloak:8080/auth/realms/marketplace
+      Keycloak__Authority: http://keycloak:8080/realms/marketplace
       Keycloak__Audience: marketplace-app
       Keycloak__ValidIssuer: http://localhost/auth/realms/marketplace
       Keycloak__RequireHttpsMetadata: "false"

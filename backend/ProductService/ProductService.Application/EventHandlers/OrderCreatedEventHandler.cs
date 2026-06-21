@@ -1,5 +1,4 @@
 ﻿using IntegrationEvents;
-using IntegrationEvents.IntegrationEvents;
 using IntegrationEvents.IntegrationEvents.Order;
 using IntegrationEvents.Shared;
 using ProductService.Infrastructure.Abstractions.EventHandlers.Abstractions;
@@ -20,29 +19,25 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
             var isReservationSuccessful = true;
             var failedProductIds = new List<Guid>();
             var reservedItems = new List<ReservedItemDto>();
-            decimal totalAmount = 0;
-
+            
             foreach (var item in @event.Items)
             {
                 var product = await productRepository.GetAsync(item.ProductId);
-                
                 if (product == null)
                 {
                     isReservationSuccessful = false;
                     failedProductIds.Add(item.ProductId);
                     continue;
                 }
-
+                
                 reservedItems.Add(new ReservedItemDto(item.ProductId, item.Quantity));
-                totalAmount += product.Price.Amount * item.Quantity;
             }
 
             var headers = new Dictionary<string, string?>
             {
                 { "sharding-key", @event.OrderId.ToString() },
-                { "correlation-id", @event.CorrelationId.ToString() }
             };
-
+            
             if (isReservationSuccessful)
             {
                 var stockReservedEvent = new StockReservedEvent
@@ -52,7 +47,7 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     ReservedItems = reservedItems
                 };
 
-                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockReservedEvent, new Dictionary<string, string>());
+                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockReservedEvent, headers);
             }
             else
             {
@@ -65,7 +60,7 @@ public class OrderCreatedEventHandler(IProductRepository productRepository, IUni
                     FailedProductIds = failedProductIds
                 };
                 
-                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockFailedEvent, new Dictionary<string, string>());
+                await eventPublisher.PublishAsync(Topics.Products.ProductsTopic, stockFailedEvent, headers);
             }
 
             await unitOfWork.CommitAsync();

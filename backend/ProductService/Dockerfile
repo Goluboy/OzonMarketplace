@@ -1,38 +1,28 @@
-﻿# syntax=docker/dockerfile:1.7
-
-# ============================================================
-# Stage 1: Build
-# ============================================================
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+﻿FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
-# 1. Копируем ТОЛЬКО csproj файлы для restore (слой кэшируется Docker'ом)
 COPY ["ProductService/ProductService.Presentation/ProductService.Presentation.csproj", "ProductService/ProductService.Presentation/"]
 COPY ["ProductService/ProductService.Application/ProductService.Application.csproj", "ProductService/ProductService.Application/"]
 COPY ["ProductService/ProductService.Infrastructure/ProductService.Infrastructure.csproj", "ProductService/ProductService.Infrastructure/"]
 COPY ["ProductService/ProductService.Infrastructure.Abstractions/ProductService.Infrastructure.Abstractions.csproj", "ProductService/ProductService.Infrastructure.Abstractions/"]
 COPY ["ProductService/ProductService.Domain/ProductService.Domain.csproj", "ProductService/ProductService.Domain/"]
 COPY ["S3/S3.csproj", "S3/"]
+COPY ["Redis/Redis.csproj", "Redis/"]
 
-# 2. Restore (обычный, без cache mounts)
-RUN dotnet restore "ProductService/ProductService.Presentation/ProductService.Presentation.csproj"
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet restore "ProductService/ProductService.Presentation/ProductService.Presentation.csproj"
 
-# 3. Копируем весь исходный код
 COPY . .
 
-# 4. Publish
-RUN dotnet publish "ProductService/ProductService.Presentation/ProductService.Presentation.csproj" \
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet publish "ProductService/ProductService.Presentation/ProductService.Presentation.csproj" \
         -c Release \
         -o /app/publish \
         /p:UseAppHost=false
 
-# ============================================================
-# Stage 2: Final (production runtime)
-# ============================================================
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 WORKDIR /app
 
-# Timezone и ICU для корректной работы с датами и строками
 RUN apk add --no-cache \
         tzdata \
         icu-libs \
@@ -41,18 +31,14 @@ RUN apk add --no-cache \
     && echo "Europe/Moscow" > /etc/timezone \
     && rm -rf /var/cache/apk/*
 
-# Неинвариантная globalization (для Currency, дат и т.д.)
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
-# Копируем только опубликованные файлы
 COPY --from=build /app/publish .
 
-# Запуск от непривилегированного пользователя (безопасность)
 USER $APP_UID
 
-# Healthcheck для orchestrator'ов
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Domain.ValueObjects;
-using OrderService.Http.Dtos;
 using OrderService.Http.Dtos.Requests;
+using OrderService.Http.Dtos.Responses;
 using OrderService.Http.Extensions;
 using OrderService.Http.Mappings;
 using OrderService.UseCases.Commands.Commands;

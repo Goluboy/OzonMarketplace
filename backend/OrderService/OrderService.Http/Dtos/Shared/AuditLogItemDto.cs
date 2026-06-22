@@ -1,4 +1,4 @@
-namespace OrderService.Http.Dtos;
+namespace OrderService.Http.Dtos.Shared;
 
 public record AuditLogItemDto(
     DateTime Timestamp,

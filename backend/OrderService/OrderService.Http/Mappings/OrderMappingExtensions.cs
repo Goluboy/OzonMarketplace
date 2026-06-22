@@ -1,4 +1,4 @@
-using OrderService.Http.Dtos;
+using OrderService.Http.Dtos.Requests;
 using OrderService.Http.Dtos.Shared;
 using OrderService.UseCases.Queries.Models;
 

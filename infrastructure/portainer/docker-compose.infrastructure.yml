@@ -47,8 +47,8 @@ services:
       KC_DB_URL: jdbc:postgresql://keycloak-db:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_NAME}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-      
-      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-https://highload-study.ru/auth}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
+      KC_HTTP_RELATIVE_PATH: /auth
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HOSTNAME_STRICT: ${KEYCLOAK_HOSTNAME_STRICT:-false}
       KC_PROXY_HEADERS: xforwarded

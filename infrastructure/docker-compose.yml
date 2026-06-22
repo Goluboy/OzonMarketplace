@@ -1,40 +1,4 @@
 services:
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-    container_name: frontend
-    environment:
-      NEXT_PUBLIC_KEYCLOAK_URL: http://localhost/auth
-      NEXT_PUBLIC_KEYCLOAK_REALM: marketplace
-      NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: marketplace-app
-      
-      NEXT_PUBLIC_API_BASE_URL: ""
-      NEXT_PUBLIC_PRODUCTS_API: /api/products
-      NEXT_PUBLIC_ORDERS_API: /api/orders
-      NEXT_PUBLIC_CATEGORIES_API: /api/categories
-      
-      NEXT_PUBLIC_MINIO_URL: http://localhost:9000
-      NEXT_PUBLIC_MINIO_BUCKET: marketplace-bucket
-      
-      API_INTERNAL_URL: http://product-service:8080
-      ORDER_API_INTERNAL_URL: http://order-service:8080
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
-      
-      NODE_ENV: production
-    depends_on:
-      - product-service
-      - order-service
-    networks:
-      - app-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
   nginx:
     image: nginx:alpine
     container_name: nginx-gateway
@@ -59,7 +23,6 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-
   kafka:
     image: apache/kafka:3.7.0
     container_name: kafka
@@ -184,25 +147,14 @@ services:
     environment:
       POSTGRES_USER: dev
       POSTGRES_PASSWORD: dev
+      POSTGRES_DB: marketplace
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-net
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - >-
-          PGPASSWORD=dev psql -U dev -d products -c 'SELECT 1;' &&
-          PGPASSWORD=dev psql -U dev -d orders -c 'SELECT 1;' &&
-          PGPASSWORD=dev psql -U dev -d keycloak -c 'SELECT 1;'
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-  
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin
@@ -213,6 +165,24 @@ services:
       - "5050:80"
     depends_on:
       - postgres
+      - order-db
+    networks:
+      - app-net
+
+  keycloak-db:
+    image: postgres:18-alpine
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - keycloak_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - app-net
 
@@ -226,28 +196,18 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_NAME}
+      KC_DB_URL: jdbc:postgresql://keycloak-db:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_NAME}
+      KC_HOSTNAME: localhost
+      KC_HTTP_RELATIVE_PATH: /auth 
+      KC_HOSTNAME_STRICT: "false"
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-
-      KC_HOSTNAME: "http://localhost/auth"
-      # KC_HTTP_RELATIVE_PATH: /auth
-      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
-      
-      KC_HOSTNAME_STRICT: "false"
-      KC_PROXY_HEADERS: xforwarded
-      KC_HTTP_ENABLED: "true"
+      KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED}
       KC_HEALTH_ENABLED: "true"
-      
-      KC_FEATURES: "opentelemetry"
-      
-      KC_METRICS_ENABLED: "true"
-      KC_TRACING_ENABLED: "true"
-      KC_TRACING_ENDPOINT: "http://jaeger:4317"
-      KC_LOG: "console"
-      KC_LOG_CONSOLE_INCLUDE_TRACE: "true"
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/marketplace-realm.json:ro
+    ports:
+      - "${KEYCLOAK_HTTP_PORT}:8080"
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
       interval: 10s
@@ -255,7 +215,7 @@ services:
       retries: 30
       start_period: 90s
     depends_on:
-      postgres:
+      keycloak-db:
         condition: service_healthy
     networks:
       - app-net
@@ -292,7 +252,7 @@ services:
     ports:
       - "5001:8080"
     environment:
-      ConnectionStrings__PostgresConnectionString: Host=postgres;Port=5432;Database=products;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      ConnectionStrings__PostgresConnectionString: Host=postgres;Port=5432;Database=marketplace;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
       KafkaSettings__Servers: kafka:9092
       ASPNETCORE_ENVIRONMENT: Development
       Redis__ConnectionString: redis:6379,password=redispassword,abortConnect=false
@@ -306,14 +266,14 @@ services:
 
       Keycloak__Authority: http://keycloak:8080/realms/marketplace
       Keycloak__Audience: marketplace-app
-      Keycloak__ValidIssuer: http://localhost/auth/realms/marketplace
+      Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
       
       OpenTelemetry__OtlpEndpoint: http://jaeger:4317
     depends_on:
       keycloak:
         condition: service_healthy
       postgres:
-        condition: service_healthy
+        condition: service_started
       kafka:
         condition: service_started
       minio:
@@ -430,13 +390,12 @@ services:
     ports:
       - "5002:8080"
     environment:
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=orders;Username=dev;Password=dev;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
+      ConnectionStrings__DefaultConnection: Host=order-db;Port=5432;Database=orders;Username=order_user;Password=order_password;Pooling=true;Maximum Pool Size=100;Minimum Pool Size=10;Timeout=30;Command Timeout=30;
       
       KafkaSettings__Servers: kafka:9092
       
       Keycloak__Authority: http://keycloak:8080/realms/marketplace
       Keycloak__Audience: marketplace-app
-      Keycloak__ValidIssuer: http://localhost/auth/realms/marketplace
       Keycloak__RequireHttpsMetadata: "false"
       
       ASPNETCORE_ENVIRONMENT: Development
@@ -444,7 +403,7 @@ services:
       
       OpenTelemetry__OtlpEndpoint: http://jaeger:4317
     depends_on:
-      postgres:
+      order-db:
         condition: service_healthy
       kafka:
         condition: service_started
@@ -457,7 +416,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
       - "9090:9090"
@@ -469,20 +428,9 @@ services:
     image: grafana/loki:3.7
     container_name: loki
     volumes:
-      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
     ports:
       - "3100:3100"
-    networks:
-      - app-net
-    restart: always
-
-  promtail:
-    image: grafana/promtail:3.6.11
-    container_name: promtail
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/log:/var/log:ro
-      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
     networks:
       - app-net
     restart: always
@@ -500,19 +448,17 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    environment:
-      GF_SERVER_ROOT_URL: http://localhost/monitoring/
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     ports:
       - "3200:3000"
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/grafana:/etc/grafana/provisioning/datasources:ro
     networks:
       - app-net
     restart: always
 
 volumes:
+  keycloak_data:
   kafka-data:
   postgres-data:
   minio-data:

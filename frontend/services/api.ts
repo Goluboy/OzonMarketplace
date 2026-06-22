@@ -1,6 +1,6 @@
 import { authService } from './auth.service';
 
-const API_BASE_URL = 'http://localhost:5001';
+const API_BASE_URL = 'http://localhost';
 
 interface ApiOptions extends RequestInit {
   requireAuth?: boolean;

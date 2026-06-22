@@ -186,6 +186,8 @@ namespace OrderService.Http
         
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseExceptionHandler();
+
             using (var scope = app.ApplicationServices.CreateScope())
             {
                 var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();

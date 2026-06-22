@@ -349,6 +349,7 @@ services:
       
       Keycloak__Authority: http://keycloak:8080/realms/marketplace
       Keycloak__Audience: marketplace-app
+      Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
       Keycloak__RequireHttpsMetadata: "false"
       
       ASPNETCORE_ENVIRONMENT: Development

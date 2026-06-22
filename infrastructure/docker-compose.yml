@@ -521,6 +521,7 @@ volumes:
   prometheus-data:
   grafana-data:  
   nginx-logs: 
+  order_data:
   
 networks:
   app-net:

@@ -5,6 +5,8 @@ import { ProductGallery } from "@/app/component/product/ProductGallery";
 import { ProductInfo } from "@/app/component/product/ProductInfo";
 import { ProductBuyCard } from "@/app/component/product/ProductBuyCard";
 import { productService } from "../../../../services/product.service";
+import Link from 'next/link';
+
 
 type Props = {
   params: Promise<{
@@ -56,9 +58,10 @@ export default async function ProductPage({ params }: Props) {
       <Header />
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Хлебные крошки */}
         <div className="mb-6 text-sm text-gray-500">
-          <span className="hover:text-gray-700">Главная</span>
+          <Link href="/">
+            <span className="hover:text-gray-700">Главная</span>
+          </Link>
           <span className="mx-2">/</span>
           {product.categoryName && (
             <>

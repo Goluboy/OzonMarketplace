@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Domain.ValueObjects;
-using OrderService.Http.Dtos;
 using OrderService.Http.Dtos.Requests;
+using OrderService.Http.Dtos.Responses;
 using OrderService.Http.Extensions;
 using OrderService.Http.Mappings;
 using OrderService.UseCases.Commands.Commands;
@@ -105,24 +105,17 @@ public class AdminOrdersController(
         [FromBody] UpdateOrderStatusRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await updateOrderStatusHandler.HandleAsync(
+        await updateOrderStatusHandler.HandleAsync(
                 new UpdateOrderStatusCommand(id, request.NewStatus, User.GetUserId(), request.Comment),
                 cancellationToken);
 
-            // Re-fetch the updated order to return
-            var updatedOrder = await getOrderByIdHandler.HandleAsync(new GetOrderByIdQuery(id), cancellationToken);
-            if (updatedOrder is null)
-            {
-                return NotFound(); // Should not happen if update was successful
-            }
-            return Ok(updatedOrder.ToAdminDto());
-        }
-        catch (InvalidOperationException ex)
+        // Re-fetch the updated order to return
+        var updatedOrder = await getOrderByIdHandler.HandleAsync(new GetOrderByIdQuery(id), cancellationToken);
+        if (updatedOrder is null)
         {
-            return BadRequest(HttpContext.CreateProblemDetails("Status update failed", ex.Message));
+            return NotFound(); // Should not happen if update was successful
         }
+        return Ok(updatedOrder.ToAdminDto());
     }
 
     /// <summary>
@@ -143,22 +136,15 @@ public class AdminOrdersController(
         [FromBody] ForceCancelOrderRequest request, // Assuming a DTO for force cancel reason
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            // Assuming ForceCancelOrderCommand exists and takes order ID and reason
-            await forceCancelOrderHandler.HandleAsync(new ForceCancelOrderCommand(id, request.Reason), cancellationToken);
+        // Assuming ForceCancelOrderCommand exists and takes order ID and reason
+        await forceCancelOrderHandler.HandleAsync(new ForceCancelOrderCommand(id, request.Reason), cancellationToken);
 
-            // Re-fetch the updated order to return
-            var cancelledOrder = await getOrderByIdHandler.HandleAsync(new GetOrderByIdQuery(id), cancellationToken);
-            if (cancelledOrder is null)
-            {
-                return NotFound(); // Should not happen if cancellation was successful
-            }
-            return Ok(cancelledOrder.ToAdminDto());
-        }
-        catch (InvalidOperationException ex)
+        // Re-fetch the updated order to return
+        var cancelledOrder = await getOrderByIdHandler.HandleAsync(new GetOrderByIdQuery(id), cancellationToken);
+        if (cancelledOrder is null)
         {
-            return BadRequest(HttpContext.CreateProblemDetails("Force cancellation failed", ex.Message));
+            return NotFound(); // Should not happen if cancellation was successful
         }
+        return Ok(cancelledOrder.ToAdminDto());
     }
 }

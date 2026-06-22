@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Domain.ValueObjects;
-using OrderService.Http.Dtos;
 using OrderService.Http.Dtos.Requests;
 using OrderService.Http.Dtos.Responses;
 using OrderService.Http.Extensions;
@@ -115,22 +114,12 @@ public class OrdersController(
                 item.Quantity,
                 0m)).ToList()); // Placeholder, actual price should come from product service
 
-        try
-        {
-            var orderId = await createOrderHandler.HandleAsync(command, cancellationToken);
+        var orderId = await createOrderHandler.HandleAsync(command, cancellationToken);
 
-            return Accepted(new CreateOrderAcceptedResponse(
-                orderId,
-                OrderStatus.Created,
-                $"/api/orders/{orderId}/status"));
-        }
-        catch (InvalidOperationException ex)
-        {
-
-            return Conflict(HttpContext.CreateProblemDetails(
-                "Order cannot be created",
-                ex.Message));
-        }
+        return Accepted(new CreateOrderAcceptedResponse(
+            orderId,
+            OrderStatus.Created,
+            $"/api/orders/{orderId}/status"));
     }
 
     /// <summary>
@@ -196,18 +185,9 @@ public class OrdersController(
             return Forbid();
         }
 
-        // Assuming CancelOrderCommand handles the business logic for cancellation rules
-        try
-        {
-            await cancelOrderHandler.HandleAsync(new CustomerCancelOrderCommand(id, customerId), cancellationToken);
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(HttpContext.CreateProblemDetails(
-                "Order cancellation failed",
-                ex.Message));
-        }
+        await cancelOrderHandler.HandleAsync(new CustomerCancelOrderCommand(id, customerId), cancellationToken);
+
+        return NoContent();
     }
 
     /// <summary>

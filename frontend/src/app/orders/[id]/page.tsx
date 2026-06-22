@@ -2,60 +2,125 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { Header } from "@/app/component/layout/header/Header";
+import {
+  getOrderById,
+  OrderDetails,
+} from "../../../../services/order.service";
 
 export default function OrderPage() {
-  const order = {
-    id: "ORD-12345",
-    status: "delivered",
-    createdAt: "15.05.2026 14:30",
-    deliveredAt: "18.05.2026",
-    address: "г. Москва, ул. Ленина, 1",
-    totalPrice: 199998,
-    items: [
-      {
-        id: "1",
-        name: "iPhone 17",
-        quantity: 2,
-        price: 99999,
-        image: "https://ir.ozone.ru/s3/multimedia-1-j/wc1000/10351974475.jpg",
-      }
-    ],
-  };
+
+  const params = useParams();
+
+  const [order, setOrder] =
+    useState<OrderDetails | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
 
   function getStatus() {
-    switch (order.status) {
-      case "delivered":
+    switch (order?.status) {
+      case "Created":
+        return {
+          icon: "📦",
+          text: "Создан",
+          color: "text-gray-500",
+        };
+
+      case "Paid":
+        return {
+          icon: "💳",
+          text: "Оплачен",
+          color: "text-blue-500",
+        };
+
+      case "Assembling":
+        return {
+          icon: "📦",
+          text: "Собирается",
+          color: "text-yellow-500",
+        };
+
+      case "Shipping":
+        return {
+          icon: "🚚",
+          text: "В пути",
+          color: "text-indigo-500",
+        };
+
+      case "Delivered":
         return {
           icon: "✅",
           text: "Доставлен",
           color: "text-green-500",
         };
 
-      case "shipping":
+      case "Cancelled":
         return {
-          icon: "🚚",
-          text: "В пути",
-          color: "text-blue-500",
-        };
-
-      case "processing":
-        return {
-          icon: "⏳",
-          text: "В обработке",
-          color: "text-yellow-500",
+          icon: "❌",
+          text: "Отменен",
+          color: "text-red-500",
         };
 
       default:
         return {
           icon: "📦",
-          text: "Создан",
+          text: order?.status,
           color: "text-text",
         };
     }
   }
 
   const status = getStatus();
+
+  useEffect(() => {
+    async function loadOrder() {
+      try {
+        const data = await getOrderById(
+          params.id as string
+        );
+
+        setOrder(data);
+      } catch (e) {
+        setError("Не удалось загрузить заказ");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadOrder();
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="container mx-auto py-10">
+          Загрузка заказа...
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Header />
+        <div className="container mx-auto py-10 text-red-500">
+          {error}
+        </div>
+      </>
+    );
+  }     
+
+  if (!order) {
+    return null;
+  }
 
   return (
     <>
@@ -84,7 +149,8 @@ export default function OrderPage() {
                   </div>
 
                   <div className="font-medium text-text">
-                    {order.createdAt}
+                    {new Date(order.createdAt)
+                      .toLocaleString("ru-RU")}
                   </div>
                 </div>
 
@@ -94,7 +160,7 @@ export default function OrderPage() {
                   </div>
 
                   <div className="font-medium text-text">
-                    {order.deliveredAt}
+                    18.05.2026
                   </div>
                 </div>
               </div>
@@ -109,13 +175,13 @@ export default function OrderPage() {
               <div className="space-y-4">
                 {order.items.map((item) => (
                   <div
-                    key={item.id}
+                    key={item.productId}
                     className="flex items-center gap-5 rounded-2xl bg-surface-secondary p-4"
                   >
                     <div className="relative h-24 w-24 overflow-hidden rounded-2xl bg-background">
                       <Image
-                        src={item.image}
-                        alt={item.name}
+                        src="/images/product-placeholder.png"
+                        alt="Товар"
                         fill
                         className="object-contain"
                       />
@@ -123,7 +189,7 @@ export default function OrderPage() {
 
                     <div className="flex-1">
                       <div className="font-medium text-text">
-                        {item.name}
+                        {item.productName}
                       </div>
 
                       <div className="mt-1 text-sm text-text-secondary">
@@ -132,7 +198,10 @@ export default function OrderPage() {
                     </div>
 
                     <div className="text-xl font-bold text-text">
-                      {(item.quantity * item.price).toLocaleString("ru-RU")} ₽
+                      {(
+                        Number(item.priceAtPurchase.amount) *
+                        item.quantity
+                      ).toLocaleString("ru-RU")} ₽
                     </div>
                   </div>
                 ))}
@@ -150,7 +219,7 @@ export default function OrderPage() {
               </div>
 
               <div className="mt-2 text-lg font-medium text-text">
-                {order.address}
+                {order.deliveryAddress}
               </div>
             </div>
 
@@ -176,7 +245,13 @@ export default function OrderPage() {
                   </span>
 
                   <span className="font-medium text-text">
-                    {order.items.length}
+                    {
+                      order.items.reduce(
+                        (sum, item) =>
+                          sum + item.quantity,
+                        0
+                      )
+                    }
                   </span>
                 </div>
 
@@ -187,7 +262,10 @@ export default function OrderPage() {
                     </span>
 
                     <span className="text-3xl font-bold text-text">
-                      {order.totalPrice.toLocaleString("ru-RU")} ₽
+                      {
+                        Number(order.totalAmount.amount)
+                          .toLocaleString("ru-RU")
+                      } ₽
                     </span>
                   </div>
                 </div>

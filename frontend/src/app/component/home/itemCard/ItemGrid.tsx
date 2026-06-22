@@ -1,4 +1,3 @@
-// app/component/home/itemCard/ItemGrid.tsx
 import { ItemCard, type Item } from "./ItemCard";
 import { cn } from "@/lib/utils/cn";
 

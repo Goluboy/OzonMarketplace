@@ -122,7 +122,24 @@ function AdminProductsPageContent() {
   return (
     <>
       <Header />
-
+      <div className="mb-4">
+        <Link
+          href="/admin"
+          className="
+            inline-flex
+            items-center
+            rounded-2xl
+            bg-surface-secondary
+            px-5
+            py-3
+            text-text
+            transition
+            hover:opacity-80
+          "
+        >
+          ← В админ-панель
+        </Link>
+      </div>
       <div className="container mx-auto py-8 px-4">
         {/* Верхняя панель */}
         <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
@@ -244,7 +261,6 @@ function AdminProductsPageContent() {
   );
 }
 
-// Loading fallback компонент
 function AdminProductsPageLoading() {
   return (
     <>

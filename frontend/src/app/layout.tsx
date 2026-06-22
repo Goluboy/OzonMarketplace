@@ -3,6 +3,7 @@ import { SearchProvider } from "../../contexts/SearchContext";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Inter } from "next/font/google";
 import { AuthProvider } from "../../providers/AuthProvider";
+import { CartProvider } from "@/contexts/CartContext";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -35,7 +36,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col container mx-auto">
         <AuthProvider>
           <SearchProvider>
-            {children}
+            <CartProvider>
+              {children}
+            </CartProvider>
           </SearchProvider>
         </AuthProvider>
       </body>

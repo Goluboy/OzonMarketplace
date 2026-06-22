@@ -30,7 +30,8 @@ export interface GetPublicProductsParams {
 
 class PublicService {
   private readonly baseUrl = '/api/products';
-
+  private readonly isBackendReady = false;
+  
   async getProducts(params: GetPublicProductsParams = {}): Promise<PublicProductCursorPagedResult> {
     try {
       const queryParams = new URLSearchParams();
@@ -73,6 +74,17 @@ class PublicService {
   }
 
   async getProductDiscount(productId: string): Promise<{ salePrice: Money; isActive: boolean } | null> {
+    if (!this.isBackendReady) {
+      console.log('🔧 Временный мок данных скидки (public)');
+      return {
+        salePrice: { 
+          amount: "0",
+          currency: 'RUB' 
+        },
+        isActive: false,
+      };
+    }
+
     try {
       const response = await api.get<{ salePrice: Money; isActive: boolean }>(
         `/api/pricing/products/${productId}`,

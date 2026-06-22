@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "../../../../../providers/AuthProvider"
 import { useSearch } from "../../../../../contexts/SearchContext"
 import { HeaderMenu } from "./Header-menu.data"
+import { useEffect } from "react";
 
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ')
@@ -21,9 +22,17 @@ export function Header() {
   const canAccessAdmin = user?.role === 'admin' || user?.role === 'seller';
 
   const handleSearch = () => {
-    if (localSearch.trim()) {
-      setSearchQuery(localSearch);
-      router.push('/?search=' + encodeURIComponent(localSearch));
+    const query = localSearch.trim();
+
+    setSearchQuery(query);
+
+    if (query) {
+      router.push(
+        "/?search=" +
+        encodeURIComponent(query)
+      );
+    } else {
+      router.push("/");
     }
   };
 
@@ -32,6 +41,10 @@ export function Header() {
       handleSearch();
     }
   };
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   return (
     <header className="grid grid-cols-[2fr_7fr_2.3fr] gap-7 items-center mt-3 mx-5 mb-20">
@@ -62,13 +75,14 @@ export function Header() {
         {!loading && (
           <>
             {!isAuthenticated ? (
-              <button
-                onClick={login}
-                className="flex items-center flex-col hover:opacity-70 transition-opacity"
-              >
-                <User size={20} />
-                <span className="text-sm font-medium">Войти</span>
-              </button>
+              <Link href="/login">
+                <button
+                  className="flex items-center flex-col hover:opacity-70 transition-opacity"
+                >
+                  <User size={20} />
+                  <span className="text-sm font-medium">Войти</span>
+                </button>
+              </Link>
             ) : (
               <div className="flex items-center gap-4">
                 <div className="text-right">

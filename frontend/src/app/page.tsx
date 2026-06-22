@@ -115,7 +115,6 @@ function HomeContent() {
   );
 }
 
-// 🆕 Fallback компонент для Suspense
 function HomeLoading() {
   return (
     <>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/app/component/ui/Button";
 
 interface CartSummaryProps {
@@ -5,6 +6,8 @@ interface CartSummaryProps {
   totalQty: number;
   discount: number;
   totalPrice: number;
+
+  onCheckout: () => void;
 }
 
 function formatPrice(value: number) {
@@ -16,6 +19,7 @@ export function CartSummary({
   totalQty,
   discount,
   totalPrice,
+  onCheckout,
 }: CartSummaryProps) {
   return (
     <div className="sticky top-6 h-fit rounded-xl bg-gray-50 bg-surface p-5">
@@ -53,9 +57,11 @@ export function CartSummary({
         </div>
       </div>
 
-      <Button className="mt-4 h-10 w-full bg-primary text-white hover:bg-accent-dark">
-        Оформить заказ →
-      </Button>
+      <Link href="/checkout">
+        <Button className="mt-4 h-10 w-full bg-primary text-white hover:bg-accent-dark">
+          Оформить заказ →
+        </Button>
+      </Link>
 
       <p className="mt-3 text-center text-[11px] leading-relaxed text-text-secondary">
         Переход к оформлению и выбору доставки

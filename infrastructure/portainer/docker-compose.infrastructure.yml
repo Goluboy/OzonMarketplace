@@ -1,6 +1,8 @@
 services:
   nginx:
     image: goluboy/marketplace-nginx:latest
+    container_name: nginx-gateway
+    restart: unless-stopped
     volumes:
       - nginx-logs:/var/log/nginx
     networks:
@@ -10,8 +12,7 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost/nginx-health || exit 1"]
       interval: 30s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 3    
     deploy:
       replicas: 1
       restart_policy:
@@ -26,6 +27,7 @@ services:
 
   keycloak-db:
     image: postgres:18-alpine
+    container_name: keycloak-db
     environment:
       POSTGRES_DB: ${KEYCLOAK_DB_NAME}
       POSTGRES_USER: ${KEYCLOAK_DB_USER}
@@ -35,16 +37,15 @@ services:
     networks:
       - app-netu
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d ${KEYCLOAK_DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
-    deploy:
-      restart_policy:
-        condition: any
+    shm_size: '256mb'
 
   keycloak:
     image: goluboy/marketplace-keycloak:latest
+    container_name: keycloak
     command:
       - start-dev
       - --import-realm
@@ -62,6 +63,12 @@ services:
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED:-true}
       KC_HEALTH_ENABLED: "true"
+      
+      KC_FEATURES: "opentelemetry"
+      KC_METRICS_ENABLED: "true"
+      KC_TRACING_ENABLED: "true"
+      KC_TRACING_ENDPOINT: ${TRACING_ENDPOINT}
+        
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
       interval: 10s
@@ -72,19 +79,18 @@ services:
       - keycloak-db
     networks:
       - app-netu
-    deploy:
-      restart_policy:
-        condition: any
 
   keycloak-init:
     image: goluboy/marketplace-keycloak:latest
+    container_name: keycloak-init
     depends_on:
       - keycloak
+        
     entrypoint: ["/bin/bash", "/tmp/init-users.sh"]
     environment:
       KC_ADMIN: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KC_SERVER_URL: http://keycloak:8080
+      KC_SERVER_URL: http://keycloak:8080/auth
       KC_REALM: marketplace
       TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test@example.com}
       TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-password}
@@ -92,48 +98,40 @@ services:
       ADMIN_USER_PASSWORD: ${ADMIN_USER_PASSWORD:-admin123}
     networks:
       - app-netu
-    deploy:
-      restart_policy:
-        condition: none
+    restart: "no"
 
   prometheus:
     image: goluboy/marketplace-prometheus:latest
+    container_name: prometheus
     volumes:
       - prometheus-data:/prometheus
     networks:
       - app-netu
-    deploy:
-      restart_policy:
-        condition: any
+    restart: always
 
   loki:
     image: goluboy/marketplace-loki:latest
+    container_name: loki
     networks:
       - app-netu
-    deploy:
-      restart_policy:
-        condition: any
+    restart: always
 
   grafana:
     image: goluboy/marketplace-grafana:latest
+    container_name: grafana
     environment:
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-https://highload-study.ru/monitoring/}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL}
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_PLUGINS_AUTO_UPDATE: "false"
     volumes:
       - grafana-data:/var/lib/grafana
     networks:
       - app-netu
-    deploy:
-      restart_policy:
-        condition: any
+    restart: always
 
   grafana-init:
     image: goluboy/marketplace-grafana-init:latest
     environment:
-      GRAFANA_URL: http://grafana:3000
+      GRAFANA_URL: http://marketplace-infrastructure_grafana:3000
       GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
     depends_on:
@@ -143,6 +141,14 @@ services:
     deploy:
       restart_policy:
         condition: none
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    networks:
+      - app-netu
+    deploy:
+      restart_policy:
+        condition: any
 
 volumes:
   keycloak_data:
@@ -155,4 +161,4 @@ networks:
     external: true
   app-netu:
     driver: overlay
-    attachable: true
+    attachable: true 

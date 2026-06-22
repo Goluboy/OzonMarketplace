@@ -114,9 +114,9 @@ import_dashboard_v2() {
     
     echo "[INFO] Importing ${filename} via v2 API..."
     
-    # Читаем содержимое
+    # Конвертируем CRLF в LF
     local dashboard_json
-    dashboard_json=$(cat "$file")
+    dashboard_json=$(tr -d '\r' < "$file")
     
     # Извлекаем name из metadata
     local dash_name
@@ -154,12 +154,16 @@ import_dashboard_v2() {
 convert_v2_to_legacy() {
     local file=$1
     
-    # Конвертируем через jq
-    jq '{
+    # Конвертируем CRLF в LF на лету (решает проблему Windows)
+    local clean_json
+    clean_json=$(tr -d '\r' < "$file")
+    
+    # Конвертируем через jq с правильным синтаксисом
+    echo "$clean_json" | jq --arg folderUid "$FOLDER_UID" '{
         dashboard: {
-            uid: .metadata.uid,
+            uid: (.metadata.uid // .metadata.name // "dashboard"),
             title: .spec.title,
-            panels: .spec.panels,
+            panels: (.spec.panels // []),
             templating: (.spec.templating // {}),
             annotations: (.spec.annotations // {}),
             schemaVersion: (.spec.schemaVersion // 39),
@@ -169,11 +173,10 @@ convert_v2_to_legacy() {
             timezone: (.spec.timezone // "browser"),
             editable: true,
             graphTooltip: (.spec.graphTooltip // 0)
-        } + (if .metadata.uid then {uid: .metadata.uid} else {} end)
-          + (if .metadata.name then {uid: .metadata.name} else {} end),
+        },
         overwrite: true,
-        folderUid: "'"$FOLDER_UID"'"
-    }' "$file"
+        folderUid: $folderUid
+    }'
 }
 
 # ============================================
@@ -188,8 +191,8 @@ import_dashboard_legacy() {
     local dashboard_json
     
     if [ "$format" = "legacy" ]; then
-        # Уже legacy формат, используем как есть
-        dashboard_json=$(cat "$file")
+        # Конвертируем CRLF в LF и читаем файл
+        dashboard_json=$(tr -d '\r' < "$file")
         
         # Убедимся, что есть overwrite и folderUid
         dashboard_json=$(echo "$dashboard_json" | jq --arg folderUid "$FOLDER_UID" '
@@ -201,6 +204,12 @@ import_dashboard_legacy() {
     fi
     
     echo "[INFO] Importing ${filename} via legacy API..."
+    
+    # Проверяем, что JSON валидный
+    if ! echo "$dashboard_json" | jq empty 2>/dev/null; then
+        echo "[ERROR] ${filename} contains invalid JSON after conversion"
+        return 1
+    fi
     
     local response
     response=$(curl -sf -w "\n%{http_code}" -X POST \

@@ -452,7 +452,7 @@ services:
       - "3200:3000"
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/grafana:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana:/etc/grafana/provisioning/datasources:ro
     networks:
       - app-net
     restart: always

@@ -1,24 +1,31 @@
 services:
   nginx:
     image: goluboy/marketplace-nginx:latest
-    container_name: nginx-gateway
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
     volumes:
       - nginx-logs:/var/log/nginx
     networks:
-      - app-net
+      - traefik_proxy
+      - app-netu
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost/nginx-health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 10s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      labels:
+        - "traefik.enable=true"        
+        - "traefik.http.routers.marketplace-nginx.rule=Host(`netu.highload-study.ru`)"
+        - "traefik.http.routers.marketplace-nginx.entrypoints=websecure"
+        - "traefik.http.routers.marketplace-nginx.tls=true"
+        - "traefik.http.routers.marketplace-nginx.tls.certresolver=letresolver"
+        - "traefik.http.services.marketplace-nginx.loadbalancer.server.port=80"
 
   keycloak-db:
     image: postgres:18-alpine
-    container_name: keycloak-db
     environment:
       POSTGRES_DB: ${KEYCLOAK_DB_NAME}
       POSTGRES_USER: ${KEYCLOAK_DB_USER}
@@ -26,17 +33,18 @@ services:
     volumes:
       - keycloak_data:/var/lib/postgresql
     networks:
-      - app-net
+      - app-netu
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
-    shm_size: '256mb'
+    deploy:
+      restart_policy:
+        condition: any
 
   keycloak:
     image: goluboy/marketplace-keycloak:latest
-    container_name: keycloak
     command:
       - start-dev
       - --import-realm
@@ -54,12 +62,6 @@ services:
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED:-true}
       KC_HEALTH_ENABLED: "true"
-      
-      KC_FEATURES: "opentelemetry"
-      KC_METRICS_ENABLED: "true"
-      KC_TRACING_ENABLED: "true"
-      KC_TRACING_ENDPOINT: "http://jaeger:4317"
-        
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
       interval: 10s
@@ -69,14 +71,15 @@ services:
     depends_on:
       - keycloak-db
     networks:
-      - app-net
+      - app-netu
+    deploy:
+      restart_policy:
+        condition: any
 
   keycloak-init:
     image: goluboy/marketplace-keycloak:latest
-    container_name: keycloak-init
     depends_on:
       - keycloak
-        
     entrypoint: ["/bin/bash", "/tmp/init-users.sh"]
     environment:
       KC_ADMIN: ${KEYCLOAK_ADMIN_USERNAME:-admin}
@@ -88,36 +91,58 @@ services:
       ADMIN_USER_EMAIL: ${ADMIN_USER_EMAIL:-admin@example.com}
       ADMIN_USER_PASSWORD: ${ADMIN_USER_PASSWORD:-admin123}
     networks:
-      - app-net
-    restart: "no"
+      - app-netu
+    deploy:
+      restart_policy:
+        condition: none
 
   prometheus:
     image: goluboy/marketplace-prometheus:latest
-    container_name: prometheus
     volumes:
       - prometheus-data:/prometheus
     networks:
-      - app-net
-    restart: always
+      - app-netu
+    deploy:
+      restart_policy:
+        condition: any
 
   loki:
     image: goluboy/marketplace-loki:latest
-    container_name: loki
     networks:
-      - app-net
-    restart: always
+      - app-netu
+    deploy:
+      restart_policy:
+        condition: any
 
   grafana:
     image: goluboy/marketplace-grafana:latest
-    container_name: grafana
     environment:
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost/monitoring/}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-https://highload-study.ru/monitoring/}
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_PLUGINS_AUTO_UPDATE: "false"
     volumes:
       - grafana-data:/var/lib/grafana
     networks:
-      - app-net
-    restart: always
+      - app-netu
+    deploy:
+      restart_policy:
+        condition: any
+
+  grafana-init:
+    image: goluboy/marketplace-grafana-init:latest
+    environment:
+      GRAFANA_URL: http://grafana:3000
+      GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    depends_on:
+      - grafana
+    networks:
+      - app-netu
+    deploy:
+      restart_policy:
+        condition: none
 
 volumes:
   keycloak_data:
@@ -126,7 +151,8 @@ volumes:
   nginx-logs:
 
 networks:
-  app-net:
-    name: marketplace_app-net
+  traefik_proxy:
+    external: true
+  app-netu:
     driver: overlay
-    attachable: true 
+    attachable: true

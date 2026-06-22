@@ -2,25 +2,15 @@
 
 import { Header } from "@/app/component/layout/header/Header";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useCart } from "@/contexts/CartContext";
+import { authService } from "../../../services/auth.service";
+import { createOrder } from "../../../services/order.service";
 
 export default function CheckoutPage() {
   const router = useRouter();
 
-  const items = [
-    {
-      id: "1",
-      name: "iPhone 14",
-      quantity: 2,
-      price: 99999,
-    },
-    {
-      id: "2",
-      name: "Ноутбук",
-      quantity: 1,
-      price: 79999,
-    },
-  ];
+  const { items, clearCart } = useCart();
 
   const [paymentMethod, setPaymentMethod] = useState("card");
 
@@ -31,12 +21,38 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.quantity * item.price,
+  const discount = items.reduce((sum, item) => {
+    if (!item.discountPrice) return sum;
+
+    return (
+      sum +
+      (item.price - item.discountPrice) *
+        item.quantity
+    );
+  }, 0);
+
+  const totalPrice = items.reduce((sum, item) => {
+    const currentPrice =
+      item.discountPrice ?? item.price;
+
+    return sum + currentPrice * item.quantity;
+  }, 0);
+
+  const productsPrice = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(
+    e: React.FormEvent
+  ) {
+    const user = authService.getUser();
+
+    if (!user) {
+      setError("Необходимо авторизоваться");
+      return;
+    }
+
     e.preventDefault();
 
     setError("");
@@ -51,42 +67,51 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!deliveryAddress.trim()) {
+      setError("Введите адрес доставки");
+      return;
+    }
+
+    const payload = {
+      customerName,
+      customerEmail,
+      deliveryAddress,
+
+      items: items.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+      })),
+    };
+
     setLoading(true);
 
     try {
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          customerName,
-          customerEmail,
-          deliveryAddress,
-          paymentMethod,
-          items,
-        }),
-      });
+      const result = await createOrder(payload);
 
-      if (response.status === 409) {
-        setError("Некоторые товары больше недоступны");
-        return;
-      }
+      clearCart();
 
-      if (!response.ok) {
-        setError("Не удалось оформить заказ");
-        return;
-      }
+      router.push(
+        `/orders/${result.orderId}`
+      );
+    } catch (error) {
+      console.error(error);
 
-      const data = await response.json();
-
-      router.push(`/orders/${data.orderId}`);
-    } catch {
-      setError("Ошибка соединения с сервером");
+      setError(
+        "Не удалось оформить заказ"
+      );
     } finally {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    const user = authService.getUser();
+
+    if (user) {
+      setCustomerName(user.name);
+      setCustomerEmail(user.email);
+    }
+  }, []);
 
   return (
     <>
@@ -237,7 +262,10 @@ export default function CheckoutPage() {
                     </div>
 
                     <div className="font-semibold text-text">
-                      {(item.price * item.quantity).toLocaleString("ru-RU")} ₽
+                      {(
+                        (item.discountPrice ?? item.price) *
+                        item.quantity
+                      ).toLocaleString("ru-RU")} ₽
                     </div>
                   </div>
                 ))}
@@ -260,7 +288,7 @@ export default function CheckoutPage() {
     </span>
 
     <span className="font-medium text-text">
-      {totalPrice.toLocaleString("ru-RU")} ₽
+      {productsPrice.toLocaleString("ru-RU")} ₽
     </span>
   </div>
 
@@ -270,7 +298,7 @@ export default function CheckoutPage() {
     </span>
 
     <span className="font-medium text-green-500">
-      0 ₽
+      -{discount.toLocaleString("ru-RU")} ₽
     </span>
   </div>
 

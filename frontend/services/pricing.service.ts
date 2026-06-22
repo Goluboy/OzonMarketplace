@@ -15,8 +15,20 @@ export interface SetDiscountRequest {
 
 class PricingService {
   private readonly baseUrl = '/api/pricing';
+  private readonly isBackendReady = false;
 
-  async getProductDiscount(productId: string): Promise<ProductDiscountDto> {
+  async getProductDiscount(productId: string): Promise<ProductDiscountDto | null> {
+    if (!this.isBackendReady) {
+      console.log('🔧 Временный мок данных скидки');
+      return {
+        productId,
+        sellerId: 'temp-seller',
+        salePrice: { amount: "1000", currency: 'RUB' },
+        isActive: false,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    
     try {
       const discount = await api.get<ProductDiscountDto>(
         `${this.baseUrl}/products/${productId}`,

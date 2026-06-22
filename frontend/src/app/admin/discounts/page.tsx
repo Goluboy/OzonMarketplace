@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Header } from "@/app/component/layout/header/Header";
 import { AdminGuard } from "../../component/AdminGuard";
 import { productService, ProductCardDto } from "../../../../services/product.service";
@@ -349,7 +350,24 @@ function AdminDiscountsPageContent() {
   return (
     <>
       <Header />
-
+      <div className="mb-4">
+        <Link
+          href="/admin"
+          className="
+            inline-flex
+            items-center
+            rounded-2xl
+            bg-surface-secondary
+            px-5
+            py-3
+            text-text
+            transition
+            hover:opacity-80
+          "
+        >
+          ← В админ-панель
+        </Link>
+      </div>
       <div className="container mx-auto py-8 px-4">
         <div className="mb-6">
           <h1 className="text-[32px] font-bold text-gray-900">

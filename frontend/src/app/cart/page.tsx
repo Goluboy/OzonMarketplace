@@ -2,42 +2,80 @@
 
 import Link from "next/link";
 import { useState } from "react";
-
+import { useCart } from "@/contexts/CartContext";
 import { CartItem } from "@/app/component/cart/CartItem";
 import { CartSummary } from "@/app/component/cart/CartSummary";
+import { createOrder } from "../../../services/order.service";
 import { cartItems as initialItems, CartItemType } from "@/app/component/cart/Cartitem.data";
 import {Header} from "@/app/component/layout/header/Header"
+
 export default function CartPage() {
-  const [items, setItems] = useState<CartItemType[]>(initialItems);
+  const {
+    items,
+    increaseQuantity,
+    decreaseQuantity,
+    removeItem,
+  } = useCart();
 
-  const handleIncrease = (id: string) =>
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity: i.quantity + 1 } : i))
-    );
-
-  const handleDecrease = (id: string) =>
-    setItems((prev) =>
-      prev
-        .map((i) => (i.id === id ? { ...i, quantity: i.quantity - 1 } : i))
-        .filter((i) => i.quantity > 0)
-    );
-
-  const handleRemove = (id: string) =>
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const { clearCart } = useCart();
 
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
 
-  const discount = items.reduce((s, i) => {
-    if (!i.discount) return s;
-    return s + Math.round(i.pricePerUnit * (i.discount / 100)) * i.quantity;
+  const discount = items.reduce((sum, item) => {
+    if (!item.discountPrice) return sum;
+
+    return (
+      sum +
+      (item.price - item.discountPrice) *
+        item.quantity
+    );
   }, 0);
 
-  const totalPrice = items.reduce((s, i) => {
-    const unit = i.discount
-      ? Math.round(i.pricePerUnit * (1 - i.discount / 100))
-      : i.pricePerUnit;
-    return s + unit * i.quantity;
+  const totalPrice = items.reduce((sum, item) => {
+    const currentPrice =
+      item.discountPrice ?? item.price;
+
+    return sum + currentPrice * item.quantity;
   }, 0);
+
+  const handleCheckout = async () => {
+    const customerName = prompt("Введите ФИО");
+
+    if (!customerName) return;
+
+    const customerEmail = prompt("Введите Email");
+
+    if (!customerEmail) return;
+
+    const deliveryAddress = prompt("Введите адрес доставки");
+
+    if (!deliveryAddress) return;
+
+    try {
+      const payload = {
+        customerName,
+        customerEmail,
+        deliveryAddress,
+
+        items: items.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+        })),
+      };
+
+      const result = await createOrder(payload);
+
+      alert(
+        `Заказ создан.\nНомер: ${result.orderId}`
+      );
+
+      clearCart();
+    } catch (error) {
+      console.error(error);
+
+      alert("Ошибка оформления заказа");
+    }
+  };
 
   return (
     <>
@@ -46,7 +84,7 @@ export default function CartPage() {
       <div className="mb-6 flex items-baseline justify-between">
         <h1 className="text-[22px] font-medium text-text">Корзина</h1>
         <Link
-          href="/catalog"
+          href="/"
           className="text-sm text-accent transition-colors hover:text-accent-dark"
         >
           ← Продолжить покупки
@@ -56,7 +94,7 @@ export default function CartPage() {
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-gray-50 bg-surface py-20 text-center">
           <p className="text-[15px] font-medium text-text">Корзина пуста</p>
-          <Link href="/catalog" className="text-sm text-accent hover:text-accent-dark">
+          <Link href="/" className="text-sm text-accent hover:text-accent-dark">
             Перейти в каталог →
           </Link>
         </div>
@@ -67,10 +105,15 @@ export default function CartPage() {
         {items.map((item, index) => (
           <CartItem
             key={item.id}
-            item={item}
-            onIncrease={handleIncrease}
-            onDecrease={handleDecrease}
-            onRemove={handleRemove}
+            item={{
+              ...item,
+              image: item.image,
+              pricePerUnit:
+                item.discountPrice ?? item.price,
+            }}
+            onIncrease={increaseQuantity}
+            onDecrease={decreaseQuantity}
+            onRemove={removeItem}
           />
         ))}
       </div>
@@ -81,6 +124,7 @@ export default function CartPage() {
       totalQty={totalQty}
       discount={discount}
       totalPrice={totalPrice}
+      onCheckout={handleCheckout}
     />
   </div>
       )}

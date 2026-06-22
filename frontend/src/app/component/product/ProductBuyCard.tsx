@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ShoppingCart, Check, Minus, Plus, CreditCard } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
 import { ProductPageDto } from "../../../../services/product.service";
 
 interface ProductBuyCardProps {
@@ -11,6 +12,7 @@ interface ProductBuyCardProps {
 export function ProductBuyCard({ product }: ProductBuyCardProps) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const { addToCart } = useCart();
   
   const regularPrice = parseFloat(product.price.amount);
   const discountPrice = product.discountPrice ? parseFloat(product.discountPrice.amount) : null;
@@ -30,9 +32,22 @@ export function ProductBuyCard({ product }: ProductBuyCardProps) {
   };
   
   const handleAddToCart = () => {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      image: product.images?.[0]?.url || "/placeholder.png",
+      price: parseFloat(product.price.amount),
+      discountPrice: product.discountPrice
+        ? parseFloat(product.discountPrice.amount)
+        : undefined,
+      quantity,
+    });
+
     setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-    console.log("Добавлено в корзину:", { productId: product.id, quantity });
+
+    setTimeout(() => {
+      setAdded(false);
+    }, 2000);
   };
   
   const handleBuyNow = () => {

@@ -89,13 +89,16 @@ class AuthService {
 
   async updateToken(minValidity: number = 5): Promise<boolean> {
     try {
-      const refreshed = await keycloak.updateToken(minValidity);
-      if (refreshed) {
-        console.log('Токен обновлен');
+      if (!keycloak.authenticated) {
+        return false;
       }
-      return refreshed;
-    } catch (error) {
-      console.error('Не удалось обновить токен:', error);
+
+      if (!keycloak.refreshToken) {
+        return false;
+      }
+
+      return await keycloak.updateToken(minValidity);
+    } catch {
       return false;
     }
   }

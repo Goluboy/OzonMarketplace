@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
-  
+
   images: {
     remotePatterns: [
       {
@@ -21,9 +21,21 @@ const nextConfig = {
         hostname: 'ir-8.ozone.ru',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'ir-9.ozone.ru',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ir.ozone.ru',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
-  
+
   env: {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || '',
     NEXT_PUBLIC_KEYCLOAK_URL: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost/auth',
@@ -34,6 +46,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'keycloak-js'],
   },
+
 };
 
 export default nextConfig;

@@ -6,18 +6,19 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Npgsql;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OrderService.Http.Middleware;
 using OrderService.Infrastructure.EventBus;
 using OrderService.Infrastructure.Persistence;
 using OrderService.UseCases.Commands;
 using OrderService.UseCases.Queries;
+using Prometheus;
 using System.Data;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using Prometheus;
 
 namespace OrderService.Http
 {
@@ -27,6 +28,8 @@ namespace OrderService.Http
         
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddExceptionHandler<GlobalExceptionHandler>();
+
             services.AddControllers()
                 .AddJsonOptions(options =>
                 {

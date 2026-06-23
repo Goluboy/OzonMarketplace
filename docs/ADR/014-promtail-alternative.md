@@ -1,0 +1,45 @@
+# ADR-014: Отказ от promtail на Portainer
+
+| Метаданные | Значение |
+|---|---|
+| **Дата** | `2026-06-23` |
+| **Статус** | `🟡 Обсуждается` |
+| **Авторы** | `@Goluboy` |
+| **Рецензенты** | `@darksvoid ` |
+
+---
+
+## Контекст
+
+В Portainer нет root прав и необходимо адаптироваться под docker swarm, нет depends_on с условиями. А promtail требует монтирование /var/run/docker.sock и доступ к логам на хосте.
+
+## Решение
+
+Отказ от promtail в пользу Fluent Bit + Docker Fluentd Logging Driver. Не требуются права.
+
+Для сервисов без OTEL интеграции(Kafka, PostgreSQL, Redis...), Docker сам может перенаправить эти логи в Fluent Bit через Fluentd protocol
+Для сервисов OTEL интеграциq (Keycloak) логи трейсинга уйдут в Jaeger, а остальное в Fluent Bit
+Для .NET есть AddOpenTelemetry().AddOtlpExporter(), либо как сервисы без OTEL
+
+## Последствия
+### Позитивные
+- Fluent Bit легковесный, в сравнении с Promtail 
+- Fluent Bit работает не только с loki, возможность расширения
+- Совместим с Docker Swarm
+
+### Негативные
+- Требуется явная настройка logging в каждом сервисе
+
+## Рассмотренные альтернативы
+| Вариант | Почему отклонён |
+|---|---|
+| `Docker json-file driver + Loki Docker plugin` | `Loki Docker plugin требует установки на хост через root (docker plugin install grafana loki-docker-driver). Невозможно на shared-хостинге без админ-прав. Также создает tight coupling между Docker и Loki.` |
+| `OpenTelemetry Collector` | `Требует изменений в коде всех приложений (переход на OTLP-экспорт логов). Не покрывает сторонние сервисы (Keycloak, Kafka, PostgreSQL, Redis, MinIO), у них нет встроенной OTLP-интеграции. ` |
+
+
+
+## Ссылки
+- Issue: `#[номер]`
+- PR: `#[номер]`
+- Документация/Спецификация: `ссылка`
+- Обсуждение в чате/митинге: `ссылка или дата`

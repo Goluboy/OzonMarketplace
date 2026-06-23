@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    orgId: 1
+    folder: 'Marketplace'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true # Позволяет редактировать дашборды в UI (изменения не сохранятся после перезапуска контейнера)
+    options:
+      path: /var/lib/grafana/dashboards # Путь внутри контейнера, где будут лежать JSON-файлы
+      foldersFromFilesStructure: false

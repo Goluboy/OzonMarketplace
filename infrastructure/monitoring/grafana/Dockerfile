@@ -1,11 +1,19 @@
-FROM grafana/grafana:latest
+FROM grafana/grafana:11.2.0
 
-# Копируем datasource'ы в правильную директорию
-COPY datasources/ /etc/grafana/provisioning/datasources/
+# 1. Переключаемся на root, чтобы иметь права на создание папок в /opt
+USER root
 
-# Копируем дашборды И их провайдер
-COPY dashboards/ /var/lib/grafana/dashboards/
-COPY dashboards/dashboard-provider.yaml /etc/grafana/provisioning/dashboards/
+# 2. Копируем конфиг датасорсов
+COPY --chown=grafana:root ./datasources.yaml /etc/grafana/provisioning/datasources/datasources.yaml
 
-# Устанавливаем плагины (опционально, если нужны)
-# RUN grafana-cli plugins install grafana-piechart-panel
+# 3. Копируем провайдер дашбордов (указатель)
+COPY --chown=grafana:root ./dashboards.yml /etc/grafana/provisioning/dashboards/dashboards.yml
+
+# 4. Создаем отдельную папку для дашбордов и рекурсивно отдаем права пользователю grafana
+RUN mkdir -p /opt/grafana/dashboards && chown -R grafana:root /opt/grafana
+
+# 5. Копируем сами JSON-файлы дашбордов
+COPY --chown=grafana:root ./*.json /opt/grafana/dashboards/
+
+# 6. Возвращаем пользователя grafana для безопасного запуска контейнера
+USER grafana

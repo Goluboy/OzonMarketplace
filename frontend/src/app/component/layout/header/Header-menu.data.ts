@@ -7,16 +7,19 @@ export const HeaderMenu = [
     {
         title: "Заказы",
         icon: Package,
-        href: PagesConfig.ORDERS
+        href: PagesConfig.ORDERS,
+        disabled: false
     },
     {
         title: "Избранное",
         icon: Heart,
-        href: PagesConfig.FAVORITES
+        href: PagesConfig.FAVORITES,
+        disabled: true
     },
     {
         title: "Коризна",
         icon: ShoppingBasket,
-        href: PagesConfig.CART
+        href: PagesConfig.CART,
+        disabled: false
     }
 ] as const

@@ -198,10 +198,7 @@ export default function OrderPage() {
                     </div>
 
                     <div className="text-xl font-bold text-text">
-                      {(
-                        Number(item.priceAtPurchase.amount) *
-                        item.quantity
-                      ).toLocaleString("ru-RU")} ₽
+                      
                     </div>
                   </div>
                 ))}

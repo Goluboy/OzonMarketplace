@@ -197,10 +197,9 @@ function AdminProductsPageContent() {
                   {/* Фото */}
                   <div className="relative h-60 overflow-hidden rounded-2xl bg-gray-100">
                     {product.imageUrl ? (
-                      <Image
+                      <img
                         src={product.imageUrl}
                         alt={product.name}
-                        fill
                         className="object-contain p-5"
                       />
                     ) : (

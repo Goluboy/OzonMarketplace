@@ -124,18 +124,39 @@ export function Header() {
         )}
 
         {/* Обычное меню */}
-        {HeaderMenu.map((item) => (
-          <Link
-            key={item.title}
-            href={item.href}
-            className={cn(
-              "flex items-center flex-col transition-opacity hover:opacity-100 opacity-50"
-            )}
-          >
-            <item.icon size={20} />
-            <span className="text-sm font-medium">{item.title}</span>
-          </Link>
-        ))}
+        {HeaderMenu.map((item) => {
+          const Icon = item.icon;
+          const isDisabled = item.disabled;
+
+          if (isDisabled) {
+            return (
+              <div
+                key={item.title}
+                className={cn(
+                  "flex items-center flex-col opacity-30 cursor-not-allowed relative group"
+                )}
+                title="Скоро появится"
+              >
+                <Icon size={20} />
+                <span className="text-sm font-medium">{item.title}</span>
+                
+              </div>
+            );
+          }
+
+          return (
+            <Link
+              key={item.title}
+              href={item.href}
+              className={cn(
+                "flex items-center flex-col transition-opacity hover:opacity-100 opacity-50"
+              )}
+            >
+              <Icon size={20} />
+              <span className="text-sm font-medium">{item.title}</span>
+            </Link>
+          );
+        })}
       </div>
     </header>
   )

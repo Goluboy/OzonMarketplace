@@ -1,6 +1,13 @@
 import { authService } from './auth.service';
 
-const API_BASE_URL = 'http://localhost';
+const getBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return process.env.API_URL || 'http://nginx-gateway';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost';
+};
+
+const API_BASE_URL = getBaseUrl();
 
 interface ApiOptions extends RequestInit {
   requireAuth?: boolean;

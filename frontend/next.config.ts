@@ -8,13 +8,13 @@ const nextConfig = {
         protocol: "http",
         hostname: 'localhost',
         port: '9000',
-        pathname: '/marketplace-bucket/**',
+        pathname: '/**',
       },
       {
         protocol: "http",
         hostname: 'minio',
         port: '9000',
-        pathname: '/marketplace-bucket/**',
+        pathname: '/**',
       },
       {
         protocol: 'https',

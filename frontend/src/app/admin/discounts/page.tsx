@@ -145,7 +145,7 @@ function AdminDiscountsPageContent() {
                     ...p, 
                     discount, 
                     isLoadingDiscount: false,
-                    salePriceInput: discount.salePrice.amount 
+                    salePriceInput: discount?.salePrice?.amount ?? ""
                   }
                 : p
             ));
@@ -215,7 +215,7 @@ function AdminDiscountsPageContent() {
                   ...p, 
                   discount, 
                   isLoadingDiscount: false,
-                  salePriceInput: discount.salePrice.amount 
+                  salePriceInput: discount?.salePrice?.amount ?? ""
                 }
               : p
           ));

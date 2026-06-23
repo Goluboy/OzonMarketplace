@@ -74,9 +74,9 @@ services:
           local topic=$$1
           local partitions=$$2
           local retention=$$3
-          
+        
           echo "🔍 Checking if topic '$$topic' exists..."
-          
+        
           if /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list | grep -q "^$$topic$$"; then
             echo "ℹ️  Topic '$$topic' already exists, skipping"
           else
@@ -89,7 +89,7 @@ services:
               --replication-factor 1 \
               --config retention.ms="$$retention" \
               --config cleanup.policy=delete
-            
+        
             if [ $$? -eq 0 ]; then
               echo "✅ Topic '$$topic' created successfully"
             else
@@ -155,7 +155,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: keycloak
-    command: 
+    command:
       - start-dev
       - --import-realm
     environment:
@@ -349,7 +349,6 @@ services:
       
       Keycloak__Authority: http://keycloak:8080/realms/marketplace
       Keycloak__Audience: marketplace-app
-      Keycloak__ValidIssuer: http://localhost:8080/realms/marketplace
       Keycloak__RequireHttpsMetadata: "false"
       
       ASPNETCORE_ENVIRONMENT: Development
@@ -429,8 +428,8 @@ volumes:
   redis_data:
   redis_insight_data:
   prometheus-data:
-  grafana-data:  
-  
+  grafana-data:
+
 networks:
   app-net:
     driver: bridge

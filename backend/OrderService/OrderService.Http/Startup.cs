@@ -30,6 +30,8 @@ namespace OrderService.Http
         {
             services.AddExceptionHandler<GlobalExceptionHandler>();
 
+            services.AddProblemDetails();
+            
             services.AddControllers()
                 .AddJsonOptions(options =>
                 {

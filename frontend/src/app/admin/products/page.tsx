@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -122,7 +122,24 @@ function AdminProductsPageContent() {
   return (
     <>
       <Header />
-
+      <div className="mb-4">
+        <Link
+          href="/admin"
+          className="
+            inline-flex
+            items-center
+            rounded-2xl
+            bg-surface-secondary
+            px-5
+            py-3
+            text-text
+            transition
+            hover:opacity-80
+          "
+        >
+          ← В админ-панель
+        </Link>
+      </div>
       <div className="container mx-auto py-8 px-4">
         {/* Верхняя панель */}
         <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
@@ -244,10 +261,28 @@ function AdminProductsPageContent() {
   );
 }
 
+function AdminProductsPageLoading() {
+  return (
+    <>
+      <Header />
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-center h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Загрузка товаров...</p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function AdminProductsPage() {
   return (
     <AdminGuard>
-      <AdminProductsPageContent />
+      <Suspense fallback={<AdminProductsPageLoading />}>
+        <AdminProductsPageContent />
+      </Suspense>
     </AdminGuard>
   );
 }

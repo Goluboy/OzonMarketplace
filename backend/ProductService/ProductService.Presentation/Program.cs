@@ -108,6 +108,7 @@ public static class Program
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService("ProductService"))
             .WithTracing(tracing => tracing
+                .AddCapInstrumentation()
                 .AddAspNetCoreInstrumentation(options =>
                 {
                     options.Filter = httpContext =>

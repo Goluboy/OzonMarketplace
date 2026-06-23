@@ -40,8 +40,8 @@ public class ProductQueryServiceTests
 
         var skuCards = new List<ProductCardDto>
         {
-            new() { Id = Guid.NewGuid(), SellerId = Guid.NewGuid(), CategoryId = 1, Name = "Phone Store 1", PriceAmount = 1000m, PriceCurrency = "RUB", MainImageUrl = "img1.png"},
-            new() { Id = Guid.NewGuid(), SellerId = Guid.NewGuid(), CategoryId = 1, Name = "Phone Store 2", PriceAmount = 950m, PriceCurrency = "RUB", MainImageUrl = "img2.png"},
+            new( Id: Guid.NewGuid(), SellerId: Guid.NewGuid(), CategoryId: 1, Name: "Phone Store 1", PriceAmount: 1000m, PriceCurrency: "RUB", MainImageUrl: "img1.png" ),
+            new( Id: Guid.NewGuid(), SellerId: Guid.NewGuid(), CategoryId: 1, Name: "Phone Store 2", PriceAmount: 950m, PriceCurrency: "RUB", MainImageUrl: "img2.png" ),
         };
 
         _repository.GetCardsAsync(123456).Returns(skuCards);
@@ -113,9 +113,9 @@ public class ProductQueryServiceTests
 
         var dbCards = new List<ProductCardDto>
         {
-            new() { Id = id1, SellerId = sellerId, CategoryId = 1, Name = "Notebook Middle", PriceAmount = 1000m, PriceCurrency = "RUB", MainImageUrl = "img1.png"},
-            new() { Id = id2, SellerId = sellerId, CategoryId = 1, Name = "Notebook Cheap", PriceAmount = 500m, PriceCurrency = "RUB", MainImageUrl = "img2.png"},
-            new() { Id = id3, SellerId = sellerId, CategoryId = 1, Name = "Notebook Expensive", PriceAmount = 2000m, PriceCurrency = "RUB", MainImageUrl = "img3.png"},
+            new( Id: id1, SellerId: sellerId, CategoryId: 1, Name: "Notebook Middle", PriceAmount: 1000m, PriceCurrency: "RUB", MainImageUrl: "img1.png" ),
+            new( Id: id2, SellerId: sellerId, CategoryId: 1, Name: "Notebook Cheap", PriceAmount: 500m, PriceCurrency: "RUB", MainImageUrl: "img2.png" ),
+            new( Id: id3, SellerId: sellerId, CategoryId: 1, Name: "Notebook Expensive", PriceAmount:  2000m, PriceCurrency: "RUB", MainImageUrl: "img3.png" ),
         };
         _repository.GetCardsAsync(pagedIds).Returns(dbCards);
         _productImageUrlHelper.ToAbsoluteUrl("img1.png").Returns("http://img1.png");
@@ -152,21 +152,21 @@ public class ProductQueryServiceTests
         var ct = CancellationToken.None;
         var productId = Guid.NewGuid();
         var detailsDto = new ProductDetailsDto
-        {
-            Id = productId,
-            Sku = 12345,
-            SellerId = Guid.NewGuid(),
-            Name = "Smartphone",
-            Description = "Full description",
-            PriceAmount = 999m,
-            PriceCurrency = "USD",
-            CategoryId = 1,
-            CategoryName = "Electronics",
-            CategoryPath = "electronics",
-            Images = [new ProductImageDto("img1.png")],
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
+        (
+            Id: productId,
+            Sku: 12345,
+            SellerId: Guid.NewGuid(),
+            Name: "Smartphone",
+            Description: "Full description",
+            PriceAmount: 999m,
+            PriceCurrency: "USD",
+            CategoryId: 1,
+            CategoryName: "Electronics",
+            CategoryPath: "electronics",
+            Images: [new ProductImageDto("img1.png")],
+            CreatedAt: DateTimeOffset.UtcNow,
+            UpdatedAt: DateTimeOffset.UtcNow
+        );
 
         _repository.GetDetailsAsync(productId).Returns(detailsDto);
         _productImageUrlHelper.ToAbsoluteImageDtos(Arg.Any<IEnumerable<ProductImageDto>>()).Returns([new ProductImageDto("http://img1.png")]);

@@ -1,5 +1,6 @@
 ﻿using DotNetCore.CAP;
 using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.IntegrationEvents.Order;
 using IntegrationEvents.Shared;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.UseCases.Commands.Commands;

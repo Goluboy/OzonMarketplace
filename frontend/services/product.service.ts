@@ -215,7 +215,7 @@ class ProductService {
       
       try {
         const discount = await pricingService.getProductDiscount(id);
-        if (discount.isActive) {
+        if (discount?.isActive) {
           return {
             ...product,
             discountPrice: discount.salePrice,

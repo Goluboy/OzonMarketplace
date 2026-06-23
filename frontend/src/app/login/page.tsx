@@ -61,7 +61,7 @@ export default function LoginPage() {
 
           <p className="text-center text-sm">
             <button
-              onClick={() => router.push('/registration')}
+              onClick={() => router.push('/registion')}
               className="underline underline-offset-2"
             >
               Зарегистрироваться

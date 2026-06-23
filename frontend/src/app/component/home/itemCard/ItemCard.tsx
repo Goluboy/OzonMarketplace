@@ -4,6 +4,7 @@ import { Heart } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
+import { useCart } from "@/contexts/CartContext";
 
 export interface Item {
   id: number;
@@ -12,7 +13,7 @@ export interface Item {
   oldPrice?: number;
   rating?: number;
   reviewCount?: number;
-  imageUrl: string;
+  imageUrl: string | null;
   badge?: string;
 }
 
@@ -23,6 +24,10 @@ interface ItemCardProps {
 
 export function ItemCard({ item, className }: ItemCardProps) {
   const [liked, setLiked] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const { addToCart } = useCart();
+
   const discount =
     item.oldPrice && item.oldPrice > item.price
       ? Math.round(((item.oldPrice - item.price) / item.oldPrice) * 100)
@@ -113,12 +118,42 @@ export function ItemCard({ item, className }: ItemCardProps) {
       <div className="px-3 pb-3 transition-opacity duration-150">
         <button
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
-            console.log("Добавлено в корзину:", item.id);
+
+            addToCart({
+              id: String(item.id),
+              name: item.title,
+              image:
+                item.imageUrl ||
+                "/placeholder.png",
+              price: item.price,
+              quantity: 1,
+            });
+
+            setAdded(true);
+
+            setTimeout(() => {
+              setAdded(false);
+            }, 1500);
           }}
-          className="w-full bg-[#540303] hover:bg-[#6b0404] active:bg-[#540303] text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+          className={`
+            w-full
+            text-sm
+            font-semibold
+            py-2
+            rounded-lg
+            transition-colors
+            ${
+              added
+                ? "bg-green-600 text-white"
+                : "bg-[#540303] hover:bg-[#6b0404] text-white"
+            }
+          `}
         >
-          В корзину
+          {added
+            ? "✓ Добавлено"
+            : "В корзину"}
         </button>
       </div>
     </div>

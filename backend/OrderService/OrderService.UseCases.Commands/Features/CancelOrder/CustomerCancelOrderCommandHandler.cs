@@ -1,6 +1,7 @@
 using DotNetCore.CAP;
 using IntegrationEvents;
 using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.IntegrationEvents.Order;
 using Microsoft.Extensions.Logging;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.Domain.ValueObjects;

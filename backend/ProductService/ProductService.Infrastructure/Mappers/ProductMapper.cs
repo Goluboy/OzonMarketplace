@@ -32,21 +32,21 @@ public static class ProductMapper
         var daoImages =  product.Images
             .Select(img => new ProductImageDto(img.Url))
             .ToList();
-        
+
         return new ProductDao
-        {
-            Id = product.Id,
-            SellerId = product.SellerId,
-            Sku = product.Sku,
-            Name = product.Name,
-            Description = product.Description,
-            PriceAmount = product.Price.Amount,
-            PriceCurrency = product.Price.Currency,
-            CategoryId = product.CategoryId,
-            CreatedAt = product.CreatedAt,
-            UpdatedAt = product.UpdatedAt,
-            Version = product.Version,
-            Images = daoImages
-        };
+        (
+            Id: product.Id,
+            SellerId: product.SellerId,
+            Sku: product.Sku,
+            Name: product.Name,
+            Description: product.Description,
+            PriceAmount: product.Price.Amount,
+            PriceCurrency: product.Price.Currency,
+            CategoryId: product.CategoryId,
+            CreatedAt: product.CreatedAt,
+            UpdatedAt: product.UpdatedAt,
+            Version: product.Version,
+            Images: daoImages
+        );
     }
 }

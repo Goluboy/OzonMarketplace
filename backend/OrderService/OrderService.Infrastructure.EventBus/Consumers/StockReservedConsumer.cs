@@ -1,6 +1,7 @@
 ﻿using DotNetCore.CAP;
 using DotNetCore.CAP.Messages;
 using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.IntegrationEvents.Order;
 using Microsoft.Extensions.Logging;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.UseCases.Commands.Commands;

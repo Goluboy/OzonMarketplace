@@ -40,7 +40,5 @@
 
 
 ## Ссылки
-- Issue: `#[номер]`
-- PR: `#[номер]`
-- Документация/Спецификация: `ссылка`
-- Обсуждение в чате/митинге: `ссылка или дата`
+- Issue: [#89](https://github.com/Goluboy/OzonMarketplace/issues/89)
+- Документация/Спецификация: [docs/logging.md](/docs/logging.md)

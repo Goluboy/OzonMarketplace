@@ -28,7 +28,7 @@ sequenceDiagram
         end
     end
     
-    Kafka->>PriceService: Consume OrderCreated  
+    Kafka->>PriceService: Consume StockReserved  
     PriceService->>PriceService: Check if already processed MessageId
     alt Already Processed
         PriceService->>PriceService: Ignore duplicate

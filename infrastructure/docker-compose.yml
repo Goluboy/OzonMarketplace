@@ -222,7 +222,7 @@ services:
     container_name: frontend
     environment:
       API_URL: http://nginx-gateway
-      NEXT_PUBLIC_API_URL: http://localhost
+      NEXT_PUBLIC_API_URL: http://${PUBLIC_IP:-localhost}
     restart: always
     extra_hosts:
       - "localhost:host-gateway"

@@ -42,7 +42,6 @@ export default function LoginPage() {
             <ul className="space-y-1 text-xs">
               <li>Customer: test@example.com / password → Главная</li>
               <li>Admin: admin@example.com / admin123 → Админка</li>
-              <li>Seller: seller@example.com / seller123 → Админка</li>
             </ul>
           </div>
 

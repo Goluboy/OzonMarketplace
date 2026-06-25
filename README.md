@@ -230,6 +230,7 @@ flowchart TB
     subgraph Application["Application Layer<br/>ProductService.Application"]
         direction TB
         subgraph Services["Services"]
+            direction LR
             ProdCmd["Products (Command)"]
             ProdQry["Products (Query)"]
             CatServices["Categories"]
@@ -242,14 +243,16 @@ flowchart TB
     end
 
     subgraph Abstractions["Infrastructure Abstractions<br/>ProductService.Infrastructure.Abstractions"]
-        RepoAbs["Repository Abstractions"]
-        UoWAbs["Unit of Work Abstractions"]
-        PubAbs["Event Publisher Abstractions"]
-        CacheAbs["Caching Abstractions"]
-        QryDTOs["Query DTOs (Product.Query)"]
+        direction LR
+        RepoAbs["Repository<br/>Abstractions"]
+        UoWAbs["Unit of Work<br/>Abstractions"]
+        PubAbs["Event Publisher<br/>Abstractions"]
+        CacheAbs["Caching<br/>Abstractions"]
+        QryDTOs["Query DTOs<br/>(Product.Query)"]
     end
 
     subgraph Domain["Domain Layer<br/>ProductService.Domain"]
+        direction LR
         Entities["Entities"]        
         ValueObjects["Value Objects"]
         DomainEvents["Events"]
@@ -266,13 +269,18 @@ flowchart TB
         
         Decorators["Repository Decorators"]
         RepoImpl["Repository Products<br/>(Real Repos)"]
-        UoWImpl["Unit of Work"]
-        CachingImpl["Caching"]
-        Saga["Saga<br/>(Dispatchers, EventPublisher)"]
-        InfraMappers["Mappers / Helpers<br/>(JsonbSerialization)"]
+
+        subgraph InfraOther["Other Infra Components"]
+            direction LR
+            UoWImpl["Unit of Work"]
+            CachingImpl["Caching"]
+            Saga["Saga<br/>(Dispatchers, EventPublisher)"]
+            InfraMappers["Mappers / Helpers<br/>(JsonbSerialization)"]
+        end
     end
 
     subgraph Shared["Shared Libraries"]
+        direction LR
         RedisLib["Redis Project<br/>(Provider, Service)"]
         S3Lib["S3 Project<br/>(Minio Helpers, Service)"]
     end
@@ -285,14 +293,15 @@ flowchart TB
     end
 
     %% Dependencies (Направлены внутрь согласно Dependency Rule)
-    Controllers --> Services
+    Controllers --> ProdCmd
+    Controllers --> ProdQry
+    Controllers --> MediaServices
     Controllers --> AppDTOs
     
-    Services --> Domain
-    Services --> RepoAbs
-    Services --> UoWAbs
-    Services --> PubAbs
-    Services --> CacheAbs
+    ProdCmd --> Entities
+    ProdCmd --> RepoAbs
+    ProdCmd --> UoWAbs
+    ProdQry --> RepoAbs
     
     %% Media Service использует общую библиотеку S3
     MediaServices --> S3Lib
@@ -325,7 +334,7 @@ flowchart TB
     class Controllers,Models,Middleware,PresMappers presentation
     class Services,ProdCmd,ProdQry,CatServices,MediaServices,AppDTOs,EventHandlers,AppMappers,AppExceptions usecases
     class Entities,ValueObjects,DomainEvents domain
-    class RepoAbs,UoWAbs,PubAbs,CacheAbs,QryDTOs,DAO,Provider,Migrations,RepoImpl,Decorators,UoWImpl,CachingImpl,Saga,InfraMappers,Persistence,Abstractions,Shared,RedisLib,S3Lib infra
+    class RepoAbs,UoWAbs,PubAbs,CacheAbs,QryDTOs,DAO,Provider,Migrations,RepoImpl,Decorators,UoWImpl,CachingImpl,Saga,InfraMappers,Persistence,Abstractions,Shared,RedisLib,S3Lib,InfraOther,Repositories infra
     class Database,MessageBroker,Minio,RedisServer external
 ```
 

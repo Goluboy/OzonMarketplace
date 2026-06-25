@@ -217,9 +217,117 @@ flowchart TB
 ```
 
 ### Сервис товаров
+```mermaid
+flowchart TB
 
-<img width="1468" height="1050" alt="image" src="https://github.com/user-attachments/assets/8b1a5f45-836f-43f0-a2bd-ddb73b74dde5" />
+    subgraph Presentation["Presentation Layer<br/>ProductService.Presentation"]
+        Controllers["Controllers"]
+        Models["Models / Validators"]
+        Middleware["Middleware"]
+        PresMappers["Helpers / Mappers"]
+    end
 
+    subgraph Application["Application Layer<br/>ProductService.Application"]
+        direction TB
+        subgraph Services["Services"]
+            ProdCmd["Products (Command)"]
+            ProdQry["Products (Query)"]
+            CatServices["Categories"]
+            MediaServices["Media"]
+        end
+        AppDTOs["DTOs<br/>(Category, Media, Product)"]
+        EventHandlers["Event Handlers"]
+        AppMappers["Helpers / Mappers"]
+        AppExceptions["Exceptions"]
+    end
+
+    subgraph Abstractions["Infrastructure Abstractions<br/>ProductService.Infrastructure.Abstractions"]
+        RepoAbs["Repository Abstractions"]
+        UoWAbs["Unit of Work Abstractions"]
+        PubAbs["Event Publisher Abstractions"]
+        CacheAbs["Caching Abstractions"]
+        QryDTOs["Query DTOs (Product.Query)"]
+    end
+
+    subgraph Domain["Domain Layer<br/>ProductService.Domain"]
+        Entities["Entities"]        
+        ValueObjects["Value Objects"]
+        DomainEvents["Events"]
+    end
+
+    subgraph Infrastructure["Infrastructure Layer<br/>ProductService.Infrastructure"]
+        direction TB
+        subgraph Persistence["Persistence & Access"]
+            direction LR
+            DAO["DAO"]
+            Provider["DB Provider"]
+            Migrations["Migrations"]
+        end
+        
+        Decorators["Repository Decorators"]
+        RepoImpl["Repository Products<br/>(Real Repos)"]
+        UoWImpl["Unit of Work"]
+        CachingImpl["Caching"]
+        Saga["Saga<br/>(Dispatchers, EventPublisher)"]
+        InfraMappers["Mappers / Helpers<br/>(JsonbSerialization)"]
+    end
+
+    subgraph Shared["Shared Libraries"]
+        RedisLib["Redis Project<br/>(Provider, Service)"]
+        S3Lib["S3 Project<br/>(Minio Helpers, Service)"]
+    end
+
+    subgraph External["External"]
+        Database[("PostgreSQL")]
+        MessageBroker["Apache Kafka"]
+        Minio[("Minio S3")]
+        RedisServer[("Redis")]
+    end
+
+    %% Dependencies (Направлены внутрь согласно Dependency Rule)
+    Controllers --> Services
+    Controllers --> AppDTOs
+    
+    Services --> Domain
+    Services --> RepoAbs
+    Services --> UoWAbs
+    Services --> PubAbs
+    Services --> CacheAbs
+    
+    %% Media Service использует общую библиотеку S3
+    MediaServices --> S3Lib
+    S3Lib --> Minio
+
+    %% Реализация контрактов абстракций
+    Decorators -.->|Implements| RepoAbs
+    RepoImpl -.->|Implements| RepoAbs
+    UoWImpl -.->|Implements| UoWAbs
+    Saga -.->|Implements| PubAbs
+    CachingImpl -.->|Implements| CacheAbs
+    
+    %% Паттерн Декоратор и подключение Redis
+    Decorators -->|Wraps| RepoImpl
+    Decorators --> RedisLib
+    RedisLib --> RedisServer
+
+    %% Обращение реального репозитория к БД
+    RepoImpl --> DAO
+    DAO --> Database
+    Saga --> MessageBroker
+
+    %% Styling
+    classDef presentation fill:#48dbfb,stroke:#333,color:#000
+    classDef usecases fill:#1dd1a1,stroke:#333,color:#000
+    classDef domain fill:#feca57,stroke:#333,color:#000
+    classDef infra fill:#ff6b6b,stroke:#333,color:#fff
+    classDef external fill:#54a0ff,stroke:#333,color:#fff
+    
+    class Controllers,Models,Middleware,PresMappers presentation
+    class Services,ProdCmd,ProdQry,CatServices,MediaServices,AppDTOs,EventHandlers,AppMappers,AppExceptions usecases
+    class Entities,ValueObjects,DomainEvents domain
+    class RepoAbs,UoWAbs,PubAbs,CacheAbs,QryDTOs,DAO,Provider,Migrations,RepoImpl,Decorators,UoWImpl,CachingImpl,Saga,InfraMappers,Persistence,Abstractions,Shared,RedisLib,S3Lib infra
+    class Database,MessageBroker,Minio,RedisServer external
+```
 
 ##  Структура бэкенда
 

@@ -1,10 +1,7 @@
 import { authService } from "./auth.service";
 
 const getBaseUrl = () => {
-  if (typeof window === 'undefined') {
-    return 'http://nginx-gateway';
-  }
-  return '';
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002';
 };
 
 const API_URL = getBaseUrl();

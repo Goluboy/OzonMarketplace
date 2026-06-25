@@ -29,6 +29,7 @@ namespace OrderService.Http
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddExceptionHandler<GlobalExceptionHandler>();
+            services.AddProblemDetails();
 
             services.AddProblemDetails();
             

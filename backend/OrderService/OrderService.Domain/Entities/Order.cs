@@ -18,6 +18,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
     public DateTime CreatedAt { get; private set; } = default!;
     public DateTime? UpdatedAt { get; private set; } = default!;
     public DateTime? CancelledAt { get; private set; } = default!;
+    public DateTime? PaidAt { get; private set; } = default!;
 
     public int Version { get; private set; }
 
@@ -26,7 +27,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
 
     private readonly List<IDomainEvent> _domainEvents = new();
     public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
-    public void ClearDomainEvents() => _domainEvents.Clear(); 
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     public bool CanBeModified() =>
         Status is OrderStatus.Created or OrderStatus.Paid;
@@ -54,6 +55,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         DateTime createdAt,
         DateTime? updatedAt,
         DateTime? cancelledAt,
+        DateTime? paidAt,
         int version,
         IEnumerable<OrderItem> items)
     {
@@ -69,6 +71,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
             CancelledAt = cancelledAt,
+            PaidAt = paidAt,
             Version = version
         };
 
@@ -88,7 +91,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         IEnumerable<OrderItem> items)
     {
         ArgumentNullException.ThrowIfNull(customerName);
-        
+
         var itemsList = items.ToList();
         if (itemsList.Count == 0)
         {
@@ -122,7 +125,7 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
             order.CustomerEmail,
             order.TotalAmount,
             order.DeliveryAddress,
-            order.Items.Select(i => i.ToSnapshot()).ToList(), 
+            order.Items.Select(i => i.ToSnapshot()).ToList(),
             order.CreatedAt));
 
 
@@ -130,10 +133,17 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         return order;
     }
 
-    
+    private void TryChangeToAssembling()
+    {
+        if (Status == OrderStatus.Paid && AllItemsReserved())
+        {
+            ChangeStatus(OrderStatus.Assembling);
+        }
+    }
+
     private void RecalculateTotal()
     {
-        TotalAmount = new Money(Math.Round(_items.Sum(i => i.Subtotal.Value), 2, MidpointRounding.AwayFromZero));
+        TotalAmount = new Money(Math.Round(_items.Sum(i => i.Subtotal.Amount), 2, MidpointRounding.AwayFromZero));
     }
 
     public void AddItem(OrderItem item)
@@ -192,7 +202,18 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
             return;
         }
 
-        ChangeStatus(OrderStatus.Cancelled, cancelledBy, reason); 
+        ChangeStatus(OrderStatus.Cancelled, cancelledBy, reason);
+    }
+
+    public void ForceCancel(string reason)
+    {
+        if (Status == OrderStatus.Cancelled)
+        {
+            return;
+        }
+
+        // Принудительная отмена возможна из любого состояния
+        ChangeStatus(OrderStatus.Cancelled, null, reason);
     }
 
     public OrderStatusHistory ChangeStatus(
@@ -289,6 +310,87 @@ public class Order : IAuditable, IVersioned, ICloneable, IEquatable<Order>
         }
 
         return Id == other.Id;
+    }
+
+    public void MarkItemsAsReserved(IEnumerable<(Guid ProductId, int Quantity)> reservedItems)
+    {
+        if (Status == OrderStatus.Cancelled)
+            throw new InvalidOperationException("Cannot reserve items for cancelled order");
+
+        if (Status != OrderStatus.Created)
+            throw new InvalidOperationException(
+                $"Cannot reserve items for order with status '{Status}'. Expected: 'Created'.");
+
+        var reservedList = reservedItems.ToList();
+        var reservedProductIds = new List<Guid>();
+
+        foreach (var (productId, quantity) in reservedList)
+        {
+            var item = _items.FirstOrDefault(i => i.ProductId == productId);
+
+            if (item == null)
+                throw new InvalidOperationException(
+                    $"Product '{productId}' not found in order '{Id}'");
+
+            item.MarkAsReserved(quantity);
+            reservedProductIds.Add(productId);
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+        IncrementVersion();
+    }
+
+    public void MarkAsPaid()
+    {
+        if (Status == OrderStatus.Paid || Status == OrderStatus.Assembling)
+            return;
+
+        if (!AllItemsReserved())
+            throw new InvalidOperationException(
+                $"Cannot mark order '{Id}' as Paid: not all items are reserved. " +
+                $"Reserved: {_items.Count(i => i.IsReserved)}/{_items.Count}");
+
+        ChangeStatus(OrderStatus.Paid, changedBy: null, comment: "All items reserved");
+
+        TryChangeToAssembling();
+        PaidAt = UpdatedAt;
+    }
+
+    public void SetTotalAmount(Money newTotalAmount)
+    {
+        if (Status == OrderStatus.Cancelled)
+            throw new InvalidOperationException("Cannot update total amount for cancelled order");
+
+        if (Status != OrderStatus.Created)
+            throw new InvalidOperationException(
+                $"Cannot update total amount for order with status '{Status}'. " +
+                $"Price updates are only allowed in 'Created' status.");
+
+        if (newTotalAmount.Amount < 0)
+            throw new ArgumentException("Total amount cannot be negative");
+
+        var oldTotalAmount = TotalAmount;
+        TotalAmount = newTotalAmount;
+
+        UpdatedAt = DateTime.UtcNow;
+        IncrementVersion();
+    }
+
+    public bool AllItemsReserved()
+    {
+        if (_items.Count == 0) return false;
+        return _items.All(i => i.IsReserved);
+    }
+
+    public void ReleaseAllReservations()
+    {
+        foreach (var item in _items)
+        {
+            item.ReleaseReservation();
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+        IncrementVersion();
     }
 
     public override bool Equals(object? obj) => Equals(obj as Order);

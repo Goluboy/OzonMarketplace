@@ -1,10 +1,12 @@
-﻿using System.Text;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace ProductService.Infrastructure.Helpers;
 
+[SuppressMessage("ReSharper", "ReplaceSubstringWithRangeIndexer")]
 public static class CursorHelper
 {
-    public static string Encode(object sortValue, Guid id)
+    public static string Encode(string sortValue, Guid id)
     {
         var rawCursor = $"{sortValue}|{id}";
         

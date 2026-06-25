@@ -9,7 +9,7 @@ public class PostgresConnectionFactory(IConfiguration configuration) : IPostgres
     {
         var postgresConnString = configuration.GetConnectionString("DefaultConnection")
                                  ?? throw new NullReferenceException("Connection string 'DefaultConnection' not found.");
-        
+
         return new NpgsqlConnection(postgresConnString);
     }
 }

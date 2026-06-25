@@ -1,6 +1,10 @@
-﻿using IntegrationEvents.IntegrationEvents;
+﻿using DotNetCore.CAP;
+using DotNetCore.CAP.Messages;
+using IntegrationEvents;
+using IntegrationEvents.IntegrationEvents;
+using IntegrationEvents.IntegrationEvents.Order;
 using IntegrationEvents.Shared;
-using MassTransit;
+using Microsoft.Extensions.Logging;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Interfaces.Persistence;
 using OrderService.UseCases.Commands.Commands;
@@ -11,7 +15,8 @@ namespace OrderService.UseCases.Commands.Features.CreateOrder;
 public class CreateOrderCommandHandler(
     IOrderRepository orderRepository,
     IUnitOfWork unitOfWork,
-    IPublishEndpoint publishEndpoint) : ICommandHandler<CreateOrderCommand, Guid>
+    ICapPublisher capPublisher)
+    : ICommandHandler<CreateOrderCommand, Guid>
 {
     public async Task<Guid> HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
@@ -32,17 +37,26 @@ public class CreateOrderCommandHandler(
 
             await orderRepository.SaveAsync(order, cancellationToken);
 
+            await capPublisher.PublishAsync(
+                Topics.Orders.OrdersTopic,
+                new OrderCreatedEvent
+                {
+                    CorrelationId = order.Id,
+                    CustomerEmail = order.CustomerEmail.Value,
+                    DeliveryAddress = order.DeliveryAddress?.AddressLine ?? string.Empty,
+                    Items = order.Items.Select(i => new OrderItemDto(i.ProductId, i.Quantity)).ToList()
+                },
+                new Dictionary<string, string?> { { "sharding-key", order.Id.Value.ToString() } },
+                cancellationToken);
+
+            await capPublisher.PublishDelayAsync(
+                TimeSpan.FromMinutes(15),
+                Topics.Orders.OrdersTopic,
+                new OrderTimeoutEvent() { CorrelationId = order.Id },
+                new Dictionary<string, string?> { { "sharding-key", order.Id.Value.ToString() } },
+                cancellationToken);
+
             await unitOfWork.CommitAsync(cancellationToken);
-
-            var integrationEvent = new OrderCreatedEvent
-            {
-                CorrelationId = order.Id.Value,
-                CustomerEmail = order.CustomerEmail.Value,
-                DeliveryAddress = order.DeliveryAddress?.AddressLine ?? string.Empty,
-                Items = order.Items.Select(i => new OrderItemDto(i.ProductId, i.Quantity)).ToList()
-            };
-
-            await publishEndpoint.Publish(integrationEvent, cancellationToken);
 
             return order.Id.Value;
         }
@@ -51,5 +65,6 @@ public class CreateOrderCommandHandler(
             await unitOfWork.RollbackAsync(cancellationToken);
             throw;
         }
+
     }
 }

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Npgsql;
 using ProductService.Application.Exceptions;
 
 namespace ProductService.Presentation.Middleware;
@@ -11,21 +12,40 @@ public class ExceptionHandler(ILogger<ExceptionHandler> logger) : IExceptionHand
     {
         logger.LogError(exception, "An unhandled exception occurred: {Message}", exception.Message);
         
-        var (statusCode, title, errors) = exception switch
+        var (statusCode, title, detail, errors) = exception switch
         {
             ValidationException valEx => (
                 StatusCodes.Status400BadRequest,
                 "One or more validation errors occurred.",
+                "Validation failed.",
                 MapValidationErrors(valEx)
             ),
+            
+            PostgresException { SqlState: "23505", ConstraintName: "uq_products_seller_sku" } => (
+                StatusCodes.Status409Conflict,
+                "Product SKU Conflict",
+                "A product with this SKU already exists in your catalog. SKU must be unique within your seller account.",
+                null
+            ),
+            
+            ForbiddenException => (
+                StatusCodes.Status403Forbidden,
+                "Access to this resource is forbidden.",
+                exception.Message,
+                null
+            ),
+            
             KeyNotFoundException or NotFoundException => (
                 StatusCodes.Status404NotFound,
                 "The specified resource was not found.",
+                exception.Message,
                 null
             ),
+            
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "An unexpected error occurred.",
+                "An unexpected error occurred on the server.",
                 null
             )
         };
@@ -35,7 +55,7 @@ public class ExceptionHandler(ILogger<ExceptionHandler> logger) : IExceptionHand
             Status = statusCode,
             Title = title,
             Type = $"https://httpstatuses.com/{statusCode}",
-            Detail = exception.Message,
+            Detail = detail,
             Instance = httpContext.Request.Path
         };
         

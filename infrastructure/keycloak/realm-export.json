@@ -273,8 +273,8 @@
                 "view-realm",
                 "view-authorization",
                 "manage-users",
-                "view-events",
-                "manage-identity-providers"
+                "manage-identity-providers",
+                "view-events"
               ]
             }
           },
@@ -517,9 +517,13 @@
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
+        "http://localhost/*",
+        "/*",
         "/realms/marketplace/account/*"
       ],
-      "webOrigins": [],
+      "webOrigins": [
+        "+"
+      ],
       "notBefore": 0,
       "bearerOnly": false,
       "consentRequired": false,
@@ -758,18 +762,18 @@
       "clientId": "marketplace-app",
       "name": "",
       "description": "",
-      "rootUrl": "http://localhost:3000",
-      "adminUrl": "http://localhost:3000",
-      "baseUrl": "",
+      "rootUrl": "",
+      "adminUrl": "",
+      "baseUrl": "http://localhost/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": true,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://localhost:3000/*"
+        "http://localhost/*"
       ],
       "webOrigins": [
-        "http://localhost:3000"
+        "+"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -785,7 +789,8 @@
         "realm_client": "false",
         "oidc.ciba.grant.enabled": "false",
         "backchannel.logout.session.required": "true",
-        "post.logout.redirect.uris": "http://localhost:3000",
+        "post.logout.redirect.uris": "http://localhost/*",
+        "display.on.consent.screen": "false",
         "oauth2.device.authorization.grant.enabled": "false",
         "backchannel.logout.revoke.offline.tokens": "false"
       },
@@ -803,8 +808,9 @@
             "included.client.audience": "marketplace-app",
             "id.token.claim": "true",
             "lightweight.claim": "false",
+            "introspection.token.claim": "true",
             "access.token.claim": "true",
-            "introspection.token.claim": "true"
+            "userinfo.token.claim": "true"
           }
         }
       ],
@@ -1662,13 +1668,13 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "saml-user-property-mapper",
             "oidc-usermodel-property-mapper",
             "oidc-usermodel-attribute-mapper",
+            "saml-user-property-mapper",
             "saml-user-attribute-mapper",
             "oidc-address-mapper",
-            "saml-role-list-mapper",
             "oidc-sha256-pairwise-sub-mapper",
+            "saml-role-list-mapper",
             "oidc-full-name-mapper"
           ]
         }
@@ -1708,14 +1714,14 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "saml-user-property-mapper",
             "saml-user-attribute-mapper",
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-usermodel-property-mapper",
+            "saml-role-list-mapper",
+            "saml-user-property-mapper",
             "oidc-full-name-mapper",
             "oidc-usermodel-attribute-mapper",
-            "oidc-sha256-pairwise-sub-mapper",
-            "oidc-address-mapper",
-            "oidc-usermodel-property-mapper",
-            "saml-role-list-mapper"
+            "oidc-address-mapper"
           ]
         }
       },

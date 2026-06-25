@@ -1,30 +1,34 @@
 ﻿using System.Data;
+using Microsoft.Extensions.Logging;
 using ProductService.Application.DTO.Category;
 using ProductService.Application.Exceptions;
 using ProductService.Application.Mappers;
 using ProductService.Domain.Entities;
+using ProductService.Infrastructure.Abstractions.Caching.Abstractions;
 using ProductService.Infrastructure.Abstractions.Repository.Abstractions;
 using ProductService.Infrastructure.Abstractions.UnitOfWork.Abstractions;
 
 namespace ProductService.Application.Services.Categories;
 
-public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categoryRepository) : ICategoryService
+public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categoryRepository, 
+    ICategoryVersionProvider versionProvider, ILogger<CategoryService> logger) : ICategoryService
 {
-    public async Task<IReadOnlyCollection<CategoryDto>> GetAllAsync(CancellationToken ct)
+    public async Task<CategoriesResponse> GetAllAsync(string? eTag, CancellationToken ct)
     {
-        // TODO: Двухфазное кэширование и E-Tag (паттерн Декоратор 'CachingCategoryService'):
-        // 1. ФАЗА 1: Получить текущий E-Tag из Redis. Если он совпадает с присланным клиентом If-None-Match — вернуть маркер 304 (Not Modified) без вычитки данных.
-        // 2. ФАЗА 2: Если тег не совпал, попробовать получить сериализованный список категорий из Redis. Если он есть — вернуть его и обновить E-Tag на клиенте.
+        var actualEtag = await versionProvider.GetVersionETagAsync(ct);
+
+        if (!string.IsNullOrEmpty(actualEtag) && actualEtag == eTag)
+        {
+            return new CategoriesResponse([], actualEtag, IsModified: false);
+        }
         
-        // Важно: Не забываем передавать CancellationToken во все асинхронные вызовы БД
         var categories = await categoryRepository.GetAllAsync(ct);
-        
-        // TODO: ФАЗА 3 (Cache Miss): Если данных в Redis не было, сгенерировать новый E-Tag,
-        // а затем записать полученный список DTO и новый E-Tag в Redis с TTL.
-        
-        return categories
+       
+        var dtos = categories
             .Select(c => c.ToDto())
             .ToList();
+        
+        return new CategoriesResponse(dtos, actualEtag, IsModified: true);
     }
 
     public async Task<CategoryDto> CreateAsync(CreateCategoryDto dto, CancellationToken ct)
@@ -41,12 +45,13 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             
             await unitOfWork.CommitAsync();
             
-            // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag категорий из Redis.
+            logger.LogInformation("Category created successfully. CategoryId: {CategoryId}, Name: {CategoryName}", id, dto.Name);
             
             return category.ToDto();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to create category. Name: {CategoryName}. Transaction rolled back.", dto.Name);
             await unitOfWork.RollbackAsync();
             throw;
         }
@@ -86,14 +91,15 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             
             await unitOfWork.CommitAsync();
             
-            // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag из Redis.
-            
             category.ClearDomainEvents();
+            
+            logger.LogInformation("Category updated successfully. CategoryId: {CategoryId}", category.Id);
             
             return category.ToDto();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to update category. CategoryId: {CategoryId}. Transaction rolled back.", dto.Id);
             await unitOfWork.RollbackAsync();
             throw;
         }
@@ -113,18 +119,13 @@ public class CategoryService(IUnitOfWork unitOfWork, ICategoryRepository categor
             
             await unitOfWork.CommitAsync();
             
-            // TODO: Инвалидация кэша: Сбросить/удалить ключи данных и E-Tag из Redis.
+            logger.LogInformation("Category deleted successfully. CategoryId: {CategoryId}", id);
         }
-        catch 
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Failed to delete category. CategoryId: {CategoryId}. Transaction rolled back.", id);
             await unitOfWork.RollbackAsync();
             throw;
         }
-    }
-
-    public Task<string> GetVersionETagAsync(CancellationToken ct)
-    {
-        //TODO Redis кеширование версии категорий
-        return Task.FromResult("1");
     }
 }

@@ -1,141 +1,238 @@
 # SAGA Choreography Documentation
 
-Поток выполнения CreateProduct см. в docs/Sequence diagrams/Create Product.md
+Документация описывает реализацию хореографической SAGA для процесса создания заказа в маркетплейсе с использованием **DotNetCore.CAP 10.x** и Apache Kafka.
 
-# 1 топик на домен/сервис
+> **Историческая справка:** Изначально SAGA была реализована на MassTransit с оркестрацией. Миграция на DotNetCore.CAP + чистую хореографию описана в [ADR-006](/docs/ADR/006-kafka-topics-management.md).
 
-Все события, связанные с созданием заказа (OrderCreated, StockReserved, StockReservationFailed, PriceCalculated, OrderCancelled), публикуются в единый топик orders.
-Решение см. в [ADR](/docs/ADR/006-kafka-topics-management.md)
+---
 
-## Контракты
+## Архитектурные принципы
 
-| Ивент                         | 📤 Издатель      | 📥 Подписчик                         | 🗂️ Топик Kafka              |
-| ----------------------------- | ---------------- | ------------------------------------ | ---------------------------- |
-| `OrderCreatedEvent`           | `OrderService`   | `ProductService`, `PriceService`     | `orders`    |
-| `StockReservedEvent`          | `ProductService` | `OrderService`                       | `orders` |
-| `StockReservationFailedEvent` | `ProductService` | `OrderService`                       | `orders`   |
-| `PriceCalculatedEvent`        | `PriceService`   | `OrderService`                       | `orders`       |
-| `OrderCancelledEvent`         | `OrderService`   | `ProductService` (+ будущие сервисы) | `orders`        |
+### 1 топик на агрегат (Domain)
 
-Интеграционные ивенты реализуются в каждом сервисе независимо.
+Вместо классического "1 топик = 1 событие" используется подход **"1 топик на агрегат"**, где внутри одного топика маршрутизируются все события, связанные с одной доменной сущностью. Это гарантирует:
 
-```c#
-public abstract record IntegrationEvent
+- ✅ Строгий порядок событий внутри агрегата (важно для SAGA)
+- ✅ Меньше топиков в Kafka (проще администрирование)
+- ✅ Единая партиция на OrderId (все события одного заказа обрабатываются последовательно)
+
+### Топики системы
+
+| Топик | Агрегат | Publisher | Основные события |
+|-------|---------|-----------|------------------|
+| `orders` | Order | `OrderService` | `OrderCreatedEvent`, `OrderTimeoutEvent`, `OrderCancelledEvent` |
+| `products` | Product/Stock | `ProductService` | `StockReservedEvent`, `StockReservationFailedEvent` |
+| `prices` | Price | `PriceService` | `PriceCalculatedEvent` |
+
+### Dispatcher Pattern
+
+Вместо прямой подписки Consumer'ов на топик используется **Dispatcher**, который принимает базовый `IntegrationEvent` и маршрутизирует события по типу:
+
+```csharp
+[CapSubscribe("products")]
+public async Task HandleAsync(IntegrationEvent @event, CapHeader header, CancellationToken ct)
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
-    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
-    public Guid CorrelationId { get; init; } // = OrderId для связки шагов SAGA
+    switch (@event)
+    {
+        case StockReservedEvent e:
+            await stockReservedConsumer.HandleAsync(e, header, ct);
+            break;
+        case StockReservationFailedEvent e:
+            await stockFailedConsumer.HandleAsync(e, header, ct);
+            break;
+    }
 }
-
-
-public record OrderCreatedEvent : IntegrationEvent
-{
-    public List<OrderItemDto> Items { get; init; } = new();
-    public string CustomerEmail { get; init; } = string.Empty;
-    public string DeliveryAddress { get; init; } = string.Empty;
-}
-
-public record StockReservedEvent : IntegrationEvent
-{
-    public List<Guid> ReservedProductIds { get; init; } = new();
-}
-
-public record StockReservationFailedEvent : IntegrationEvent
-{
-    public string Reason { get; init; } = string.Empty;
-    public List<Guid> FailedProductIds { get; init; } = new();
-}
-
-public record PriceCalculatedEvent : IntegrationEvent
-{
-    public decimal TotalAmount { get; init; }
-    public string Currency { get; init; } = "RUB";
-}
-
-public record OrderCancelledEvent : IntegrationEvent
-{
-    public string Reason { get; init; } = string.Empty;
-    public List<Guid> ItemsToRelease { get; init; } = new();
-}
-
-public record OrderItemDto(Guid ProductId, int Quantity);
 ```
 
+Полиморфная десериализация обеспечивается атрибутом `[JsonDerivedType]` на базовом классе `IntegrationEvent`.
+
+---
+
+## Контракты событий
+
+### Базовый класс
+
+```csharp
+public abstract record IntegrationEvent
+{
+    public Guid EventId { get; init; }
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public Guid CorrelationId { get; init; }  // = OrderId для связки шагов SAGA
+    public Guid OrderId => CorrelationId;
+}
+```
+
+### Таблица событий
+
+| Ивент | 📤 Издатель | 📥 Подписчики | Топик |
+|-------|-------------|---------------|-------|
+| `OrderCreatedEvent` | `OrderService` | `ProductService`, `PriceService`, `OrderService` (timeout) | `orders` |
+| `OrderTimeoutEvent` | `OrderService` (delayed) | `OrderService` | `orders` |
+| `StockReservedEvent` | `ProductService` | `OrderService` | `products` |
+| `StockReservationFailedEvent` | `ProductService` | `OrderService` | `products` |
+| `PriceCalculatedEvent` | `PriceService` | `OrderService` | `prices` |
+| `OrderCancelledEvent` | `OrderService` | `ProductService` (+ будущие) | `orders` |
+
+
+---
+
+## Поток выполнения SAGA
+
+Полный sequence diagram см. в [docs/Sequence diagrams/Create Order SAGA.md](/docs/Sequence%20diagrams/Create%20Product.md).
+
+---
 
 ## Надёжность и отказоустойчивость
-| Механизм                  | Реализация                                                                                                                 |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **Идемпотентность**       | Таблица `processed_events (event_id UUID PRIMARY KEY)`. Проверка `INSERT ... ON CONFLICT DO NOTHING` перед бизнес-логикой. |
-| **Управление состоянием** | Таблица `order_saga_state` с полем `row_version`. Обновление через `WHERE order_id = @id AND row_version = @ver`.          |
-| **Таймаут**               | MassTransit Scheduler публикует `SagaTimeoutEvent` через 30с. При получении - автоматическая отмена.                       |
-| **Компенсация**           | `OrderCancelledEvent` публикуется только из `OrderService`. Подписчики обрабатывают его идемпотентно.                      |
-| **Повторные попытки**     | MassTransit retry: `3 attempts × 5s`, затем Dead Letter Queue.                                                             |
 
-## Изменение контракта события
+| Механизм | Реализация в DotNetCore.CAP |
+|----------|-----------------------------|
+| **Outbox Pattern** | Атомарная запись бизнес-изменений и `cap.published` через `BeginOutboxTransactionAsync()` и `CommitAsync()`. CAP worker отправляет в Kafka только после commit. |
+| **Идемпотентность** | Таблица `processed_events (message_id TEXT PRIMARY KEY)`. Consumer проверяет через `IsProcessedAsync()` перед выполнением, пишет через `MarkAsProcessedAsync()` в той же транзакции, что и бизнес-логика. |
+| **Таймаут SAGA** | `capPublisher.PublishDelayAsync(TimeSpan.FromMinutes(15), "orders", new OrderTimeoutEvent(...))`. CAP сохраняет отложенное сообщение в `cap.published` с задержкой и отправляет по расписанию. **Scheduler не нужен.** |
+| **Distributed Tracing** | `SagaCorrelationFilter` + `CorrelatedCapPublisher` обеспечивают проброс `cap-corr-id = OrderId` через все события SAGA. В Grafana Tempo видно всю цепочку по `OrderId`. |
+| **Компенсация** | `OrderCancelledEvent` публикуется только из `OrderService` (из `ForceCancelOrderCommandHandler`). ProductService подписан и снимает резерв стока идемпотентно. |
+| **Повторные попытки** | Встроенный CAP retry: 3 попытки с экспоненциальной задержкой, затем сообщение помечается как `Failed` и требует ручного вмешательства. |
+| **Управление состоянием** | Состояние хранится в самом агрегате `Order` (статус, `IsReserved`, `PaidAt`). Отдельная таблица `order_saga_state` не нужна благодаря Outbox. |
+| **Версионирование** | `IVersioned` в агрегате + `row_version` в БД для защиты от lost update при конкурентных изменениях. |
 
-### План миграции
+### Как обеспечивается атомарность
 
-1. **Добавить код V2**: Развернуть новый `OrderCreatedEventV2` и `OrderCreatedV2Consumer` в **ProductService**.
-2. **Настроить слушателя**: Убедиться, что `TopicEndpoint` для V2 в ProductService активен.
-3. **Деплой ProductService**: Сервис начнет слушать `orders` на наличие сообщений типа `OrderCreatedEventV2`.
-4. **Обновить Publisher (OrderService)**:
-    - В коде `CreateOrderHandler` заменить публикацию V1 на публикацию V2.
-    - Топик публикации **не меняется** (`orders`). Меняется только тип сообщения.
-5. **Деплой OrderService**: Сервис начинает писать V2 в топик `orders`.
-6. **Результат**:
-    - ProductService (V2 Consumer) берет сообщения и обрабатывает.
-    - Если есть другие старые сервисы, они продолжат читать V1 (пока мы не отключим публикацию V1).
-7. **Очистка**: Через релиз удалить V1 классы и слушателей.
-
-
-### Таблица маршрутизации
-
-| Версия | Класс C#              | Топик Kafka | Кто слушает                        |
-| ------ | --------------------- | ----------- | ---------------------------------- |
-| **V1** | `OrderCreatedEvent`   | `orders`    | Legacy-сервисы (ProductService v1) |
-| **V2** | `OrderCreatedEventV2` | `orders`    | Новые сервисы (ProductService v2)  |
-
-### Настройка Consumer
-
-// Program.cs (ProductService)
-
-x.UsingKafka((context, k) =>
+```csharp
+// Handler (UseCase)
+await unitOfWork.BeginOutboxTransactionAsync(ct);  // CAP транзакция
+try
 {
-    k.Host("kafka:9092");
+    order.MarkItemsAsReserved(reservedItems);
+    await orderRepository.SaveAsync(order, ct);
+    await capPublisher.PublishAsync(...);
+    await processedEvents.MarkAsProcessedAsync(...);
+    await unitOfWork.CommitAsync(ct);
+}
+catch { await unitOfWork.RollbackAsync(ct); throw; }
+```
 
-    // 1. Подписка на V1 (в топик orders)
-    k.TopicEndpoint<OrderCreatedEvent>("orders", "product-service-legacy", e =>
-    {
-        e.ConfigureConsumer<OrderCreatedConsumer>(context);
-    });
+---
 
-    // 2. Подписка на V2 (ТОЖЕ в топик orders)
-    // MassTransit использует заголовок MT-MessageType, чтобы отличить V2 от V1
-    k.TopicEndpoint<OrderCreatedEventV2>("orders", "product-service-v2", e =>
-    {
-        e.ConfigureConsumer<OrderCreatedV2Consumer>(context);
-    });
-});
+## Distributed Tracing
 
-### Переход на новые версии
+Все события в рамках одной SAGA имеют одинаковый `cap-corr-id`, равный `OrderId`. Это достигается через:
+
+1. **На старте SAGA** (в `CreateOrderCommandHandler`): `cap-corr-id` задается явно через headers.
+2. **В Consumer'ах**: `SagaCorrelationFilter` читает `cap-corr-id` из Kafka Headers и сохраняет в `AsyncLocal`.
+3. **При последующих публикациях**: `CorrelatedCapPublisher` (декоратор `ICapPublisher`) автоматически добавляет `cap-corr-id` из `AsyncLocal` в заголовки новых сообщений.
+
+### Поиск трейсов
+
+В Grafana Tempo / Loki:
+```logql
+{service=~"OrderService|ProductService|PriceService"} 
+  | json | CorrelationId="ce055aa6-..."
+```
+
+Отобразит всю цепочку: от создания заказа до отмены или успешного завершения.
+
+---
+
+## Миграция контрактов событий
+
+В отличие от MassTransit, DotNetCore.CAP не имеет встроенной версионизации через `MT-MessageType`. Используется **явная маршрутизация по `cap-msg-type`** header'у.
+
+### План миграции (пример: добавление `CustomerPhone` в `OrderCreatedEvent`)
+
+1. **Создать V2 контракт в `IntegrationEvents` либе:**
+   ```csharp
+   public record OrderCreatedEventV2 : IntegrationEvent
+   {
+       public string CustomerPhone { get; init; }  // Новое поле
+       // ... остальные поля
+   }
+   ```
+   Добавить `[JsonDerivedType(typeof(OrderCreatedEventV2), nameof(OrderCreatedEventV2))]`.
+
+2. **Обновить Dispatcher в ProductService:**
+   ```csharp
+   switch (@event)
+   {
+       case OrderCreatedEventV2 v2:
+           await consumer.HandleAsync(v2, header, ct);  // Новая логика
+           break;
+       case OrderCreatedEvent v1:
+           await consumer.HandleAsync(v1, header, ct);  // Старая логика (fallback)
+           break;
+   }
+   ```
+
+3. **Деплой ProductService** (потребитель): начинает принимать оба типа.
+
+4. **Обновить Publisher в OrderService:** публиковать `OrderCreatedEventV2`.
+
+5. **Деплой OrderService** (издатель): пишет только V2 в топик `orders`.
+
+6. **Через релиз:** удалить V1 Consumer из ProductService и старый класс `OrderCreatedEvent`.
+
+### Таблица маршрутизации версий
+
+| Версия | Класс | Топик | Кто слушает |
+|--------|-------|-------|-------------|
+| V1 | `OrderCreatedEvent` | `orders` | Legacy-сервисы |
+| V2 | `OrderCreatedEventV2` | `orders` | Новые сервисы |
+
+### Жизненный цикл топика при миграции
 
 ```
 # Этап 1: Запуск
-orders.order-created  # V1
+orders (V1 events)
 
-# Этап 2: Добавили поле CustomerPhone (breaking change)
-orders.order-created      # V1 (для старых сервисов)
-orders.order-created.v2   # V2 (для новых сервисов)
+# Этап 2: Breaking change (CustomerPhone)
+orders (V1 + V2 events, маршрутизация по cap-msg-type header)
 
-# Этап 3: Все сервисы перешли на V2
-orders.order-created.v2   # Основной топик
-# orders.order-created удалён
+# Этап 3: Все сервисы на V2
+orders (только V2 events)
 
-# Этап 4: Новая версия
-orders.order-created.v2   # Legacy
-orders.order-created.v3   # Новая версия
+# Этап 4: Новая миграция
+orders (V2 + V3 events)
 ```
 
-# Ссылки
+**Ключевое отличие от MassTransit:** CAP использует заголовок `cap-msg-type` для идентификации типа события, а не отдельный routing key в топике. Это позволяет держать **один топик на агрегат** даже при наличии нескольких версий контрактов.
 
-[ADR с решением перейти на хореографию](docs/ADR/003-saga.md)
+---
+
+## Компоненты OrderService
+
+### Проекты
+
+```
+OrderService/
+├── Domain/                     ← Entities, Value Objects, Domain Events
+├── UseCases.Commands/          ← Handlers (оркестрация, без бизнес-логики)
+├── UseCases.Queries/           ← Read model
+├── Infrastructure.Persistence/ ← Dapper, UnitOfWork, Migrations
+├── Infrastructure.EventBus/    ← Consumers, Dispatchers, Tracing
+└── Http/                       ← Controllers
+```
+
+### Consumers в `Infrastructure.EventBus`
+
+| Consumer | Обрабатывает | Вызывает Handler |
+|----------|--------------|------------------|
+| `OrderCreatedConsumer` | `OrderCreatedEvent` | — (или публикует таймаут) |
+| `OrderSagaTimeoutConsumer` | `OrderTimeoutEvent` | `ForceCancelOrderCommand` |
+| `OrderCancelledConsumer` | `OrderCancelledEvent` | — |
+| `StockReservedConsumer` | `StockReservedEvent` | `UpdateOrderStockStatusCommand` |
+| `StockReservationFailedConsumer` | `StockReservationFailedEvent` | `ForceCancelOrderCommand` |
+| `PriceCalculatedConsumer` | `PriceCalculatedEvent` | `UpdateOrderPriceCommand` |
+
+### Dispatchers
+
+- `OrdersEventDispatcher` → топик `orders`
+- `ProductsEventDispatcher` → топик `products`
+- `PricesEventDispatcher` → топик `prices`
+
+---
+
+## 📚 Ссылки
+
+- [ADR-003: Решение перейти на хореографию](docs/ADR/003-saga.md)
+- [ADR-003: Outbox Transactional](docs/ADR/004-outbox.md)
+- [ADR-006: Стратегия управления топиками Kafka (1 топик на 1 ивент))](docs/ADR/006-kafka-topics-management.md)
+- [ADR-007: Стратегия управления топиками Kafka (1 топик на бизнес-флоу](docs/ADR/007-kafka-topics-management2.md)

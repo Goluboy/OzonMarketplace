@@ -1,5 +1,4 @@
 using FluentMigrator.Runner;
-using static MassTransit.MessageHeaders;
 
 namespace OrderService.Http
 {

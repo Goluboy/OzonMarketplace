@@ -6,11 +6,16 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Npgsql;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OrderService.Http.Middleware;
 using OrderService.Infrastructure.EventBus;
 using OrderService.Infrastructure.Persistence;
 using OrderService.UseCases.Commands;
 using OrderService.UseCases.Queries;
+using Prometheus;
 using System.Data;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -19,8 +24,12 @@ namespace OrderService.Http
 {
     public class Startup(IConfiguration configuration)
     {
+        private const string ReactCorsPolicy = "ReactAppPolicy";
+        
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddExceptionHandler<GlobalExceptionHandler>();
+
             services.AddControllers()
                 .AddJsonOptions(options =>
                 {
@@ -30,8 +39,25 @@ namespace OrderService.Http
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
+            var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy(ReactCorsPolicy, policy =>
+                {
+                    if (allowedOrigins != null && allowedOrigins.Length != 0)
+                    {
+                        policy.WithOrigins(allowedOrigins)
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials();
+                    }
+                });
+            });
+
             var keycloakAuthority = configuration["Keycloak:Authority"];
             var audience = configuration["Keycloak:Audience"];
+            var issuer = configuration["Keycloak:ValidIssuer"];
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -44,7 +70,7 @@ namespace OrderService.Http
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
-                        ValidIssuer = keycloakAuthority,
+                        ValidIssuer = issuer,
 
                         ValidateAudience = true,
                         ValidAudience = audience,
@@ -113,12 +139,21 @@ namespace OrderService.Http
             services.AddPersistenceServices(configuration);
             services.AddCommands();
             services.AddQueries();
+            
+            services.AddCapServices(configuration);
 
+            AddObservability(services, configuration);
+            
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Startup>();
 
             services.AddSwaggerGen(c =>
                 {
+                    var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+
+                    c.IncludeXmlComments(xmlPath);
+
                     c.SwaggerDoc("v1", new OpenApiInfo { Title = "OrderService", Version = "v1" });
                     c.AddSecurityDefinition(
                         "token",
@@ -150,12 +185,12 @@ namespace OrderService.Http
                     );
                 }
             );
-
-            services.AddKafkaIntegration(configuration);
         }
-
+        
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseExceptionHandler();
+
             using (var scope = app.ApplicationServices.CreateScope())
             {
                 var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
@@ -169,6 +204,10 @@ namespace OrderService.Http
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Marketplace API v1"));
             }
 
+            app.UseHttpMetrics();
+            
+            app.UseCors(ReactCorsPolicy);
+            
             app.UseHttpsRedirection();
             app.UseRouting();
 
@@ -179,7 +218,34 @@ namespace OrderService.Http
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                
+                endpoints.MapMetrics();
             });
+        }
+        
+        private static IServiceCollection AddObservability(IServiceCollection services, IConfiguration configuration)
+        {
+            var otlpEndpoint = configuration["OpenTelemetry:OtlpEndpoint"] 
+                               ?? throw new NullReferenceException("OpenTelemetry Otlp Endpoint not found.");
+
+            services.AddOpenTelemetry()
+                .ConfigureResource(resource => resource.AddService("OrderService"))
+                .WithTracing(tracing => tracing
+                    .AddCapInstrumentation()
+                    .AddAspNetCoreInstrumentation(options =>
+                    {
+                        options.Filter = httpContext =>
+                            !httpContext.Request.Path.StartsWithSegments("/swagger") &&
+                            !httpContext.Request.Path.StartsWithSegments("/metrics");
+                    })
+                    .AddHttpClientInstrumentation()
+                    .AddNpgsql()
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri(otlpEndpoint);
+                    }));
+        
+            return services;
         }
     }
 }

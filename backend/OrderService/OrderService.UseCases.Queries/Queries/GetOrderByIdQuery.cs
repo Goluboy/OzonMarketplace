@@ -1,3 +1,7 @@
-namespace OrderService.UseCases.Queries.Queries;
+using OrderService.UseCases.Queries.Models;
+using OrderService.UseCases.Queries.Queries;
 
-public record GetOrderByIdQuery(Guid OrderId);
+namespace OrderService.UseCases.Queries
+{
+    public record GetOrderByIdQuery(Guid OrderId) : IQuery<OrderModel?>;
+}

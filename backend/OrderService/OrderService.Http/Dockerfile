@@ -1,30 +1,81 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+# syntax=docker/dockerfile:1.7
 
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-USER $APP_UID
+# ============================================================
+# Stage 1: Base (runtime для production и VS Fast Mode)
+# ============================================================
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
+RUN apk add --no-cache \
+        tzdata \
+        icu-libs \
+        curl \
+    && cp /usr/share/zoneinfo/Europe/Moscow /etc/localtime \
+    && echo "Europe/Moscow" > /etc/timezone \
+    && rm -rf /var/cache/apk/*
 
-# This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+ENV ASPNETCORE_URLS=http://+:8080
+
+USER $APP_UID
+
+# ============================================================
+# Stage 2: Build (SDK с cache mounts)
+# ============================================================
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
 COPY ["OrderService.Http/OrderService.Http.csproj", "OrderService.Http/"]
-RUN dotnet restore "./OrderService.Http/OrderService.Http.csproj"
+COPY ["OrderService.Infrastructure.EventBus/OrderService.Infrastructure.EventBus.csproj", "OrderService.Infrastructure.EventBus/"]
+COPY ["OrderService.Domain/OrderService.Domain.csproj", "OrderService.Domain/"]
+COPY ["OrderService.Infrastructure.Persistence/OrderService.Infrastructure.Persistence.csproj", "OrderService.Infrastructure.Persistence/"]
+COPY ["OrderService.UseCases.Commands/OrderService.UseCases.Commands.csproj", "OrderService.UseCases.Commands/"]
+COPY ["OrderService.UseCases.Queries/OrderService.UseCases.Queries.csproj", "OrderService.UseCases.Queries/"]
+
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet restore "./OrderService.Http/OrderService.Http.csproj"
+
 COPY . .
 WORKDIR "/src/OrderService.Http"
-RUN dotnet build "./OrderService.Http.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# This stage is used to publish the service project to be copied to the final stage
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet build "./OrderService.Http.csproj" \
+        -c $BUILD_CONFIGURATION \
+        -o /app/build
+
+# ============================================================
+# Stage 3: Dev (для разработки с hot reload)
+# ============================================================
+FROM build AS dev
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_URLS=http://+:8080
+WORKDIR /src/OrderService.Http
+CMD ["dotnet", "watch", "run", "--no-launch-profile", "--urls", "http://+:8080"]
+
+# ============================================================
+# Stage 4: Publish
+# ============================================================
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./OrderService.Http.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet publish "./OrderService.Http.csproj" \
+        -c $BUILD_CONFIGURATION \
+        -o /app/publish \
+        /p:UseAppHost=false
 
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
+# ============================================================
+# Stage 5: Final (production)
+# ============================================================
 FROM base AS final
 WORKDIR /app
+
 COPY --from=publish /app/publish .
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
 ENTRYPOINT ["dotnet", "OrderService.Http.dll"]

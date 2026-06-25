@@ -99,7 +99,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
             fixture.DeliveryAddress,
             items);
 
-        order.TotalAmount.Value.Should().Be(65.00m);
+        order.TotalAmount.Amount.Should().Be(65.00m);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         order.AddItem(newItem);
 
         order.Items.Count.Should().Be(initialCount + 1);
-        order.TotalAmount.Value.Should().BeGreaterThan(initialTotal);
+        order.TotalAmount.Amount.Should().BeGreaterThan(initialTotal);
         order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         order.Version.Should().Be(2);
         order.DomainEvents.Last().Should().BeOfType<OrderItemAddedEvent>();
@@ -174,7 +174,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
 
         order.Items.Count.Should().Be(initialCount - 1);
         order.Items.Should().NotContain(i => i.Id == itemToRemove.Id);
-        order.TotalAmount.Value.Should().BeLessThan(order.TotalAmount + refundedAmount);
+        order.TotalAmount.Amount.Should().BeLessThan(order.TotalAmount + refundedAmount);
         order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         order.Version.Should().Be(2);
         order.DomainEvents.Last().Should().BeOfType<OrderItemRemovedEvent>();
@@ -418,11 +418,12 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
         var createdAt = DateTime.UtcNow;
         var updatedAt = DateTime.UtcNow.AddMinutes(10);
         var cancelledAt = (DateTime?)null;
+        var PaidAt = (DateTime?)null;
         var version = 2;
         var items = new List<OrderItem>
         {
-            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 1", 1, new Money(50m), new Money(50m), createdAt, null),
-            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 2", 1, new Money(50m), new Money(50m), createdAt, null)
+            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 1", 1, new Money(50m), new Money(50m), createdAt, null, false),
+            OrderItem.Rehydrate(Guid.NewGuid(), orderId, Guid.NewGuid(), "Product 2", 1, new Money(50m), new Money(50m), createdAt, null, false)
         };
 
         // Act
@@ -436,6 +437,7 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
             totalAmount,
             createdAt,
             updatedAt,
+            PaidAt,
             cancelledAt,
             version,
             items);
@@ -482,10 +484,291 @@ public class OrderTests(OrderFixture fixture) : IClassFixture<OrderFixture>
             createdAt,
             null,
             null,
+            null,
             1,
             items);
 
         // Assert
         order.DeliveryAddress.Should().BeNull();
+    }
+
+    [Fact]
+    public void MarkAsPaid_WhenAllItemsReserved_ShouldChangeStatusToAssembling()
+    {
+        var order = fixture.CreateValidOrder();
+        var reservedItems = order.Items
+            .Select(i => (i.ProductId, i.Quantity))
+            .ToList();
+
+        order.MarkItemsAsReserved(reservedItems);
+
+        order.MarkAsPaid();
+
+        order.Status.Should().Be(OrderStatus.Assembling);
+        order.PaidAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        order.Version.Should().BeGreaterThan(1);
+        order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        order.DomainEvents.Should().Contain(e => e is OrderStatusChangedEvent);
+    }
+
+    [Fact]
+    public void MarkAsPaid_WhenAllItemsReserved_ShouldAutoTransitionToAssembling()
+    {
+        var order = fixture.CreateValidOrder();
+        var reservedItems = order.Items
+            .Select(i => (i.ProductId, i.Quantity))
+            .ToList();
+        order.MarkItemsAsReserved(reservedItems);
+
+        order.MarkAsPaid();
+
+        order.Status.Should().Be(OrderStatus.Assembling);
+    }
+
+    [Fact]
+    public void MarkAsPaid_WhenAlreadyPaid_ShouldBeIdempotent()
+    {
+        var order = fixture.CreateValidOrder();
+        var reservedItems = order.Items.Select(i => (i.ProductId, i.Quantity)).ToList();
+        order.MarkItemsAsReserved(reservedItems);
+        order.MarkAsPaid();
+
+        var paidAt = order.PaidAt;
+        var version = order.Version;
+
+        order.MarkAsPaid();
+
+        order.Status.Should().Be(OrderStatus.Assembling);
+        order.PaidAt.Should().Be(paidAt);
+        order.Version.Should().Be(version);
+    }
+
+    [Fact]
+    public void MarkAsPaid_WhenNotAllItemsReserved_ShouldThrowInvalidOperationException()
+    {
+        var order = fixture.CreateValidOrder();
+        var partialReserved = new List<(Guid, int)>
+    {
+        (order.Items.First().ProductId, order.Items.First().Quantity)
+    };
+        order.MarkItemsAsReserved(partialReserved);
+
+        var act = () => order.MarkAsPaid();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"Cannot mark order '{order.Id}' as Paid: not all items are reserved.*");
+    }
+
+    [Fact]
+    public void MarkAsPaid_WhenNoItemsReserved_ShouldThrowInvalidOperationException()
+    {
+        var order = fixture.CreateValidOrder();
+
+        var act = () => order.MarkAsPaid();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"Cannot mark order '{order.Id}' as Paid: not all items are reserved.*");
+    }
+
+    [Fact]
+    public void SetTotalAmount_WhenStatusIsCreated_ShouldUpdateAmount()
+    {
+        var order = fixture.CreateValidOrder();
+        var oldTotal = order.TotalAmount;
+        var newTotal = new Money(999.99m, "RUB");
+
+        order.SetTotalAmount(newTotal);
+
+        order.TotalAmount.Amount.Should().Be(999.99m);
+        order.TotalAmount.Currency.Should().Be("RUB");
+        order.TotalAmount.Should().NotBe(oldTotal);
+        order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        order.Version.Should().Be(2);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Paid)]
+    [InlineData(OrderStatus.Assembling)]
+    [InlineData(OrderStatus.Shipping)]
+    [InlineData(OrderStatus.Delivered)]
+    public void SetTotalAmount_WhenStatusIsNotCreated_ShouldThrowInvalidOperationException(OrderStatus status)
+    {
+        var order = fixture.CreateValidOrder();
+        fixture.ForceSetStatus(order, status);
+        var newTotal = new Money(999.99m, "RUB");
+
+        var act = () => order.SetTotalAmount(newTotal);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"Cannot update total amount for order with status '{status}'.*");
+    }
+
+    [Fact]
+    public void SetTotalAmount_WhenStatusIsCancelled_ShouldThrowInvalidOperationException()
+    {
+        var order = fixture.CreateValidOrder();
+        order.Cancel(Guid.NewGuid(), "Test reason");
+
+        var act = () => order.SetTotalAmount(new Money(100m, "RUB"));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot update total amount for cancelled order");
+    }
+
+    [Fact]
+    public void SetTotalAmount_WithNegativeAmount_ShouldThrowArgumentException()
+    {
+        var order = fixture.CreateValidOrder();
+
+        var act = () => order.SetTotalAmount(new Money(-100m, "RUB"));
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("Value must be non-negative (Parameter 'value')");
+    }
+
+    [Fact]
+    public void SetTotalAmount_WithZeroAmount_ShouldSucceed()
+    {
+        var order = fixture.CreateValidOrder();
+
+        order.SetTotalAmount(new Money(0m, "RUB"));
+
+        order.TotalAmount.Amount.Should().Be(0m);
+    }
+
+    [Fact]
+    public void MarkItemsAsReserved_WhenStatusIsPaid_ShouldThrowInvalidOperationException()
+    {
+        var order = fixture.CreateValidOrder();
+        fixture.ForceSetStatus(order, OrderStatus.Paid);
+        var reservedItems = order.Items.Select(i => (i.ProductId, i.Quantity)).ToList();
+
+        var act = () => order.MarkItemsAsReserved(reservedItems);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot reserve items for order with status 'Paid'. Expected: 'Created'.");
+    }
+
+    [Fact]
+    public void MarkItemsAsReserved_WhenStatusIsCreated_ShouldNotTransitionToAssembling()
+    {
+        var order = fixture.CreateValidOrder();
+        var reservedItems = order.Items.Select(i => (i.ProductId, i.Quantity)).ToList();
+
+        order.MarkItemsAsReserved(reservedItems);
+
+        order.Status.Should().Be(OrderStatus.Created);
+    }
+
+    [Fact]
+    public void FullSagaFlow_CreateReservePrice_ShouldTransitionThroughAllStatuses()
+    {
+        var order = fixture.CreateValidOrder();
+        order.Status.Should().Be(OrderStatus.Created);
+
+        order.SetTotalAmount(new Money(1500m, "RUB"));
+        order.TotalAmount.Amount.Should().Be(1500m);
+        order.Status.Should().Be(OrderStatus.Created);
+
+        var reservedItems = order.Items.Select(i => (i.ProductId, i.Quantity)).ToList();
+        order.MarkItemsAsReserved(reservedItems);
+        order.AllItemsReserved().Should().BeTrue();
+
+        order.MarkAsPaid();
+
+        order.PaidAt.Should().NotBeNull();
+        order.Status.Should().Be(OrderStatus.Assembling);
+        order.Version.Should().BeGreaterThan(3);
+    }
+
+    [Fact]
+    public void FullSagaFlow_FailedReservation_ShouldAllowCancellation()
+    {
+        var order = fixture.CreateValidOrder();
+        var reservedItems = order.Items.Select(i => (i.ProductId, i.Quantity)).ToList();
+        order.MarkItemsAsReserved(reservedItems);
+
+        order.ReleaseAllReservations();
+        order.ForceCancel("Stock reservation failed after initial reservation");
+
+        order.Status.Should().Be(OrderStatus.Cancelled);
+        order.AllItemsReserved().Should().BeFalse();
+        order.CancelledAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AllItemsReserved_WhenNoItems_ShouldReturnFalse()
+    {
+        var order = Order.Create(
+            fixture.CustomerId,
+            fixture.CustomerName,
+            fixture.CustomerEmail,
+            fixture.DeliveryAddress,
+            new List<OrderItem> { fixture.CreateOrderItem() }); // хотя бы 1 item при создании
+
+        // Очищаем items через RemoveItem для проверки edge case
+        var firstItem = order.Items.First();
+        order.RemoveItem(firstItem.Id);
+
+        order.AllItemsReserved().Should().BeFalse();
+    }
+
+    [Fact]
+    public void AllItemsReserved_WhenAllItemsReserved_ShouldReturnTrue()
+    {
+        var order = fixture.CreateValidOrder();
+        var reservedItems = order.Items.Select(i => (i.ProductId, i.Quantity)).ToList();
+
+        order.MarkItemsAsReserved(reservedItems);
+
+        order.AllItemsReserved().Should().BeTrue();
+    }
+
+    [Fact]
+    public void AllItemsReserved_WhenPartialReservation_ShouldReturnFalse()
+    {
+        var order = fixture.CreateValidOrder();
+        if (order.Items.Count < 2)
+        {
+            // Добавим ещё один item для корректного теста
+            order.AddItem(fixture.CreateOrderItem());
+        }
+
+        var partialReserved = new List<(Guid, int)>
+    {
+        (order.Items.First().ProductId, order.Items.First().Quantity)
+    };
+        order.MarkItemsAsReserved(partialReserved);
+
+        order.AllItemsReserved().Should().BeFalse();
+    }
+
+    [Fact]
+    public void ReleaseAllReservations_ShouldReleaseAllItems()
+    {
+        var order = fixture.CreateValidOrder();
+        var reservedItems = order.Items.Select(i => (i.ProductId, i.Quantity)).ToList();
+        order.MarkItemsAsReserved(reservedItems);
+        order.AllItemsReserved().Should().BeTrue();
+
+        order.ReleaseAllReservations();
+
+        order.AllItemsReserved().Should().BeFalse();
+        order.Items.Should().OnlyContain(i => !i.IsReserved);
+        order.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+        order.Version.Should().BeGreaterThan(1);
+    }
+
+    [Fact]
+    public void ReleaseAllReservations_WhenNoReservations_ShouldBeIdempotent()
+    {
+        var order = fixture.CreateValidOrder();
+        var versionBefore = order.Version;
+
+        order.ReleaseAllReservations();
+
+        // Version всё равно увеличивается (UpdatedAt обновляется)
+        order.Version.Should().BeGreaterThan(versionBefore);
+        order.AllItemsReserved().Should().BeFalse();
     }
 }

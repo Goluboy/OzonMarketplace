@@ -11,4 +11,7 @@
     <Project Path="OrderService.Domain.Tests/OrderService.Domain.Tests.csproj" Id="eaa0fc9c-d0f5-41bf-b112-43bc93d1d62b" />
     <Project Path="OrderService.Infrastructure.Persistence.Tests/OrderService.Infrastructure.Persistence.Tests.csproj" Id="a8a0abbb-999a-469a-b32c-4df4ce0783cc" />
   </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
 </Solution>

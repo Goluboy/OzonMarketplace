@@ -1,0 +1,3 @@
+﻿CREATE DATABASE products;
+CREATE DATABASE orders;
+CREATE DATABASE keycloak;

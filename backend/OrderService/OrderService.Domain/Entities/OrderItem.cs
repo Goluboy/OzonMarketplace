@@ -14,6 +14,8 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
     public Money Subtotal { get; private set; } = default!;
     public DateTime CreatedAt { get; init; } = default!;
     public DateTime? UpdatedAt { get; private set; } = default!;
+    public bool IsReserved { get; private set; }
+    public int ReservedQuantity { get; private set; }
 
     private OrderItem() { }
 
@@ -26,7 +28,8 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
         Money priceAtPurchase,
         Money subtotal,
         DateTime createdAt,
-        DateTime? updatedAt)
+        DateTime? updatedAt,
+        bool isReserved)
     {
         return new OrderItem
         {
@@ -37,6 +40,8 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
             Quantity = quantity,
             PriceAtPurchase = priceAtPurchase,
             Subtotal = subtotal,
+            IsReserved = isReserved,
+            ReservedQuantity = quantity,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt
         };
@@ -67,6 +72,8 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
             Quantity = quantity,
             PriceAtPurchase = new Money(price),
             Subtotal = new Money(subtotal),
+            IsReserved = false,
+            ReservedQuantity = 0,
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -89,6 +96,43 @@ public class OrderItem : IAuditable, ICloneable, IEquatable<OrderItem>
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void MarkAsReserved(int reservedQuantity)
+    {
+        if (IsReserved)
+        {
+            throw new InvalidOperationException(
+                $"Item '{ProductId}' is already reserved");
+        }
+
+        if (reservedQuantity <= 0)
+        {
+            throw new ArgumentException(
+                "Reserved quantity must be positive", nameof(reservedQuantity));
+        }
+
+        if (reservedQuantity != Quantity)
+        {
+            throw new InvalidOperationException(
+                $"Reserved quantity ({reservedQuantity}) must match ordered quantity ({Quantity}). " +
+                $"Partial reservations are not supported in this SAGA flow.");
+        }
+
+        IsReserved = true;
+        ReservedQuantity = reservedQuantity;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ReleaseReservation()
+    {
+        if (!IsReserved)
+        {
+            return;
+        }
+
+        IsReserved = false;
+        ReservedQuantity = 0;
+        UpdatedAt = DateTime.UtcNow;
+    }
 
     public void UpdateQuantity(int newQuantity)
     {

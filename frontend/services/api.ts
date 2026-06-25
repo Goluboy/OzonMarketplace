@@ -1,10 +1,7 @@
 import { authService } from './auth.service';
 
 const getBaseUrl = () => {
-  if (typeof window === 'undefined') {
-    return 'https://d5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net';
-  }
-  return 'https://d5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net';
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 };
 
 const API_BASE_URL = getBaseUrl();

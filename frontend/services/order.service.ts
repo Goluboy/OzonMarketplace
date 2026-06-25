@@ -2,9 +2,9 @@ import { authService } from "./auth.service";
 
 const getBaseUrl = () => {
   if (typeof window === 'undefined') {
-    return process.env.API_URL || 'http://nginx-gateway';
+    return 'http://nginx-gateway';
   }
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost';
+  return '';
 };
 
 const API_URL = getBaseUrl();

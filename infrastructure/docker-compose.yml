@@ -182,6 +182,7 @@ services:
     container_name: keycloak
     command:
       - start-dev
+      - --http-relative-path=/auth
       - --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
@@ -190,14 +191,16 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_NAME}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
-      KC_HOSTNAME_STRICT: ${KEYCLOAK_HOSTNAME_STRICT}
-      KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_RELATIVE_PATH: /auth
-
+      KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_FEATURES: "opentelemetry"
+      KC_HTTP_COOKIE_SAME_SITE: "Lax"
 
-      KC_HOSTNAME: http://localhost/auth
+      KC_HOSTNAME: https://d5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net/auth
+      KC_HOSTNAME_ADMIN_URL: https://d5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net/auth
       KC_PROXY_HEADERS: xforwarded
 
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
@@ -252,7 +255,7 @@ services:
     container_name: frontend
     environment:
       API_URL: http://nginx-gateway
-      NEXT_PUBLIC_API_URL: http://localhost
+      NEXT_PUBLIC_API_URL: https://d5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net
     restart: always
     ports:
       - "3000:3000"

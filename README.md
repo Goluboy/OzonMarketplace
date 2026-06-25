@@ -218,6 +218,7 @@ flowchart TB
 
 ### Сервис товаров
 ```mermaid
+%%{init: {'themeVariables': { 'fontSize': '18px' }}}%%
 flowchart TB
 
     subgraph Presentation["Presentation Layer<br/>ProductService.Presentation"]
@@ -248,7 +249,7 @@ flowchart TB
         UoWAbs["Unit of Work<br/>Abstractions"]
         PubAbs["Event Publisher<br/>Abstractions"]
         CacheAbs["Caching<br/>Abstractions"]
-        QryDTOs["Query DTOs<br/>(Product.Query)"]
+        QryDTOs["Query DTOs (Product.Query)"]
     end
 
     subgraph Domain["Domain Layer<br/>ProductService.Domain"]
@@ -324,12 +325,12 @@ flowchart TB
     DAO --> Database
     Saga --> MessageBroker
 
-    %% Styling
-    classDef presentation fill:#48dbfb,stroke:#333,color:#000
-    classDef usecases fill:#1dd1a1,stroke:#333,color:#000
-    classDef domain fill:#feca57,stroke:#333,color:#000
-    classDef infra fill:#ff6b6b,stroke:#333,color:#fff
-    classDef external fill:#54a0ff,stroke:#333,color:#fff
+    %% Styling (Добавлен параметр font-size)
+    classDef presentation fill:#48dbfb,stroke:#333,color:#000,font-size:18px
+    classDef usecases fill:#1dd1a1,stroke:#333,color:#000,font-size:18px
+    classDef domain fill:#feca57,stroke:#333,color:#000,font-size:18px
+    classDef infra fill:#ff6b6b,stroke:#333,color:#fff,font-size:18px
+    classDef external fill:#54a0ff,stroke:#333,color:#fff,font-size:18px
     
     class Controllers,Models,Middleware,PresMappers presentation
     class Services,ProdCmd,ProdQry,CatServices,MediaServices,AppDTOs,EventHandlers,AppMappers,AppExceptions usecases
@@ -339,7 +340,6 @@ flowchart TB
 ```
 
 ##  Структура бэкенда
-
 ```
 backend
 ├── OrderService

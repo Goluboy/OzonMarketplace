@@ -363,7 +363,7 @@ backend
     └── Minio
 ```
 ## Запуск
-В infrastructure лежат настройки для yandex cloud VM, которая работает за api-gateway, поэтому для локального запуска нужно использовать infrastructure-dev
+В **`infrastructure`** лежат настройки для yandex cloud VM, которая работает за api-gateway, поэтому для локального запуска нужно использовать **`infrastructure-dev`**
 Требуется docker compose и Node.js 20+
 1. Настройка окружения
 	Скопировать .env.example из корня репозитория в infrastructure-dev
@@ -392,6 +392,11 @@ backend
 	```
 	curl.exe -X POST "http://localhost:8080/realms/marketplace/protocol/openid-connect/token" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=password" -d "client_id=marketplace-app" -d "username=<username>" -d "password=<password>" -d "scope=openid"
 	```
+
+## Мониторинг
+В **`infrastructure\monitoring\grafana`** лежат готовые дашборды для построения диаграмм и отслеживания состояния каждого сервиса, отдельный дашборд для Keycloak.
+Данные дашборды нужно импортировать в интерфейсе **Grafana** во вкладке `Dashboards`.
+
 ##  Деплой
 Деплой производился на yandex cloud, с разворачиванием docker-compose.yml на виртуальной машине за api-gateway. 
 

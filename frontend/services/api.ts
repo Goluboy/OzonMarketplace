@@ -1,6 +1,13 @@
 import { authService } from './auth.service';
 
-const API_BASE_URL = 'http://localhost';
+const getBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return 'https://d5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net';
+  }
+  return 'https://d5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net';
+};
+
+const API_BASE_URL = getBaseUrl();
 
 interface ApiOptions extends RequestInit {
   requireAuth?: boolean;

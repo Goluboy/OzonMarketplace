@@ -145,7 +145,7 @@ function AdminDiscountsPageContent() {
                     ...p, 
                     discount, 
                     isLoadingDiscount: false,
-                    salePriceInput: discount.salePrice.amount 
+                    salePriceInput: discount?.salePrice?.amount ?? ""
                   }
                 : p
             ));
@@ -215,7 +215,7 @@ function AdminDiscountsPageContent() {
                   ...p, 
                   discount, 
                   isLoadingDiscount: false,
-                  salePriceInput: discount.salePrice.amount 
+                  salePriceInput: discount?.salePrice?.amount ?? ""
                 }
               : p
           ));
@@ -396,10 +396,9 @@ function AdminDiscountsPageContent() {
               <div className="grid gap-6 lg:grid-cols-[120px_1fr_280px]">
                 <div className="relative h-28 overflow-hidden rounded-2xl bg-gray-100">
                   {product.imageUrl ? (
-                    <Image
+                    <img
                       src={product.imageUrl}
                       alt={product.name}
-                      fill
                       className="object-contain p-3"
                       sizes="120px"
                     />

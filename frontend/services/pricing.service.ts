@@ -17,6 +17,11 @@ class PricingService {
   private readonly baseUrl = '/api/pricing';
   private readonly isBackendReady = false;
 
+  // Вспомогательный метод для генерации ошибки неготовности
+  private handleNotReady(): never {
+    throw new Error('Упс, этот функционал ещё не готов');
+  }
+
   async getProductDiscount(productId: string): Promise<ProductDiscountDto | null> {
     if (!this.isBackendReady) {
       console.log('🔧 Временный мок данных скидки');
@@ -27,12 +32,16 @@ class PricingService {
         isActive: false,
         updatedAt: new Date().toISOString(),
       };
+
+      // Если даже просмотр скидки должен выдавать ошибку «не готово», 
+      // закомментируйте код выше и раскомментируйте эту строчку:
+      // this.handleNotReady();
     }
-    
+
     try {
       const discount = await api.get<ProductDiscountDto>(
-        `${this.baseUrl}/products/${productId}`,
-        true
+          `${this.baseUrl}/products/${productId}`,
+          true
       );
       return discount;
     } catch (error) {
@@ -42,11 +51,15 @@ class PricingService {
   }
 
   async createDiscount(productId: string, data: SetDiscountRequest): Promise<ProductDiscountDto> {
+    if (!this.isBackendReady) {
+      this.handleNotReady();
+    }
+
     try {
       const discount = await api.post<ProductDiscountDto>(
-        `${this.baseUrl}/products/${productId}`,
-        data,
-        true
+          `${this.baseUrl}/products/${productId}`,
+          data,
+          true
       );
       return discount;
     } catch (error) {
@@ -56,11 +69,15 @@ class PricingService {
   }
 
   async updateDiscount(productId: string, data: SetDiscountRequest): Promise<ProductDiscountDto> {
+    if (!this.isBackendReady) {
+      this.handleNotReady();
+    }
+
     try {
       const discount = await api.put<ProductDiscountDto>(
-        `${this.baseUrl}/products/${productId}`,
-        data,
-        true
+          `${this.baseUrl}/products/${productId}`,
+          data,
+          true
       );
       return discount;
     } catch (error) {
@@ -70,11 +87,15 @@ class PricingService {
   }
 
   async activateDiscount(productId: string): Promise<ProductDiscountDto> {
+    if (!this.isBackendReady) {
+      this.handleNotReady();
+    }
+
     try {
       const discount = await api.post<ProductDiscountDto>(
-        `${this.baseUrl}/products/${productId}/activate`,
-        undefined,
-        true
+          `${this.baseUrl}/products/${productId}/activate`,
+          undefined,
+          true
       );
       return discount;
     } catch (error) {
@@ -84,11 +105,15 @@ class PricingService {
   }
 
   async deactivateDiscount(productId: string): Promise<ProductDiscountDto> {
+    if (!this.isBackendReady) {
+      this.handleNotReady();
+    }
+
     try {
       const discount = await api.post<ProductDiscountDto>(
-        `${this.baseUrl}/products/${productId}/deactivate`,
-        undefined,
-        true
+          `${this.baseUrl}/products/${productId}/deactivate`,
+          undefined,
+          true
       );
       return discount;
     } catch (error) {

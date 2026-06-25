@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
 
 export interface Item {
-  id: number;
+  id: string | number;
   title: string;
   price: number;
   oldPrice?: number;
@@ -43,13 +43,11 @@ export function ItemCard({ item, className }: ItemCardProps) {
       <Link href={`/product/${item.id}`} className="flex-1">
         <div className="relative aspect-square overflow-hidden bg-gray-50">
           {item.imageUrl ? (
-            <Image
-              src={item.imageUrl}
-              alt={item.title}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            />
+              <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
           ) : (
             <div className="flex items-center justify-center h-full bg-gray-100">
               <span className="text-4xl text-gray-400">📷</span>

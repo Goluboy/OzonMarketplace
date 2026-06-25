@@ -29,13 +29,11 @@ export function ProductGallery({ product }: ProductGalleryProps) {
     <div className="sticky top-8">
       {/* Главное изображение */}
       <div className="relative aspect-square bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4">
-        <Image
+        <img
           src={images[selectedImage]}
           alt={product.name}
-          fill
           className="object-contain p-8"
           sizes="(max-width: 768px) 100vw, 50vw"
-          priority
         />
         
         {/* Кнопки навигации */}
@@ -69,10 +67,9 @@ export function ProductGallery({ product }: ProductGalleryProps) {
                 ${selectedImage === idx ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-300'}
               `}
             >
-              <Image
+              <img
                 src={img}
                 alt={`${product.name} - ${idx + 1}`}
-                fill
                 className="object-cover"
                 sizes="80px"
               />

@@ -77,10 +77,9 @@ export function CartItem({
           className="relative overflow-hidden w-full h-full"
           style={{ borderRadius: 16, background: "var(--color-bg-secondary, #f3f6ff)" }}
         >
-          <Image
+          <img
             src={item.image}
             alt={item.name}
-            fill
             className="object-contain"
           />
         </div>

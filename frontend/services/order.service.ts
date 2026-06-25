@@ -1,7 +1,13 @@
 import { authService } from "./auth.service";
 
-const API_URL = 'http://localhost:5002';
+const getBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return 'http://nginx-gateway';
+  }
+  return '';
+};
 
+const API_URL = getBaseUrl();
 export interface CreateOrderRequest {
   customerName: string;
   customerEmail: string;

@@ -95,7 +95,7 @@ class ProductService {
       if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
       
       const queryString = queryParams.toString();
-      const url = queryString ? `${this.baseUrl}?${queryString}` : this.baseUrl;
+      const url = queryString ? `${this.baseUrl}/?${queryString}` : `${this.baseUrl}/`;
 
       const result = await api.get<ProductCursorPagedResult>(url, false);
       return result;

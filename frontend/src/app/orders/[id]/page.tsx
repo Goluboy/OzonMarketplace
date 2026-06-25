@@ -9,10 +9,13 @@ import {
   getOrderById,
   OrderDetails,
 } from "../../../../services/order.service";
+import { productService } from "../../../../services/product.service";
 
 export default function OrderPage() {
 
   const params = useParams();
+  const [productImages, setProductImages] =
+    useState<Record<string, string>>({});
 
   const [order, setOrder] =
     useState<OrderDetails | null>(null);
@@ -86,6 +89,27 @@ export default function OrderPage() {
         );
 
         setOrder(data);
+        const images: Record<string, string> = {};
+
+        await Promise.all(
+          data.items.map(async (item) => {
+            try {
+              const product =
+                await productService.getProduct(
+                  item.productId
+                );
+
+              images[item.productId] =
+                product.images?.[0]?.url ||
+                "/images/product-placeholder.png";
+            } catch {
+              images[item.productId] =
+                "/images/product-placeholder.png";
+            }
+          })
+        );
+
+        setProductImages(images);
       } catch (e) {
         setError("Не удалось загрузить заказ");
       } finally {
@@ -179,11 +203,13 @@ export default function OrderPage() {
                     className="flex items-center gap-5 rounded-2xl bg-surface-secondary p-4"
                   >
                     <div className="relative h-24 w-24 overflow-hidden rounded-2xl bg-background">
-                      <Image
-                        src="/images/product-placeholder.png"
-                        alt="Товар"
-                        fill
-                        className="object-contain"
+                      <img
+                        src={
+                          productImages[item.productId] ||
+                          "/images/product-placeholder.png"
+                        }
+                        alt={item.productName}
+                        className="h-full w-full object-contain"
                       />
                     </div>
 
@@ -198,10 +224,7 @@ export default function OrderPage() {
                     </div>
 
                     <div className="text-xl font-bold text-text">
-                      {(
-                        Number(item.priceAtPurchase.amount) *
-                        item.quantity
-                      ).toLocaleString("ru-RU")} ₽
+                      
                     </div>
                   </div>
                 ))}

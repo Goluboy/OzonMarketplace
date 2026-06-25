@@ -8,13 +8,13 @@ const nextConfig = {
         protocol: "http",
         hostname: 'localhost',
         port: '9000',
-        pathname: '/marketplace-bucket/**',
+        pathname: '/**',
       },
       {
         protocol: "http",
         hostname: 'minio',
         port: '9000',
-        pathname: '/marketplace-bucket/**',
+        pathname: '/**',
       },
       {
         protocol: 'https',
@@ -33,12 +33,17 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'd5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net',
+        pathname: '/**',
+      },
     ],
   },
 
   env: {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || '',
-    NEXT_PUBLIC_KEYCLOAK_URL: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost/auth',
+    NEXT_PUBLIC_KEYCLOAK_URL: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'https://d5ddimrn36v2tdv58n65.nkhmighe.apigw.yandexcloud.net/auth',
     NEXT_PUBLIC_KEYCLOAK_REALM: process.env.NEXT_PUBLIC_KEYCLOAK_REALM || 'marketplace',
     NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || 'marketplace-app',
   },

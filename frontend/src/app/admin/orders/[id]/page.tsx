@@ -6,13 +6,13 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { Header } from "@/app/component/layout/header/Header";
-
 import {
   AdminOrder,
   getAdminOrderById,
   updateOrderStatus,
   forceCancelOrder,
 } from "../../../../../services/order.service";
+import { productService } from "../../../../../services/product.service";
 
 export default function AdminOrderPage() {
   const params = useParams();
@@ -25,6 +25,9 @@ export default function AdminOrderPage() {
 
   const [error, setError] =
     useState("");
+
+  const [productImages, setProductImages] =
+    useState<Record<string, string>>({});
 
   function getStatus() {
     switch (order?.status) {
@@ -84,16 +87,33 @@ export default function AdminOrderPage() {
   useEffect(() => {
     async function loadOrder() {
       try {
-        const data =
-          await getAdminOrderById(
-            params.id as string
-          );
+        const data = await getAdminOrderById(params.id as string);
 
         setOrder(data);
-      } catch {
-        setError(
-          "Не удалось загрузить заказ"
+
+        const images: Record<string, string> = {};
+
+        await Promise.all(
+          data.items.map(async (item) => {
+            try {
+              const product =
+                await productService.getProduct(
+                  item.productId
+                );
+
+              images[item.productId] =
+                product.images?.[0]?.url ||
+                "/images/product-placeholder.png";
+            } catch {
+              images[item.productId] =
+                "/images/product-placeholder.png";
+            }
+          })
         );
+
+        setProductImages(images);
+      } catch {
+        setError("Не удалось загрузить заказ");
       } finally {
         setLoading(false);
       }
@@ -269,12 +289,14 @@ export default function AdminOrderPage() {
                       }
                       className="flex items-center gap-5 rounded-2xl bg-surface-secondary p-4"
                     >
-                      <div className="relative h-24 w-24 overflow-hidden rounded-2xl bg-background">
-                        <Image
-                          src="/images/product-placeholder.png"
-                          alt="Товар"
-                          fill
-                          className="object-contain"
+                      <div className="h-24 w-24 overflow-hidden rounded-2xl bg-background">
+                        <img
+                          src={
+                            productImages[item.productId] ||
+                            "/images/product-placeholder.png"
+                          }
+                          alt={item.productName}
+                          className="h-full w-full object-contain"
                         />
                       </div>
 
@@ -294,10 +316,7 @@ export default function AdminOrderPage() {
                       </div>
 
                       <div className="text-xl font-bold text-text">
-                        {(
-                          Number(item.priceAtPurchase.amount) *
-                          item.quantity
-                        ).toLocaleString("ru-RU")} ₽
+
                       </div>
                     </div>
                   )

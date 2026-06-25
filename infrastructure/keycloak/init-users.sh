@@ -136,10 +136,9 @@ create_user() {
 # === Создание тестовых пользователей ===
 create_user "${TEST_USER_EMAIL}" "${TEST_USER_PASSWORD}" "customer"
 create_user "${ADMIN_USER_EMAIL}" "${ADMIN_USER_PASSWORD}" "admin"
-create_user "seller@example.com" "seller123" "seller"
+
 
 echo ""
 echo "[DONE] Keycloak initialization complete!"
 echo "   Customer: ${TEST_USER_EMAIL} / ${TEST_USER_PASSWORD}"
 echo "   Admin:    ${ADMIN_USER_EMAIL} / ${ADMIN_USER_PASSWORD}"
-echo "   Seller:   seller@example.com / seller123"

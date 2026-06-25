@@ -218,7 +218,8 @@ flowchart TB
 
 ### Сервис товаров
 
-![[Pasted image 20260625153017.png]]
+<img width="1468" height="1050" alt="image" src="https://github.com/user-attachments/assets/8b1a5f45-836f-43f0-a2bd-ddb73b74dde5" />
+
 
 ##  Структура бэкенда
 

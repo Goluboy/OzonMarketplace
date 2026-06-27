@@ -365,15 +365,15 @@ backend
 ## Запуск
 В **`infrastructure`** лежат настройки для yandex cloud VM, которая работает за api-gateway, поэтому для локального запуска нужно использовать **`infrastructure-dev`**
 Требуется docker compose и Node.js 20+
-1. Настройка окружения
+1. Настройка окружения  
 	Скопировать .env.example из корня репозитория в infrastructure-dev
-2. Запуск инфраструктуры
+2. Запуск инфраструктуры  
 	Запустить infrastructure-dev/docker-compose.yml
 	```
 	cd infrastructure-dev
 	docker compose up -d
 	``` 
-3. Доступ к сервисам
+3. Доступ к сервисам  
 
 | Сервис             | URL                                | Credentials             |
 | ------------------ | ---------------------------------- | ----------------------- |
